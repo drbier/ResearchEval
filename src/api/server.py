@@ -390,6 +390,13 @@ def index_page():
                 pointer-events: auto;
                 animation: popIn 0.15s ease-out;
             }
+            #popupHeader {
+                cursor: grab;
+                user-select: none;
+            }
+            #popupHeader:active {
+                cursor: grabbing;
+            }
             #popupScrollContainer::-webkit-scrollbar {
                 width: 8px;
                 height: 8px;
@@ -546,10 +553,11 @@ def index_page():
 
         <!-- Hover / Click Popup Modal for the Highlighted Section -->
         <div id="sectionPopup">
-            <div class="bg-sky-700 text-white px-4 py-2 flex justify-between items-center text-xs font-semibold shadow-xs select-none">
-                <div class="flex items-center gap-2">
+            <div id="popupHeader" class="bg-sky-700 text-white px-4 py-2 flex justify-between items-center text-xs font-semibold shadow-xs select-none" title="Click and drag to move pop-up">
+                <div class="flex items-center gap-2 pointer-events-none">
                     <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400"></span>
                     <span id="popupTitle" class="font-mono text-xs font-bold text-sky-100 bg-sky-900/60 px-2.5 py-1 rounded tracking-wide truncate max-w-[280px]">Highlighted Manuscript Section</span>
+                    <span class="text-[11px] text-sky-300 font-normal ml-1">⋮⋮ Drag</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <!-- Zoom Controls -->
@@ -759,6 +767,71 @@ def index_page():
                     popup.style.left = Math.round(left) + 'px';
                     popup.style.top = Math.round(top) + 'px';
                 }
+            })();
+
+            // Section Popup Drag-and-Move Implementation
+            (function initPopupDraggable() {
+                const header = document.getElementById('popupHeader');
+                const popup = document.getElementById('sectionPopup');
+                if (!header || !popup) return;
+
+                let isDragging = false;
+                let startX = 0, startY = 0;
+                let initialLeft = 0, initialTop = 0;
+
+                header.addEventListener('mousedown', function(e) {
+                    // Do not drag if user clicked on buttons or zoom controls
+                    if (e.target.closest('button, #popupZoomLevel')) return;
+
+                    e.preventDefault();
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+
+                    // Auto-pin so the popup stays open while and after being moved
+                    if (!isPinned) {
+                        isPinned = true;
+                        updatePinUI();
+                    }
+
+                    const rect = popup.getBoundingClientRect();
+                    initialLeft = rect.left;
+                    initialTop = rect.top;
+
+                    header.style.cursor = 'grabbing';
+                    document.body.style.userSelect = 'none';
+
+                    function onMouseMove(moveEvent) {
+                        if (!isDragging) return;
+                        const dx = moveEvent.clientX - startX;
+                        const dy = moveEvent.clientY - startY;
+
+                        let newLeft = initialLeft + dx;
+                        let newTop = initialTop + dy;
+
+                        // Keep popup within viewport bounds with 10px margin
+                        const popW = popup.offsetWidth;
+                        const popH = popup.offsetHeight;
+                        newLeft = Math.max(10, Math.min(window.innerWidth - popW - 10, newLeft));
+                        newTop = Math.max(10, Math.min(window.innerHeight - popH - 10, newTop));
+
+                        popup.style.left = Math.round(newLeft) + 'px';
+                        popup.style.top = Math.round(newTop) + 'px';
+                    }
+
+                    function onMouseUp() {
+                        if (isDragging) {
+                            isDragging = false;
+                            header.style.cursor = 'grab';
+                            document.body.style.userSelect = '';
+                            window.removeEventListener('mousemove', onMouseMove);
+                            window.removeEventListener('mouseup', onMouseUp);
+                        }
+                    }
+
+                    window.addEventListener('mousemove', onMouseMove);
+                    window.addEventListener('mouseup', onMouseUp);
+                });
             })();
 
             function repositionHitbox() {
