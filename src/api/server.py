@@ -366,16 +366,30 @@ def index_page():
                 position: fixed;
                 display: none;
                 z-index: 9999;
-                width: 1120px;
-                max-width: calc(100vw - 40px);
+                width: 740px;
+                max-width: calc(100vw - 32px);
                 max-height: calc(100vh - 40px);
                 background: #ffffff;
-                border: 2.5px solid #0284c7;
-                border-radius: 14px;
-                box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), 0 16px 28px -8px rgba(0, 0, 0, 0.25);
+                border: 2px solid #0284c7;
+                border-radius: 12px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 10px 20px -5px rgba(0, 0, 0, 0.2);
                 overflow: hidden;
-                pointer-events: none;
+                pointer-events: auto;
                 animation: popIn 0.15s ease-out;
+            }
+            #popupScrollContainer::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            #popupScrollContainer::-webkit-scrollbar-track {
+                background: #f1f5f9;
+            }
+            #popupScrollContainer::-webkit-scrollbar-thumb {
+                background-color: #94a3b8;
+                border-radius: 4px;
+            }
+            #popupScrollContainer::-webkit-scrollbar-thumb:hover {
+                background-color: #64748b;
             }
             @keyframes popIn {
                 from { opacity: 0; transform: scale(0.96); }
@@ -517,19 +531,30 @@ def index_page():
             </div>
         </div>
 
-        <!-- Hover Popup Card for the Highlighted Section (Enlarged) -->
+        <!-- Hover / Click Popup Modal for the Highlighted Section -->
         <div id="sectionPopup">
-            <div class="bg-sky-700 text-white px-5 py-2.5 flex justify-between items-center text-xs font-semibold shadow-xs">
+            <div class="bg-sky-700 text-white px-4 py-2 flex justify-between items-center text-xs font-semibold shadow-xs select-none">
                 <div class="flex items-center gap-2">
                     <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                    <span id="popupTitle" class="font-mono text-sm tracking-wide">Highlighted Manuscript Section</span>
+                    <span id="popupTitle" class="font-mono text-xs font-bold text-sky-100 bg-sky-900/60 px-2.5 py-1 rounded tracking-wide truncate max-w-[280px]">Highlighted Manuscript Section</span>
                 </div>
-                <span class="bg-sky-800/80 px-2.5 py-1 rounded text-[11px] font-medium tracking-wide">🔍 Expanded Full-Section View</span>
+                <div class="flex items-center gap-2">
+                    <!-- Zoom Controls -->
+                    <div class="flex items-center bg-sky-800/90 rounded border border-sky-600/60 overflow-hidden text-[11px]">
+                        <button onclick="adjustPopupZoom(-0.15)" class="px-2 py-0.5 hover:bg-sky-600 font-bold transition" title="Smaller font (Zoom out)">−</button>
+                        <span id="popupZoomLevel" onclick="resetPopupZoom()" class="px-2 py-0.5 font-mono text-sky-200 cursor-pointer hover:text-white" title="Click to reset zoom">100%</span>
+                        <button onclick="adjustPopupZoom(0.15)" class="px-2 py-0.5 hover:bg-sky-600 font-bold transition" title="Larger font (Zoom in)">+</button>
+                    </div>
+                    <!-- Pin Button -->
+                    <button id="popupPinBtn" onclick="togglePopupPin()" class="flex items-center gap-1 px-2.5 py-1 rounded bg-sky-800/90 hover:bg-sky-600 text-sky-100 hover:text-white text-[11px] font-medium transition border border-sky-600/60" title="Pin / Lock popup open">
+                        <span>📌</span> <span id="pinBtnText">Pin</span>
+                    </button>
+                    <!-- Close Button -->
+                    <button onclick="closeSectionPopup()" class="text-white/80 hover:text-white px-2 py-0.5 rounded hover:bg-rose-600 transition text-sm font-bold ml-1" title="Close (or press Esc)">✕</button>
+                </div>
             </div>
-            <div class="p-4 bg-white max-h-[82vh] overflow-y-auto flex items-center justify-center">
-                <img id="popupCropImg" class="w-full h-auto rounded border border-slate-200 shadow-sm" alt="Large Section Crop"/>
-            </div>
-        </div>
+            <div id="popupScrollContainer" class="p-4 bg-slate-100/70 overflow-y-auto overflow-x-auto flex items-start justify-center" style="max-height: calc(85vh - 55px);">
+                <img id="popupCropImg" class="rounded border border-slate-200 shadow-sm bg-white" style="max-width: 100%; height: auto; object-fit: contain; transition: width 0.12s ease;" alt="Manuscript Section Crop"/>
             </div>
         </div>
 
@@ -580,61 +605,144 @@ def index_page():
                 });
             })();
 
-            // Section Hover Popup Implementation
+            // Section Hover & Pin Popup Implementation
+            let popupHideTimer = null;
+            let isPinned = false;
+            let currentZoom = 1.0;
+
+            function adjustPopupZoom(delta) {
+                currentZoom = Math.max(0.6, Math.min(2.0, Math.round((currentZoom + delta) * 100) / 100));
+                applyZoom();
+            }
+
+            function resetPopupZoom() {
+                currentZoom = 1.0;
+                applyZoom();
+            }
+
+            function applyZoom() {
+                const img = document.getElementById('popupCropImg');
+                const label = document.getElementById('popupZoomLevel');
+                if (!img) return;
+                const baseW = 680;
+                const targetW = Math.round(baseW * currentZoom);
+                img.style.width = targetW + 'px';
+                img.style.maxWidth = currentZoom <= 1.0 ? '100%' : 'none';
+                if (label) {
+                    label.innerText = Math.round(currentZoom * 100) + '%';
+                }
+            }
+
+            function togglePopupPin() {
+                isPinned = !isPinned;
+                updatePinUI();
+            }
+
+            function updatePinUI() {
+                const pinBtn = document.getElementById('popupPinBtn');
+                const pinText = document.getElementById('pinBtnText');
+                if (!pinBtn || !pinText) return;
+                if (isPinned) {
+                    pinBtn.className = "flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-600 text-slate-900 text-[11px] font-bold transition shadow-xs";
+                    pinText.innerText = "Pinned";
+                } else {
+                    pinBtn.className = "flex items-center gap-1 px-2.5 py-1 rounded bg-sky-800/90 hover:bg-sky-600 text-sky-100 hover:text-white text-[11px] font-medium transition border border-sky-600/60";
+                    pinText.innerText = "Pin";
+                }
+            }
+
+            function closeSectionPopup() {
+                isPinned = false;
+                clearTimeout(popupHideTimer);
+                updatePinUI();
+                const popup = document.getElementById('sectionPopup');
+                if (popup) popup.style.display = 'none';
+            }
+
+            function scheduleHidePopup() {
+                if (isPinned) return;
+                clearTimeout(popupHideTimer);
+                popupHideTimer = setTimeout(() => {
+                    if (!isPinned) {
+                        const popup = document.getElementById('sectionPopup');
+                        if (popup) popup.style.display = 'none';
+                    }
+                }, 400);
+            }
+
+            function cancelHidePopup() {
+                clearTimeout(popupHideTimer);
+            }
+
             (function initSectionPopup() {
                 const hitbox = document.getElementById('highlightHitbox');
                 const popup = document.getElementById('sectionPopup');
                 const popupImg = document.getElementById('popupCropImg');
                 const popupTitle = document.getElementById('popupTitle');
 
-                hitbox.addEventListener('mouseenter', function(e) {
+                function openPopup(e) {
                     if (!currentMeta) return;
+                    cancelHidePopup();
                     popupTitle.innerText = currentMeta.anchor_id || 'Highlighted Section';
-                    popupImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(currentMeta.anchor_id)}`;
-                    
-                    // Calculate pop-up coordinates near the cursor but staying within screen bounds
-                    popup.style.display = 'block';
-                    positionPopup(e);
+                    const cropUrl = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(currentMeta.anchor_id)}`;
+                    if (popupImg.src !== cropUrl && !popupImg.src.endsWith(cropUrl)) {
+                        popupImg.src = cropUrl;
+                    }
+                    applyZoom();
+
+                    // Only compute position if popup is currently hidden to avoid jumping/chasing
+                    if (popup.style.display !== 'block') {
+                        popup.style.display = 'block';
+                        positionPopup(e);
+                    }
+                }
+
+                hitbox.addEventListener('mouseenter', openPopup);
+                hitbox.addEventListener('mouseleave', scheduleHidePopup);
+
+                // Clicking the highlight hitbox pins the popup
+                hitbox.addEventListener('click', function(e) {
+                    openPopup(e);
+                    isPinned = true;
+                    updatePinUI();
                 });
 
-                hitbox.addEventListener('mousemove', function(e) {
-                    positionPopup(e);
-                });
+                // When cursor enters the popup itself, cancel any hide timer so user can scroll / interact
+                popup.addEventListener('mouseenter', cancelHidePopup);
+                popup.addEventListener('mouseleave', scheduleHidePopup);
 
-                hitbox.addEventListener('mouseleave', function() {
-                    popup.style.display = 'none';
+                // Close on Escape key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        closeSectionPopup();
+                    }
                 });
 
                 function positionPopup(e) {
-                    const margin = 24;
+                    const popW = Math.min(740, window.innerWidth - 32);
+                    popup.style.width = popW + 'px';
+
+                    const margin = 20;
+                    // Determine if cursor is on the right or left half of screen
                     const isCursorOnRight = e.clientX > (window.innerWidth / 2);
-                    
-                    let popW, left;
+                    let left;
                     if (isCursorOnRight) {
-                        const spaceOnLeft = e.clientX - margin - 20;
-                        popW = Math.min(1150, Math.max(700, spaceOnLeft));
                         left = e.clientX - popW - margin;
-                        if (left < 20) {
-                            left = 20;
-                            popW = e.clientX - left - margin;
-                        }
+                        if (left < 16) left = 16;
                     } else {
-                        const spaceOnRight = window.innerWidth - e.clientX - margin - 20;
-                        popW = Math.min(1150, Math.max(700, spaceOnRight));
                         left = e.clientX + margin;
-                        if (left + popW > window.innerWidth - 20) {
-                            popW = window.innerWidth - 20 - left;
+                        if (left + popW > window.innerWidth - 16) {
+                            left = window.innerWidth - 16 - popW;
                         }
                     }
-                    
-                    const popH = popup.offsetHeight || 520;
+
+                    const popH = popup.offsetHeight || 480;
                     let top = e.clientY - (popH / 2);
-                    if (top < 20) top = 20;
-                    if (top + popH > window.innerHeight - 20) {
-                        top = Math.max(20, window.innerHeight - popH - 20);
+                    if (top < 16) top = 16;
+                    if (top + popH > window.innerHeight - 16) {
+                        top = Math.max(16, window.innerHeight - popH - 16);
                     }
-                    
-                    popup.style.width = Math.round(popW) + 'px';
+
                     popup.style.left = Math.round(left) + 'px';
                     popup.style.top = Math.round(top) + 'px';
                 }
@@ -777,6 +885,7 @@ def index_page():
             }
 
             async function startUrlResolution() {
+                closeSectionPopup();
                 const urlInput = document.getElementById('paperUrl');
                 const rawUrl = urlInput.value.trim();
                 if (!rawUrl) {
@@ -910,6 +1019,7 @@ def index_page():
             }
 
             async function startAppraisal() {
+                closeSectionPopup();
                 const fileInput = document.getElementById('pdfFile');
                 if (!fileInput.files[0]) {
                     alert('Please select a PDF file to appraise.');
@@ -983,10 +1093,23 @@ def index_page():
                     pageBadge.classList.remove('hidden');
                     snippetText.innerText = meta.text;
                     snippetBox.classList.remove('hidden');
+
+                    // If popup is pinned, update it to the new anchor
+                    if (isPinned) {
+                        const popupTitle = document.getElementById('popupTitle');
+                        const popupImg = document.getElementById('popupCropImg');
+                        if (popupTitle) popupTitle.innerText = anchor;
+                        if (popupImg) popupImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(anchor)}`;
+                    } else {
+                        const popup = document.getElementById('sectionPopup');
+                        if (popup) popup.style.display = 'none';
+                    }
                 } else {
                     currentMeta = null;
                     pageBadge.classList.add('hidden');
                     snippetBox.classList.add('hidden');
+                    const popup = document.getElementById('sectionPopup');
+                    if (popup) popup.style.display = 'none';
                 }
 
                 // Load full page image with highlight
