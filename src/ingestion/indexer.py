@@ -11,12 +11,14 @@ class CoordinateAnchor(BaseModel):
     index: int
     text: str
     page_number: int
+    bbox: Optional[List[float]] = None  # [x0, y0, x1, y1] on the page
 
 class IndexedDocument(BaseModel):
     filename: str
     doc_header: str
     sections: Dict[str, List[CoordinateAnchor]] = Field(default_factory=dict)
     all_anchors: Dict[str, str] = Field(default_factory=dict)  # anchor_id -> text
+    anchor_metadata: Dict[str, CoordinateAnchor] = Field(default_factory=dict)  # anchor_id -> CoordinateAnchor
     raw_text: str = ""
 
 def clean_text(text: str) -> str:
@@ -83,6 +85,15 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     doc_header = " ".join(header_lines[:15])[:1500]
     indexed_doc.doc_header = doc_header
     indexed_doc.all_anchors["[Doc_Header]"] = doc_header
+    indexed_doc.anchor_metadata["[Doc_Header]"] = CoordinateAnchor(
+        anchor_id="[Doc_Header]",
+        section="Header",
+        item_type="header",
+        index=0,
+        text=doc_header,
+        page_number=1,
+        bbox=[30.0, 30.0, 560.0, 200.0]
+    )
     
     for page_idx, page in enumerate(doc):
         page_num = page_idx + 1
@@ -139,13 +150,15 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                 item_type=item_type,
                 index=idx,
                 text=block_text,
-                page_number=page_num
+                page_number=page_num,
+                bbox=[float(b[0]), float(b[1]), float(b[2]), float(b[3])]
             )
             
             if current_section not in indexed_doc.sections:
                 indexed_doc.sections[current_section] = []
             indexed_doc.sections[current_section].append(anchor_obj)
             indexed_doc.all_anchors[anchor_id] = block_text
+            indexed_doc.anchor_metadata[anchor_id] = anchor_obj
             
     indexed_doc.raw_text = clean_text("\n\n".join(full_text_accumulator))
     return indexed_doc
