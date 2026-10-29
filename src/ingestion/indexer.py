@@ -12,6 +12,9 @@ class CoordinateAnchor(BaseModel):
     text: str
     page_number: int
     bbox: Optional[List[float]] = None  # [x0, y0, x1, y1] on the page
+    overflow_page: Optional[int] = None
+    overflow_bbox: Optional[List[float]] = None
+    overflow_text: Optional[str] = None
 
 class IndexedDocument(BaseModel):
     filename: str
@@ -160,6 +163,40 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             indexed_doc.all_anchors[anchor_id] = block_text
             indexed_doc.anchor_metadata[anchor_id] = anchor_obj
             
+    # Post-process: Check for paragraphs ending mid-sentence that overflow to next page
+    for i in range(len(doc) - 1):
+        p_curr = i + 1
+        p_next = i + 2
+        
+        # Find paragraph anchors on current page
+        anchors_on_curr = [a for a in indexed_doc.anchor_metadata.values() if a.page_number == p_curr and a.item_type == "para"]
+        if not anchors_on_curr:
+            continue
+            
+        # Check all paragraphs on the page that end without terminal punctuation
+        for candidate in anchors_on_curr:
+            t = candidate.text.strip()
+            # If line ends without period, question mark, exclamation point, or colon
+            if t and not re.search(r'[\.\?!:]["\'\]\)]*$', t):
+                # Search next page for the continuation block
+                blocks_next = doc[i + 1].get_text("blocks")
+                for b_next in blocks_next:
+                    b_text = clean_text(b_next[4])
+                    # Skip running header, volume number, and page numbers
+                    if not b_text or len(b_text) < 10 or re.match(r'^(?:Vol\.|GeroScience|\d{3,}|\d+\s+\d+)', b_text):
+                        continue
+                    
+                    # If this block continues the sentence (e.g. starts with lowercase or continuation word)
+                    candidate.overflow_page = p_next
+                    candidate.overflow_bbox = [float(b_next[0]), float(b_next[1]), float(b_next[2]), float(b_next[3])]
+                    candidate.overflow_text = b_text
+                    
+                    # Merge text so downstream readers get the complete sentence
+                    merged_text = f"{candidate.text} {b_text}"
+                    candidate.text = merged_text
+                    indexed_doc.all_anchors[candidate.anchor_id] = merged_text
+                    break
+
     indexed_doc.raw_text = clean_text("\n\n".join(full_text_accumulator))
     return indexed_doc
 

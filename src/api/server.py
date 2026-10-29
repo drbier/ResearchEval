@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import pymupdf
+from PIL import Image
 
 from src.ingestion.indexer import parse_and_index_pdf, IndexedDocument
 from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL
@@ -102,7 +103,7 @@ def view_anchor_image(
     filename: str = Query(...),
     anchor: str = Query(...)
 ):
-    """Render a high-resolution PNG of the PDF page with the anchor bounding box highlighted."""
+    """Render a continuous image showing the anchor page plus the subsequent page if there is an overflow."""
     file_path = os.path.join(UPLOAD_DIR, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Source PDF file not found.")
@@ -121,26 +122,55 @@ def view_anchor_image(
     page_idx = max(0, min(len(doc) - 1, meta.page_number - 1))
     page = doc[page_idx]
     
-    # If a bounding box exists, apply a bright translucent yellow highlight
+    # Highlight on current page
     if meta.bbox and len(meta.bbox) == 4:
         rect = pymupdf.Rect(meta.bbox[0], meta.bbox[1], meta.bbox[2], meta.bbox[3])
         annot = page.add_highlight_annot(rect)
         annot.set_colors(stroke=(1.0, 0.85, 0.0))  # Vivid golden amber highlight
         annot.update()
         
-    # Render at crisp 200 DPI for high legibility
-    pix = page.get_pixmap(dpi=200)
-    img_bytes = pix.tobytes("png")
-    doc.close()
+    pix1 = page.get_pixmap(dpi=150)
+    img1 = Image.open(io.BytesIO(pix1.tobytes("png")))
     
-    return Response(content=img_bytes, media_type="image/png")
+    # Check if this paragraph overflows to next page OR if user should see the adjacent page for context
+    overflow_p = meta.overflow_page
+    next_page_idx = page_idx + 1 if (overflow_p or page_idx + 1 < len(doc)) else None
+    
+    if next_page_idx is not None and next_page_idx < len(doc):
+        page_next = doc[next_page_idx]
+        if meta.overflow_bbox and len(meta.overflow_bbox) == 4:
+            rect2 = pymupdf.Rect(meta.overflow_bbox[0], meta.overflow_bbox[1], meta.overflow_bbox[2], meta.overflow_bbox[3])
+            annot2 = page_next.add_highlight_annot(rect2)
+            annot2.set_colors(stroke=(1.0, 0.85, 0.0))
+            annot2.update()
+            
+        pix2 = page_next.get_pixmap(dpi=150)
+        img2 = Image.open(io.BytesIO(pix2.tobytes("png")))
+        
+        # Stitch pages vertically with a clean divider
+        divider_h = 16
+        stitched_w = max(img1.width, img2.width)
+        stitched_h = img1.height + img2.height + divider_h
+        stitched = Image.new("RGB", (stitched_w, stitched_h), (226, 232, 240)) # slate-200 divider
+        stitched.paste(img1, (0, 0))
+        stitched.paste(img2, (0, img1.height + divider_h))
+        
+        buf = io.BytesIO()
+        stitched.save(buf, format="PNG")
+        doc.close()
+        return Response(content=buf.getvalue(), media_type="image/png")
+    else:
+        buf = io.BytesIO()
+        img1.save(buf, format="PNG")
+        doc.close()
+        return Response(content=buf.getvalue(), media_type="image/png")
 
 @app.get("/view-anchor-crop")
 def view_anchor_crop(
     filename: str = Query(...),
     anchor: str = Query(...)
 ):
-    """Render an ultra-clear, zoomed crop of specifically the highlighted paragraph."""
+    """Render the full paragraph crop, stitching both pages if the sentence overflows."""
     file_path = os.path.join(UPLOAD_DIR, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Source PDF file not found.")
@@ -159,26 +189,63 @@ def view_anchor_crop(
     page_idx = max(0, min(len(doc) - 1, meta.page_number - 1))
     page = doc[page_idx]
     
+    crops = []
+    
     if meta.bbox and len(meta.bbox) == 4:
         rect = pymupdf.Rect(meta.bbox[0], meta.bbox[1], meta.bbox[2], meta.bbox[3])
-        # Add a subtle highlight
         annot = page.add_highlight_annot(rect)
         annot.set_colors(stroke=(1.0, 0.9, 0.2))
         annot.update()
-        # Generous padding around the box for context
         crop_rect = pymupdf.Rect(
-            max(0, rect.x0 - 25),
-            max(0, rect.y0 - 20),
-            min(page.rect.width, rect.x1 + 25),
-            min(page.rect.height, rect.y1 + 20)
+            max(0, rect.x0 - 20),
+            max(0, rect.y0 - 15),
+            min(page.rect.width, rect.x1 + 20),
+            min(page.rect.height, rect.y1 + 15)
         )
-        pix = page.get_pixmap(clip=crop_rect, dpi=250)
-    else:
-        pix = page.get_pixmap(dpi=200)
+        pix1 = page.get_pixmap(clip=crop_rect, dpi=250)
+        crops.append(Image.open(io.BytesIO(pix1.tobytes("png"))))
         
-    img_bytes = pix.tobytes("png")
+    # If it overflowed onto next page, crop the continuation block too!
+    if meta.overflow_page and meta.overflow_bbox and len(meta.overflow_bbox) == 4:
+        p_next_idx = meta.overflow_page - 1
+        if p_next_idx < len(doc):
+            p_next = doc[p_next_idx]
+            rect2 = pymupdf.Rect(meta.overflow_bbox[0], meta.overflow_bbox[1], meta.overflow_bbox[2], meta.overflow_bbox[3])
+            annot2 = p_next.add_highlight_annot(rect2)
+            annot2.set_colors(stroke=(1.0, 0.9, 0.2))
+            annot2.update()
+            crop_rect2 = pymupdf.Rect(
+                max(0, rect2.x0 - 20),
+                max(0, rect2.y0 - 15),
+                min(p_next.rect.width, rect2.x1 + 20),
+                min(p_next.rect.height, rect2.y1 + 15)
+            )
+            pix2 = p_next.get_pixmap(clip=crop_rect2, dpi=250)
+            crops.append(Image.open(io.BytesIO(pix2.tobytes("png"))))
+            
     doc.close()
-    return Response(content=img_bytes, media_type="image/png")
+    
+    if not crops:
+        pix = page.get_pixmap(dpi=200)
+        return Response(content=pix.tobytes("png"), media_type="image/png")
+        
+    if len(crops) == 1:
+        buf = io.BytesIO()
+        crops[0].save(buf, format="PNG")
+        return Response(content=buf.getvalue(), media_type="image/png")
+    else:
+        # Stitch both parts together vertically with an indicator line
+        w = max(c.width for c in crops)
+        h = sum(c.height for c in crops) + 24
+        stitched = Image.new("RGB", (w, h), (255, 255, 255))
+        y_offset = 0
+        for i, c in enumerate(crops):
+            stitched.paste(c, (0, y_offset))
+            y_offset += c.height + 24
+            
+        buf = io.BytesIO()
+        stitched.save(buf, format="PNG")
+        return Response(content=buf.getvalue(), media_type="image/png")
 
 @app.get("/view-pdf")
 def view_pdf(filename: str = Query(...)):
