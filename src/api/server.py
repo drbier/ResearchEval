@@ -83,9 +83,12 @@ async def appraise_paper(
         for aid, meta in indexed.anchor_metadata.items():
             anchor_data[aid] = {
                 "page": meta.page_number,
+                "page_width": meta.page_width,
+                "page_height": meta.page_height,
                 "section": meta.section,
                 "text": meta.text[:250],
-                "bbox": meta.bbox
+                "bbox": meta.bbox,
+                "has_overflow": bool(meta.overflow_page)
             }
             
         result["filename"] = file.filename
@@ -300,25 +303,25 @@ def index_page():
             #highlightHitbox {
                 position: absolute;
                 cursor: pointer;
-                border: 2px dashed rgba(2, 132, 199, 0.6);
-                background-color: rgba(2, 132, 199, 0.05);
-                border-radius: 4px;
-                transition: all 0.15s ease;
-                z-index: 20;
+                border: 2.5px solid #0284c7;
+                background-color: transparent;
+                border-radius: 6px;
+                transition: box-shadow 0.15s ease;
+                z-index: 25;
+                pointer-events: auto;
             }
             #highlightHitbox:hover {
-                border-color: #0284c7;
-                background-color: rgba(2, 132, 199, 0.12);
+                box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.25);
             }
             #sectionPopup {
                 position: fixed;
                 display: none;
                 z-index: 9999;
-                max-width: 580px;
+                max-width: 620px;
                 background: #ffffff;
                 border: 2px solid #0284c7;
                 border-radius: 12px;
-                box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.35), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.35), 0 10px 20px -5px rgba(0, 0, 0, 0.15);
                 overflow: hidden;
                 pointer-events: none;
                 animation: popIn 0.15s ease-out;
@@ -536,27 +539,36 @@ def index_page():
             })();
 
             function repositionHitbox() {
-                if (!currentMeta || !currentMeta.bbox) return;
+                if (!currentMeta || !currentMeta.bbox) {
+                    const hitbox = document.getElementById('highlightHitbox');
+                    if (hitbox) hitbox.style.display = 'none';
+                    return;
+                }
                 const img = document.getElementById('highlightedImage');
                 const hitbox = document.getElementById('highlightHitbox');
                 if (!img || img.naturalWidth === 0) return;
 
-                // PDF standard points to rendered image scaling
-                // PyMuPDF page standard 72 pt width vs rendered img naturalWidth at 200 DPI
-                // Calculate actual scale ratio
-                const scaleX = img.clientWidth / (img.naturalWidth / (200 / 72));
-                const scaleY = img.clientHeight / (img.naturalHeight / (200 / 72));
+                // When consecutive pages are stitched, naturalHeight reflects both pages + 16px divider
+                // Calculate exact single page dimensions
+                const pWidth = currentMeta.page_width || 547.0;
+                const pHeight = currentMeta.page_height || 737.0;
+
+                // Scale factor from PDF points (72 DPI) to rendered image natural pixels (150 DPI)
+                const ptToPx = img.naturalWidth / pWidth;
+                
+                // CSS scaling from natural image dimensions to client display width/height
+                const cssScale = img.clientWidth / img.naturalWidth;
 
                 const bbox = currentMeta.bbox;
-                const left = bbox[0] * scaleX;
-                const top = bbox[1] * scaleY;
-                const width = (bbox[2] - bbox[0]) * scaleX;
-                const height = (bbox[3] - bbox[1]) * scaleY;
+                const left = bbox[0] * ptToPx * cssScale;
+                const top = bbox[1] * ptToPx * cssScale;
+                const width = (bbox[2] - bbox[0]) * ptToPx * cssScale;
+                const height = (bbox[3] - bbox[1]) * ptToPx * cssScale;
 
-                hitbox.style.left = left + 'px';
-                hitbox.style.top = top + 'px';
-                hitbox.style.width = width + 'px';
-                hitbox.style.height = height + 'px';
+                hitbox.style.left = Math.max(0, left - 4) + 'px';
+                hitbox.style.top = Math.max(0, top - 3) + 'px';
+                hitbox.style.width = (width + 8) + 'px';
+                hitbox.style.height = (height + 6) + 'px';
                 hitbox.style.display = 'block';
             }
 

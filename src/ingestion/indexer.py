@@ -11,6 +11,8 @@ class CoordinateAnchor(BaseModel):
     index: int
     text: str
     page_number: int
+    page_width: float = 595.0
+    page_height: float = 842.0
     bbox: Optional[List[float]] = None  # [x0, y0, x1, y1] on the page
     overflow_page: Optional[int] = None
     overflow_bbox: Optional[List[float]] = None
@@ -95,6 +97,8 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         index=0,
         text=doc_header,
         page_number=1,
+        page_width=float(doc[0].rect.width) if len(doc) > 0 else 595.0,
+        page_height=float(doc[0].rect.height) if len(doc) > 0 else 842.0,
         bbox=[30.0, 30.0, 560.0, 200.0]
     )
     
@@ -154,6 +158,8 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                 index=idx,
                 text=block_text,
                 page_number=page_num,
+                page_width=float(page.rect.width),
+                page_height=float(page.rect.height),
                 bbox=[float(b[0]), float(b[1]), float(b[2]), float(b[3])]
             )
             
