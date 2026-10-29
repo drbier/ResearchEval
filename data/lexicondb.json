@@ -1,0 +1,75 @@
+[
+  {
+    "term": "Hazard Ratio (HR)",
+    "definition": "The relative rate of an event occurring in the experimental group compared with the control group at any specific point in time across the study period.",
+    "formula": "HR = Hazard(Treatment) / Hazard(Control)",
+    "critical_caveat": "The Hazard Ratio assumes proportional hazards (constant relative risk over time). If survival curves cross or separate with a substantial delay, the proportional hazards assumption fails, and a single summary HR is mathematically misleading. Restricted Mean Survival Time (RMST) or milestone survival rates should be examined."
+  },
+  {
+    "term": "Relative Risk (RR) vs. Odds Ratio (OR)",
+    "definition": "Relative Risk (Risk Ratio) is the ratio of the probability of an outcome in an exposed group to the probability of the outcome in an unexposed group. The Odds Ratio is the ratio of odds of an event occurring in one group compared to another.",
+    "formula": "RR = [a / (a + b)] / [c / (c + d)]; OR = (a * d) / (b * c)",
+    "critical_caveat": "The Odds Ratio substantially overestimates the Relative Risk when the baseline outcome incidence is common (> 10%). Clinicians must avoid interpreting Odds Ratios as Relative Risks in high-incidence scenarios."
+  },
+  {
+    "term": "Absolute Risk Reduction (ARR) & Number Needed to Treat (NNT)",
+    "definition": "ARR is the arithmetic difference in event rates between control and experimental groups. NNT represents the estimated number of patients who need to receive the experimental treatment rather than control to prevent one additional adverse outcome.",
+    "formula": "ARR = CER - EER; NNT = 1 / ARR (rounded up to the nearest whole integer)",
+    "critical_caveat": "Relative Risk Reductions (e.g. '50% reduction in mortality') often exaggerate clinical utility in rare diseases. An ARR from 2% down to 1% is a 50% relative reduction but has an NNT of 100. Always demand absolute risk metrics and finite timeframes."
+  },
+  {
+    "term": "Heterogeneity (Higgins I^2 & Cochran Q)",
+    "definition": "In meta-analyses, Higgins I^2 describes the percentage of total variation across studies that is due to true between-study heterogeneity rather than random sampling error.",
+    "formula": "I^2 = [(Q - df) / Q] * 100% (where Q is Cochran's heterogeneity statistic and df is degrees of freedom)",
+    "critical_caveat": "An I^2 value above 50% indicates substantial heterogeneity, and above 75% indicates considerable heterogeneity. Pooling disparate clinical trials with a fixed-effect model under high I^2 is statistically invalid; random-effects modeling and meta-regression exploration of heterogeneity sources are mandatory."
+  },
+  {
+    "term": "Minimal Important Difference (MID / MCID)",
+    "definition": "The smallest difference in score in an outcome of interest that informed patients or clinicians perceive as beneficial and that would mandate a change in patient management.",
+    "formula": "Determined via Anchor-based methods (e.g. Global Rating of Change) or Distribution-based methods (e.g. 0.5 * baseline Standard Deviation)",
+    "critical_caveat": "Statistical significance (p < 0.05) does NOT equate to clinical relevance. In large sample sizes, a tiny, clinically meaningless 1-point change on a 100-point symptom scale can reach statistical significance but fails to provide noticeable patient benefit."
+  },
+  {
+    "term": "Intention-to-Treat (ITT) vs. Per-Protocol (PP)",
+    "definition": "ITT analyzes all randomized participants according to the group to which they were originally assigned, regardless of whether they adhered to or received the intervention. PP restricts analysis strictly to participants who fully complied with protocol criteria.",
+    "formula": "ITT: N_randomized; PP: N_compliant_evaluable",
+    "critical_caveat": "In superiority trials, ITT provides a conservative, pragmatic estimate preserving baseline randomization. In non-inferiority trials, however, ITT biases results toward the null (making treatments look identical and falsely declaring non-inferiority). Therefore, non-inferiority trials MUST report concordant results in BOTH ITT and PP populations."
+  },
+  {
+    "term": "Non-Inferiority Margin (Delta)",
+    "definition": "The maximum clinically acceptable difference between the standard therapy and the experimental therapy that allows the experimental therapy to still be considered non-inferior.",
+    "formula": "Null Hypothesis H0: (Treatment - Control) >= Delta (for harmful endpoints)",
+    "critical_caveat": "The non-inferiority margin must be pre-specified based on historical trial data establishing the efficacy of the active control over placebo. If Delta is chosen too wide, a truly inferior, ineffective drug can be inappropriately approved ('biocreep')."
+  },
+  {
+    "term": "iRECIST (iUPD vs. iCPD)",
+    "definition": "Consensus modified response criteria for cancer immunotherapy trials to capture atypical immune response dynamics, distinguishing pseudo-progression from true disease progression.",
+    "formula": "iUPD = Immune Unconfirmed Progressive Disease; iCPD = Immune Confirmed Progressive Disease",
+    "critical_caveat": "Tumor infiltration by immune cells can cause transient swelling or appear as new lesions ('pseudo-progression'). Meeting RECIST 1.1 progression is classified in iRECIST as iUPD and requires a confirmatory scan 4-8 weeks later while the patient remains clinically stable to confirm true progression (iCPD) before discontinuing therapy."
+  },
+  {
+    "term": "Predictive vs. Prognostic Biomarker",
+    "definition": "A prognostic biomarker forecasts patient clinical outcome or disease natural history regardless of the therapy received. A predictive biomarker indicates the likelihood of therapeutic benefit from a specific treatment compared with another treatment.",
+    "formula": "Prognostic: Main effect in statistical regression; Predictive: Treatment-by-Biomarker interaction term (p-interaction < 0.05)",
+    "critical_caveat": "Demonstrating that biomarker-positive patients have better survival on a given drug does NOT prove the marker is predictive—it may simply reflect a benign prognostic biology. Proving predictive utility requires randomized comparisons and formal statistical interaction testing."
+  },
+  {
+    "term": "ctDNA / Liquid Biopsy & VAF",
+    "definition": "Circulating tumor DNA released into plasma by apoptotic/necrotic tumor cells, measured by Variant Allele Fraction (VAF%). Used for minimal residual disease (MRD) detection and genomic profiling.",
+    "formula": "VAF% = (Mutant Allele Reads / Total Allele Reads) * 100",
+    "critical_caveat": "Clonal Hematopoiesis of Indeterminate Potential (CHIP) causes age-related mutations in hematopoietic stem cells (e.g. TP53, DNMT3A, TET2) that are shed into plasma and frequently misidentified as tumor mutations. Matched peripheral blood mononuclear cell (PBMC) sequencing is necessary to eliminate false positives."
+  },
+  {
+    "term": "Post-Progression Crossover & Dilution Bias",
+    "definition": "Occurs when patients assigned to the control arm of a clinical trial are permitted to switch ('cross over') to the experimental treatment after documented disease progression.",
+    "formula": "Statistical adjustment via RPSFT (Rank-Preserving Structural Failure Time) or Two-Stage methods",
+    "critical_caveat": "When substantial crossover occurs (> 20-30%), standard ITT overall survival (OS) analyses are severely diluted, potentially yielding a non-significant OS difference despite substantial efficacy. Unadjusted OS analyses should be scrutinized alongside crossover-adjusted survival models."
+  },
+  {
+    "term": "Incremental Cost-Effectiveness Ratio (ICER) & QALY",
+    "definition": "The ratio of the difference in total monetary costs between two interventions to the difference in their health benefits, measured in Quality-Adjusted Life Years (QALYs).",
+    "formula": "ICER = (Cost_Treatment - Cost_Control) / (QALY_Treatment - QALY_Control)",
+    "critical_caveat": "Economic models are highly sensitive to the assumed time horizon and discount rate (standard 3-5% annually). QALY utilities derived from unvalidated instruments or expert guesses can distort cost-effectiveness, and willingness-to-pay (WTP) thresholds vary widely by jurisdiction ($50k-$150k in the US; £20k-£30k in the UK NICE system)."
+  }
+]
+

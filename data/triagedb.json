@@ -1,0 +1,255 @@
+[
+  {
+    "framework_id": "FW_A",
+    "name": "Superiority Randomized Controlled Trial (RCT)",
+    "description": "Prospective parallel-group or multi-arm randomized interventional trial evaluating whether an experimental therapy is superior to control or placebo.",
+    "triggers": [
+      "randomized",
+      "randomised",
+      "randomly assigned",
+      "double-blind",
+      "placebo-controlled",
+      "superiority",
+      "phase 3",
+      "phase III",
+      "parallel-group"
+    ],
+    "exclusions": [
+      "non-inferiority",
+      "noninferiority",
+      "equivalence",
+      "systematic review",
+      "meta-analysis",
+      "cost-effectiveness",
+      "observational cohort",
+      "retrospective registry"
+    ],
+    "applicable_standards": [
+      "CONSORT 2010",
+      "CONSORT Harms 2022",
+      "Cochrane RoB 2",
+      "JAMA Users' Guides to Therapy"
+    ],
+    "sub_tags": [
+      "+TAG_CONSORT_PRO",
+      "+TAG_BIOMARKER",
+      "+TAG_CROSSOVER",
+      "+TAG_SUBGROUP",
+      "+TAG_SAFETY_HARMS"
+    ]
+  },
+  {
+    "framework_id": "FW_B",
+    "name": "Systematic Review & Meta-Analysis",
+    "description": "Systematic search across medical bibliographic databases with pooled quantitative effect estimates, heterogeneity assessment, and risk of bias synthesis.",
+    "triggers": [
+      "systematic review",
+      "meta-analysis",
+      "pooled analysis",
+      "forest plot",
+      "prisma",
+      "random-effects model",
+      "fixed-effect model",
+      "funnel plot",
+      "egger test"
+    ],
+    "exclusions": [
+      "narrative review",
+      "scoping review without quantitative pooling",
+      "single trial protocol",
+      "individual patient observational study"
+    ],
+    "applicable_standards": [
+      "PRISMA 2020",
+      "AMSTAR 2",
+      "GRADE Handbook",
+      "Cochrane Handbook"
+    ],
+    "sub_tags": [
+      "+TAG_NETWORK_META",
+      "+TAG_IPD_META",
+      "+TAG_HIGH_HETEROGENEITY"
+    ]
+  },
+  {
+    "framework_id": "FW_C",
+    "name": "Observational / Real-World Evidence (RWE)",
+    "description": "Non-interventional observational studies including cohort, case-control, cross-sectional, and electronic health record / claims registry analyses.",
+    "triggers": [
+      "cohort study",
+      "case-control",
+      "cross-sectional",
+      "observational",
+      "real-world evidence",
+      "rwe",
+      "propensity score",
+      "inverse probability weighting",
+      "claims database",
+      "electronic health records",
+      "ehr",
+      "registry data"
+    ],
+    "exclusions": [
+      "randomized allocation",
+      "interventional clinical trial",
+      "in vitro bench study",
+      "single case report"
+    ],
+    "applicable_standards": [
+      "STROBE Statement",
+      "RECORD Statement",
+      "ROBINS-I"
+    ],
+    "sub_tags": [
+      "+TAG_PROPENSITY_MATCHED",
+      "+TAG_IMMORTAL_TIME_RISK",
+      "+TAG_UNMEASURED_CONFOUNDING"
+    ]
+  },
+  {
+    "framework_id": "FW_D",
+    "name": "Biomarker & Diagnostic Accuracy Study",
+    "description": "Studies evaluating predictive or prognostic tumor markers, genomic profiling, ctDNA liquid biopsies, or diagnostic test sensitivity and specificity against reference standards.",
+    "triggers": [
+      "biomarker",
+      "prognostic marker",
+      "predictive marker",
+      "diagnostic accuracy",
+      "sensitivity and specificity",
+      "receiver operating characteristic",
+      "roc",
+      "auc",
+      "positive predictive value",
+      "negative predictive value",
+      "ctdna",
+      "liquid biopsy",
+      "next-generation sequencing",
+      "ngs"
+    ],
+    "exclusions": [
+      "pre-clinical animal model without human clinical correlatives",
+      "pure pharmacokinetic dose-escalation phase 1 without marker evaluation"
+    ],
+    "applicable_standards": [
+      "STARD 2015",
+      "REMARK Guidelines",
+      "QUADAS-2"
+    ],
+    "sub_tags": [
+      "+TAG_LIQUID_BIOPSY_CTDNA",
+      "+TAG_CUTPOINT_OPTIMIZATION",
+      "+TAG_PREDICTIVE_VS_PROGNOSTIC"
+    ]
+  },
+  {
+    "framework_id": "FW_E",
+    "name": "Clinical Trial Protocol & Statistical Analysis Plan",
+    "description": "Methodological specification of planned or ongoing clinical trials prior to study completion, detailing endpoints, sample size calculations, and statistical analysis plans.",
+    "triggers": [
+      "study protocol",
+      "trial design and rationale",
+      "statistical analysis plan",
+      "sap",
+      "spirit statement",
+      "prospective protocol",
+      "planned sample size"
+    ],
+    "exclusions": [
+      "completed trial with published primary efficacy results",
+      "retrospective cohort analysis"
+    ],
+    "applicable_standards": [
+      "SPIRIT 2013 Statement",
+      "SPIRIT-PRO Extension"
+    ],
+    "sub_tags": [
+      "+TAG_MASTER_PROTOCOL",
+      "+TAG_ADAPTIVE_DESIGN",
+      "+TAG_INTERIM_STOPPING_RULES"
+    ]
+  },
+  {
+    "framework_id": "FW_F",
+    "name": "Non-Inferiority & Equivalence RCT",
+    "description": "Randomized controlled trial designed to demonstrate that an experimental treatment is not clinically worse than an active standard control by more than a pre-specified margin.",
+    "triggers": [
+      "non-inferiority",
+      "noninferiority",
+      "non-inferior",
+      "equivalence trial",
+      "non-inferiority margin",
+      "delta margin",
+      "per-protocol analysis",
+      "active control"
+    ],
+    "exclusions": [
+      "superiority-only trial without non-inferiority hypothesis",
+      "uncontrolled single-arm trial"
+    ],
+    "applicable_standards": [
+      "Extended CONSORT for Non-Inferiority Trials",
+      "FDA Non-Inferiority Guidance",
+      "Cuzick & Sasieni Principles"
+    ],
+    "sub_tags": [
+      "+TAG_MARGIN_PRESPECIFICATION",
+      "+TAG_ITT_PP_DIVERGENCE",
+      "+TAG_ASSAY_SENSITIVITY"
+    ]
+  },
+  {
+    "framework_id": "FW_G",
+    "name": "Health Economics & Outcomes Research (HEOR)",
+    "description": "Economic evaluations assessing the value, cost-effectiveness, cost-utility, or budgetary impact of health interventions.",
+    "triggers": [
+      "cost-effectiveness",
+      "cost-utility",
+      "icer",
+      "incremental cost-effectiveness ratio",
+      "qaly",
+      "quality-adjusted life year",
+      "daly",
+      "willingness-to-pay",
+      "markov model",
+      "cheers"
+    ],
+    "exclusions": [
+      "clinical efficacy analysis without cost or economic modeling"
+    ],
+    "applicable_standards": [
+      "CHEERS 2022 Statement",
+      "NICE Reference Case"
+    ],
+    "sub_tags": [
+      "+TAG_DISCOUNTING_HORIZON",
+      "+TAG_PROBABILISTIC_SENSITIVITY",
+      "+TAG_UTILITY_WEIGHT_UNCERTAINTY"
+    ]
+  },
+  {
+    "framework_id": "FW_H",
+    "name": "Narrative Review & Clinical Update",
+    "description": "Non-systematic medical review, expert commentary, or state-of-the-art summary summarizing disease pathophysiology or therapeutic trends without pooled quantitative synthesis.",
+    "triggers": [
+      "narrative review",
+      "review article",
+      "clinical overview",
+      "current concepts",
+      "state-of-the-art",
+      "expert consensus",
+      "perspectives"
+    ],
+    "exclusions": [
+      "quantitative systematic review with PRISMA flow diagram and pooled meta-analysis"
+    ],
+    "applicable_standards": [
+      "SANRA (Scale for Assessment of Narrative Review Articles)"
+    ],
+    "sub_tags": [
+      "+TAG_SEARCH_TRANSPARENCY",
+      "+TAG_CONFLICT_OF_INTEREST",
+      "+TAG_EVIDENCE_SELECTIVITY"
+    ]
+  }
+]
+

@@ -1,0 +1,211 @@
+[
+  {
+    "rule_id": "R_ROB2_D1_RANDOMIZATION",
+    "target_domain": "RoB 2: Randomization Process",
+    "trigger_condition": "framework_id in ['FW_A', 'FW_F']",
+    "citation_source": "Revised Cochrane risk-of-bias tool for randomized trials (RoB 2) Section 4; CONSORT 2010 Items 8a-10",
+    "directional_bias": "Selection Bias (non-concealed allocation overestimates treatment effect by 15-30%)",
+    "appraisal_action": "Audit whether the allocation sequence was truly random and centrally concealed until assignment. Inspect baseline characteristics table for significant prognostic imbalances between arms that suggest failure of randomization."
+  },
+  {
+    "rule_id": "R_ROB2_D2_DEVIATIONS",
+    "target_domain": "RoB 2: Deviations from Intended Interventions",
+    "trigger_condition": "framework_id in ['FW_A', 'FW_F']",
+    "citation_source": "RoB 2 Section 5",
+    "directional_bias": "Performance Bias & Co-intervention Confounding",
+    "appraisal_action": "Assess whether participants, carers, and trial personnel were blinded to intervention allocation. Evaluate if unintended co-interventions or protocol deviations occurred and whether the primary analysis reflects the Intention-to-Treat (ITT) population."
+  },
+  {
+    "rule_id": "R_ROB2_D3_MISSING_DATA",
+    "target_domain": "RoB 2: Missing Outcome Data",
+    "trigger_condition": "framework_id in ['FW_A', 'FW_F']",
+    "citation_source": "RoB 2 Section 6",
+    "directional_bias": "Attrition Bias (informative dropout)",
+    "appraisal_action": "Calculate percentage of patients missing outcome data. If missing data exceeds 5-10% or differs substantially between arms, check if missingness is related to true health status (Missing Not At Random - MNAR) and whether sensitivity imputation (e.g. pattern-mixture or multiple imputation) was performed rather than inappropriate Last Observation Carried Forward (LOCF)."
+  },
+  {
+    "rule_id": "R_ROB2_D4_MEASUREMENT",
+    "target_domain": "RoB 2: Measurement of the Outcome",
+    "trigger_condition": "framework_id in ['FW_A', 'FW_F']",
+    "citation_source": "RoB 2 Section 7",
+    "directional_bias": "Detection / Assessment Bias",
+    "appraisal_action": "Evaluate whether outcome assessors were blinded. For non-blinded trials with subjective outcomes (e.g. pain scores, investigator-assessed tumor response), flag detection bias. For oncology trials, verify if a Blinded Independent Central Review (BICR) confirmed disease progression."
+  },
+  {
+    "rule_id": "R_ROB2_D5_SELECTION_REPORT",
+    "target_domain": "RoB 2: Selection of Reported Results",
+    "trigger_condition": "framework_id in ['FW_A', 'FW_F']",
+    "citation_source": "RoB 2 Section 8",
+    "directional_bias": "Selective Outcome Reporting Bias (p-hacking / post-hoc endpoint switching)",
+    "appraisal_action": "Cross-reference the reported primary and secondary endpoints, cutoff dates, and analysis timepoints against the pre-registered clinical trial protocol (e.g. ClinicalTrials.gov) or published Statistical Analysis Plan (SAP)."
+  },
+  {
+    "rule_id": "R_CONSORT_HARMS_01",
+    "target_domain": "CONSORT Harms 2022: Safety and Toxicity Reporting",
+    "trigger_condition": "framework_id in ['FW_A', 'FW_F'] or tags.contains('+TAG_SAFETY_HARMS')",
+    "citation_source": "CONSORT Harms 2022 Statement (Item 19)",
+    "directional_bias": "Selective Safety Reporting Bias (minimizing drug toxicity)",
+    "appraisal_action": "Demand absolute numbers and percentages for all Grade 3-5 adverse events, treatment-related deaths, and drug discontinuations. Verify whether toxicities were reported for all randomized patients who received >= 1 dose (Safety Population). Audit whether grouping diverse adverse events into broad umbrella terms masked specific organ toxicities."
+  },
+  {
+    "rule_id": "R_CONSORT_PRO_01",
+    "target_domain": "CONSORT-PRO: Patient-Reported Outcomes",
+    "trigger_condition": "tags.contains('+TAG_CONSORT_PRO')",
+    "citation_source": "CONSORT-PRO Extension & Ringash et al. MID Guidelines",
+    "directional_bias": "Attrition Bias / Measurement Invalidation",
+    "appraisal_action": "Examine whether the PRO instrument is validated in the target patient population. Audit compliance and completion rates over longitudinal follow-up (especially at disease progression). Verify whether observed differences meet the a priori Minimally Important Difference (MID / MCID) threshold rather than relying solely on statistical significance (p < 0.05)."
+  },
+  {
+    "rule_id": "R_NI_DUAL_ANALYSIS",
+    "target_domain": "Non-Inferiority: Dual ITT and Per-Protocol Requirement",
+    "trigger_condition": "framework_id == 'FW_F' or tags.contains('+TAG_NON_INFERIORITY')",
+    "citation_source": "Interpreting Results of Noninferiority Trials (Cuzick & Sasieni); Extended CONSORT for Non-Inferiority",
+    "directional_bias": "Bias Toward Equivalence (ITT dilutes treatment contrast, artificially favoring non-inferiority)",
+    "appraisal_action": "Enforce mandatory evaluation of BOTH Per-Protocol (PP) and Intention-to-Treat (ITT) populations. In non-inferiority trials, non-compliance, cross-overs, and protocol dropouts bias results towards the null (making arms look identical). If non-inferiority is demonstrated ONLY in the ITT population but fails or is omitted in the PP population, the non-inferiority conclusion must be challenged."
+  },
+  {
+    "rule_id": "R_NI_MARGIN_RATIONALE",
+    "target_domain": "Non-Inferiority: Margin Selection & Retention of Control Efficacy",
+    "trigger_condition": "framework_id == 'FW_F'",
+    "citation_source": "FDA Guidance on Non-Inferiority; Cuzick & Sasieni 2022",
+    "directional_bias": "Assay Sensitivity Bias & Biocreep",
+    "appraisal_action": "Audit the pre-specified non-inferiority margin (Delta). Verify whether the margin was justified statistically and clinically based on historical superiority data of the active control vs placebo. Confirm that the upper 95% confidence interval of the effect difference does not exceed Delta, ensuring retention of at least 50% of the active comparator's established benefit."
+  },
+  {
+    "rule_id": "R_CROSSOVER_DILUTION",
+    "target_domain": "Oncology Endpoints: Overall Survival Dilution via Post-Progression Crossover",
+    "trigger_condition": "tags.contains('+TAG_CROSSOVER')",
+    "citation_source": "Approaches to Assessment of Overall Survival in Oncology Trials",
+    "directional_bias": "Dilution Bias (underestimating true OS benefit of active therapy)",
+    "appraisal_action": "Check if control arm patients crossed over to the experimental drug or active subsequent lines upon disease progression. If crossover exceeded 20-30%, standard intention-to-treat log-rank testing severely underestimates the true OS hazard ratio. Evaluate whether statistical adjustment models (e.g. Rank-Preserving Structural Failure Time [RPSFT] or two-stage estimation) were reported."
+  },
+  {
+    "rule_id": "R_SURROGATE_PFS_OS",
+    "target_domain": "Oncology Endpoints: Progression-Free Survival vs Overall Survival",
+    "trigger_condition": "framework_id in ['FW_A', 'FW_F'] and tags.contains('+TAG_ONCOLOGY')",
+    "citation_source": "FDA Oncology Endpoints Guidance; Users' Guides to Medical Literature",
+    "directional_bias": "Surrogate Validation Bias",
+    "appraisal_action": "Examine whether statistically significant progression-free survival (PFS) translates into a demonstrable overall survival (OS) benefit or meaningful health-related quality of life improvement. Note potential dissociation between PFS and OS."
+  },
+  {
+    "rule_id": "R_IRECIST_PSEUDOPROGRESSION",
+    "target_domain": "Immune Response: iRECIST vs RECIST 1.1",
+    "trigger_condition": "tags.contains('+TAG_IMMUNOTHERAPY')",
+    "citation_source": "iRECIST guidelines for response criteria in trials testing immunotherapeutics (Lancet Oncol)",
+    "directional_bias": "Pseudo-progression Misclassification",
+    "appraisal_action": "In checkpoint inhibitor trials, verify whether initial tumor increase was categorized as unconfirmed progressive disease (iUPD). Confirm that protocol mandated repeat imaging 4-8 weeks later to verify confirmed progression (iCPD) before patient discontinuation, preventing premature drug withdrawal due to transient immune-cell infiltration."
+  },
+  {
+    "rule_id": "R_PROPORTIONAL_HAZARDS",
+    "target_domain": "Survival Statistics: Proportional Hazards Assumption in Cox Models",
+    "trigger_condition": "framework_id in ['FW_A', 'FW_C', 'FW_F']",
+    "citation_source": "Kaplan-Meier & Cox Regression Guides (Bland & Altman)",
+    "directional_bias": "Model Misspecification Bias",
+    "appraisal_action": "Inspect Kaplan-Meier curves for crossing survival curves or delayed separation (typical in immuno-oncology). Crossing or delayed separation violates the proportional hazards assumption of the Cox model, rendering a single constant Hazard Ratio (HR) inaccurate. Check if restricted mean survival time (RMST) or milestone survival rates were provided."
+  },
+  {
+    "rule_id": "R_SUBGROUP_INTERACTION",
+    "target_domain": "Statistical Multiplicity: Subgroup Claims & Multiplicity Correction",
+    "trigger_condition": "tags.contains('+TAG_SUBGROUP')",
+    "citation_source": "Multiple Significance Tests & Bonferroni (Bland & Altman)",
+    "directional_bias": "Type I Error Inflation (False Positive Finding via Data Dredging)",
+    "appraisal_action": "Audit any subgroup claims of benefit. Require a formal statistical test for interaction (p-interaction). Downgrade any subgroup findings that were post-hoc, underpowered, or lacked adjustment for multiple hypothesis testing."
+  },
+  {
+    "rule_id": "R_PRISMA_HETEROGENEITY",
+    "target_domain": "PRISMA 2020: Heterogeneity & Meta-Analytic Model Choice",
+    "trigger_condition": "framework_id == 'FW_B'",
+    "citation_source": "PRISMA 2020 Explanation & Elaboration; Exploring Heterogeneity in Meta-Analysis",
+    "directional_bias": "Inappropriate Data Pooling Bias",
+    "appraisal_action": "Evaluate Cochran's Q test and Higgins I^2 statistic. If I^2 > 50%, substantial heterogeneity exists; pooling studies under a fixed-effect model is invalid. Check whether sources of clinical and methodological heterogeneity were explored via meta-regression or pre-specified subgroup analyses."
+  },
+  {
+    "rule_id": "R_PRISMA_PUB_BIAS",
+    "target_domain": "PRISMA 2020: Small Study Effects & Publication Bias",
+    "trigger_condition": "framework_id == 'FW_B'",
+    "citation_source": "Effect of Publication Bias Magnitude & Direction (Rothstein et al.)",
+    "directional_bias": "Publication / Dissemination Bias (negative trials unpublished)",
+    "appraisal_action": "Assess whether publication bias was evaluated using funnel plot visual inspection and formal statistical tests (e.g. Egger linear regression, Begg rank correlation). Check if search included grey literature, trial registries, and conference abstracts."
+  },
+  {
+    "rule_id": "R_GRADE_CERTAINTY",
+    "target_domain": "GRADE: Quality / Certainty of Evidence Across Outcomes",
+    "trigger_condition": "framework_id == 'FW_B'",
+    "citation_source": "GRADE Handbook",
+    "directional_bias": "Overconfidence in Pooled Effect Estimates",
+    "appraisal_action": "Examine whether a Summary of Findings (SoF) table with GRADE certainty ratings (High, Moderate, Low, Very Low) is provided for each critical patient-important outcome. Audit the 5 downgrade criteria: Risk of Bias, Inconsistency, Indirectness, Imprecision, and Publication Bias."
+  },
+  {
+    "rule_id": "R_STROBE_CONFOUNDING",
+    "target_domain": "STROBE: Confounding in Observational Studies",
+    "trigger_condition": "framework_id == 'FW_C'",
+    "citation_source": "STROBE Explanation & Elaboration (Vandenbroucke et al.)",
+    "directional_bias": "Residual Confounding & Indication Bias",
+    "appraisal_action": "Audit adjustment methods for confounding by indication (e.g. Multivariable Cox regression, Propensity Score matching, Inverse Probability of Treatment Weighting). Check whether sensitivity analyses for unmeasured confounding (e.g. E-value) were reported."
+  },
+  {
+    "rule_id": "R_RECORD_HEALTH_DATA",
+    "target_domain": "RECORD: Routine Electronic Health & Claims Data",
+    "trigger_condition": "framework_id == 'FW_C' and tags.contains('+TAG_EHR_CLAIMS')",
+    "citation_source": "RECORD Statement for Observational Routinely-collected health Data",
+    "directional_bias": "Information / Misclassification Bias",
+    "appraisal_action": "Verify whether validated diagnostic and procedural coding algorithms (ICD-9/10, CPT) were used to define exposure, confounders, and outcomes. Check for missing data in electronic health records and ascertainment of out-of-system events."
+  },
+  {
+    "rule_id": "R_IMMORTAL_TIME",
+    "target_domain": "Pharmacoepidemiology: Immortal Time Bias",
+    "trigger_condition": "framework_id == 'FW_C'",
+    "citation_source": "STROBE Guidance; Suissa Immortal Time Bias Principles",
+    "directional_bias": "Immortal Time Bias (spuriously inflates survival in treated cohort)",
+    "appraisal_action": "Verify whether the time between cohort entry and start of treatment was misclassified as treated follow-up time. Demand time-dependent exposure modeling or landmark analysis to avoid immortal time bias."
+  },
+  {
+    "rule_id": "R_REMARK_OPTIMIZATION",
+    "target_domain": "REMARK: Cut-point Optimization & Overfitting",
+    "trigger_condition": "framework_id == 'FW_D'",
+    "citation_source": "REMARK Explanation & Elaboration (Altman et al.)",
+    "directional_bias": "Optimism Bias / Overfitting",
+    "appraisal_action": "Audit how continuous biomarker cut-points were chosen. If an 'optimal' or data-dependent cut-point was selected to maximize statistical significance without independent validation in a separate holdout cohort, effect sizes are substantially overfitted."
+  },
+  {
+    "rule_id": "R_REMARK_PREDICTIVE_PROGNOSTIC",
+    "target_domain": "REMARK: Distinction Between Predictive and Prognostic Biomarkers",
+    "trigger_condition": "framework_id == 'FW_D' or tags.contains('+TAG_BIOMARKER')",
+    "citation_source": "Predictive and Prognostic Biomarkers in Personalized Medicine; REMARK Item 1",
+    "directional_bias": "Marker Misclassification Confounding",
+    "appraisal_action": "Verify whether the study distinguishes a prognostic biomarker (patient survival regardless of therapy, assessed as a main effect) from a predictive biomarker (identifying patients who benefit specifically from an intervention, strictly requiring a treatment-by-marker interaction test in a randomized trial)."
+  },
+  {
+    "rule_id": "R_CTDNA_TECHNICAL",
+    "target_domain": "Biomarker / Genomics: ctDNA Liquid Biopsy Technical Limits & CHIP",
+    "trigger_condition": "tags.contains('+TAG_LIQUID_BIOPSY_CTDNA')",
+    "citation_source": "Circulating Tumor DNA: A Pan-Cancer Biomarker (Review)",
+    "directional_bias": "False Positive / Negative Genomic Calls",
+    "appraisal_action": "Audit assay Limit of Detection (LOD) and Variant Allele Fraction (VAF%). Verify whether concurrent white blood cell sequencing was conducted to filter out Clonal Hematopoiesis of Indeterminate Potential (CHIP), which frequently causes false-positive somatic mutation calls."
+  },
+  {
+    "rule_id": "R_STARD_ACCURACY",
+    "target_domain": "STARD 2015: Diagnostic Accuracy & Reference Standard",
+    "trigger_condition": "framework_id == 'FW_D' and tags.contains('+TAG_DIAGNOSTIC')",
+    "citation_source": "STARD 2015 List (Bossuyt et al.)",
+    "directional_bias": "Verification Bias & Spectrum Bias",
+    "appraisal_action": "Examine whether all participants received both the index test and the gold reference standard regardless of test result (avoiding partial verification bias). Verify whether readers of the index test were blinded to reference standard results and clinical history."
+  },
+  {
+    "rule_id": "R_CHEERS_HORIZON_DISCOUNT",
+    "target_domain": "CHEERS 2022: Health Economic Modeling Assumptions",
+    "trigger_condition": "framework_id == 'FW_G'",
+    "citation_source": "CHEERS 2022 Statement & QALY Calculation Problems",
+    "directional_bias": "Time Horizon & Discounting Bias",
+    "appraisal_action": "Verify whether the time horizon matches the natural history of the disease (often lifetime for chronic cancer conditions). Check that annual discount rates (typically 3% - 5%) were applied equally to both costs and health outcomes beyond one year. Inspect deterministic and probabilistic sensitivity analysis (PSA)."
+  },
+  {
+    "rule_id": "R_SANRA_NARRATIVE",
+    "target_domain": "SANRA: Quality of Narrative Review Articles",
+    "trigger_condition": "framework_id == 'FW_H'",
+    "citation_source": "SANRA - Scale for Quality Assessment of Narrative Review Articles (Baethge et al.)",
+    "directional_bias": "Subjective Selection Bias & Cherry-Picking",
+    "appraisal_action": "Evaluate the 6 SANRA domains: (1) Justification of importance; (2) Statement of concrete aims; (3) Description of literature search; (4) Referencing consistency; (5) Scientific reasoning and evidence weighting; (6) Appropriate presentation of outcome data. Explicitly note that narrative review assertions cannot replace systematic meta-analyses for clinical efficacy."
+  }
+]
+
