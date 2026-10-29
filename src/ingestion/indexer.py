@@ -87,7 +87,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     # Step 1: Extract Document Header (First ~500 words or Page 1 Top)
     page1_text = doc[0].get_text() if len(doc) > 0 else ""
     header_lines = [l.strip() for l in page1_text.split('\n') if l.strip()]
-    doc_header = " ".join(header_lines[:15])[:1500]
+    doc_header = "\n".join(header_lines[:35])[:2500]
     indexed_doc.doc_header = doc_header
     indexed_doc.all_anchors["[Doc_Header]"] = doc_header
     indexed_doc.anchor_metadata["[Doc_Header]"] = CoordinateAnchor(
@@ -99,7 +99,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         page_number=1,
         page_width=float(doc[0].rect.width) if len(doc) > 0 else 595.0,
         page_height=float(doc[0].rect.height) if len(doc) > 0 else 842.0,
-        bbox=[30.0, 30.0, 560.0, 200.0]
+        bbox=[30.0, 30.0, float(doc[0].rect.width) - 30.0 if len(doc) > 0 else 560.0, 240.0]
     )
     
     for page_idx, page in enumerate(doc):

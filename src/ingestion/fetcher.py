@@ -265,7 +265,7 @@ class PaperFetcher:
                     # Convert structured JATS XML into a clean, searchable PDF
                     filename = f"PMC{pmcid_digits}.pdf"
                     pdf_path = os.path.join(self.upload_dir, filename)
-                    self._generate_pdf_from_jats(root, pdf_path, title)
+                    self._generate_pdf_from_jats(root, pdf_path, title, default_pmcid=f"PMC{pmcid_digits}")
                     
                     return {
                         "status": "full_text_pdf",
@@ -322,6 +322,43 @@ class PaperFetcher:
                 title_el = root.find('.//ArticleTitle')
                 title = ''.join(title_el.itertext()) if title_el is not None else "PubMed Article"
                 
+                # Extract Authors
+                authors = []
+                for a in root.findall('.//Author'):
+                    last = a.find('LastName')
+                    fore = a.find('ForeName')
+                    l_txt = last.text.strip() if last is not None and last.text else ''
+                    f_txt = fore.text.strip() if fore is not None and fore.text else ''
+                    if l_txt or f_txt:
+                        authors.append(f"{f_txt} {l_txt}".strip())
+                authors_str = ", ".join(authors) if authors else "Not specified"
+
+                # Extract Journal
+                j_el = root.find('.//Journal/Title') or root.find('.//Journal/ISOAbbreviation')
+                journal = ''.join(j_el.itertext()).strip() if j_el is not None else "Not specified"
+
+                # Extract Year
+                year = ""
+                y_el = root.find('.//JournalIssue/PubDate/Year') or root.find('.//ArticleDate/Year') or root.find('.//PubDate/Year')
+                if y_el is not None and y_el.text:
+                    year = y_el.text.strip()
+                if not year:
+                    year = "Not specified"
+
+                # Extract DOI
+                doi = ""
+                for aid in root.findall('.//ArticleId'):
+                    if aid.get('IdType') == 'doi' and aid.text:
+                        doi = aid.text.strip()
+
+                meta_dict = {
+                    "authors": authors_str,
+                    "journal": journal,
+                    "year": year,
+                    "doi": doi,
+                    "pmid": pmid
+                }
+                
                 abstract_nodes = root.findall('.//AbstractText')
                 abstract_parts = []
                 for node in abstract_nodes:
@@ -337,7 +374,7 @@ class PaperFetcher:
                     # Create an abstract PDF representation
                     filename = f"PubMed_{pmid}_abstract.pdf"
                     pdf_path = os.path.join(self.upload_dir, filename)
-                    self._create_abstract_pdf(pdf_path, title, abstract_full, f"PMID: {pmid}")
+                    self._create_abstract_pdf(pdf_path, title, abstract_full, meta_dict)
                     
                     return {
                         "status": "abstract_only",
@@ -392,6 +429,20 @@ class PaperFetcher:
 
             title = soup.title.string.strip() if soup.title else "Web Article"
             
+            # Extract meta tags for bibliographic info
+            authors_meta = [m['content'] for m in soup.find_all('meta', {'name': re.compile(r'citation_author', re.I)}) if m.get('content')]
+            j_meta = soup.find('meta', {'name': re.compile(r'citation_journal_title', re.I)})
+            d_meta = soup.find('meta', {'name': re.compile(r'citation_publication_date|citation_date', re.I)})
+            doi_meta = soup.find('meta', {'name': re.compile(r'citation_doi', re.I)})
+            
+            web_meta = {
+                "authors": ", ".join(authors_meta) if authors_meta else "Not specified",
+                "journal": j_meta['content'] if j_meta and j_meta.get('content') else "Web Publication",
+                "year": d_meta['content'][:4] if d_meta and d_meta.get('content') else "",
+                "doi": doi_meta['content'] if doi_meta and doi_meta.get('content') else "",
+                "pmid": ""
+            }
+
             # Extract main article or body text
             article_body = soup.find('article') or soup.find('main') or soup.body
             all_text = article_body.get_text(separator="\n\n") if article_body else ""
@@ -401,7 +452,7 @@ class PaperFetcher:
             if len(words) > 1800:
                 filename = f"html_paper_{abs(hash(webpage_url)) % 1000000}.pdf"
                 pdf_path = os.path.join(self.upload_dir, filename)
-                self._create_text_pdf(pdf_path, title, all_text)
+                self._create_text_pdf(pdf_path, title, all_text, web_meta)
                 return {
                     "status": "full_text_pdf",
                     "pdf_filename": filename,
@@ -414,7 +465,7 @@ class PaperFetcher:
                 # Likely an abstract page / paywalled manuscript
                 filename = f"abstract_{abs(hash(webpage_url)) % 1000000}.pdf"
                 pdf_path = os.path.join(self.upload_dir, filename)
-                self._create_abstract_pdf(pdf_path, title, all_text[:3000], webpage_url)
+                self._create_abstract_pdf(pdf_path, title, all_text[:3000], web_meta)
                 return {
                     "status": "abstract_only",
                     "pdf_filename": filename,
@@ -427,10 +478,59 @@ class PaperFetcher:
         except Exception as e:
             return {"status": "error", "message": f"Failed to access webpage: {str(e)}"}
 
-    def _generate_pdf_from_jats(self, root: ET.Element, output_path: str, title: str):
-        """Construct a clean, coordinate-indexable PDF from PubMed Central JATS XML."""
+    def _generate_pdf_from_jats(self, root: ET.Element, output_path: str, title: str, default_pmcid: str = ""):
+        """Construct a clean, coordinate-indexable PDF from PubMed Central JATS XML with full bibliographic header."""
         doc = pymupdf.open()
         
+        # 1. Extract Full Bibliographic Metadata from JATS XML
+        title_el = root.find('.//article-title')
+        if title_el is not None:
+            clean_title = ''.join(title_el.itertext()).strip()
+            if clean_title:
+                title = clean_title
+
+        authors = []
+        for contrib in root.findall('.//contrib'):
+            if contrib.get('contrib-type') == 'author':
+                name_el = contrib.find('name')
+                if name_el is not None:
+                    sur = name_el.find('surname')
+                    giv = name_el.find('given-names')
+                    s_txt = sur.text.strip() if sur is not None and sur.text else ''
+                    g_txt = giv.text.strip() if giv is not None and giv.text else ''
+                    if s_txt or g_txt:
+                        authors.append(f"{g_txt} {s_txt}".strip())
+        authors_str = ", ".join(authors) if authors else "Not specified"
+
+        j_el = root.find('.//journal-title')
+        if j_el is None:
+            for jid in root.findall('.//journal-id'):
+                if jid.text:
+                    j_el = jid
+                    break
+        journal = ''.join(j_el.itertext()).strip() if j_el is not None else "Not specified"
+
+        year = ""
+        for pd in root.findall('.//pub-date'):
+            y_node = pd.find('year')
+            if y_node is not None and y_node.text:
+                year = y_node.text.strip()
+                break
+        if not year:
+            year = "Not specified"
+
+        doi = ""
+        pmid = ""
+        pmcid = default_pmcid
+        for aid in root.findall('.//article-id'):
+            id_type = aid.get('pub-id-type')
+            if id_type == 'doi' and aid.text:
+                doi = aid.text.strip()
+            elif id_type == 'pmid' and aid.text:
+                pmid = aid.text.strip()
+            elif id_type == 'pmc' and aid.text:
+                pmcid = f"PMC{aid.text.strip()}"
+
         # Collect sections
         sections = []
         abstract_el = root.find('.//abstract')
@@ -448,11 +548,39 @@ class PaperFetcher:
 
         # Render sections across PDF pages
         current_page = doc.new_page(width=595, height=842)
-        y = 50.0
+        y = 45.0
         
-        # Header / Title
-        current_page.insert_text(pymupdf.Point(50, y), title[:120], fontsize=13, fontname="helv", color=(0.1, 0.2, 0.4))
-        y += 35.0
+        # 1. Header Box / Title
+        t_lines = max(1, len(title) // 65 + 1)
+        t_h = t_lines * 16.0 + 8.0
+        current_page.insert_textbox(pymupdf.Rect(50, y, 545, y + t_h), title, fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
+        y += t_h + 4.0
+        
+        # 2. Authors
+        a_lines = max(1, len(f"Authors: {authors_str}") // 80 + 1)
+        a_h = a_lines * 13.0 + 8.0
+        current_page.insert_textbox(pymupdf.Rect(50, y, 545, y + a_h), f"Authors: {authors_str}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
+        y += a_h + 4.0
+        
+        # 3. Journal & Year
+        current_page.insert_text(pymupdf.Point(50, y), f"Journal: {journal} | Year: {year}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))
+        y += 16.0
+        
+        # 4. DOI, PMID, PMC
+        id_parts = []
+        if doi:
+            id_parts.append(f"DOI: {doi}")
+        if pmid:
+            id_parts.append(f"PMID: {pmid}")
+        if pmcid:
+            id_parts.append(f"PMC: {pmcid}")
+        id_line = " | ".join(id_parts) if id_parts else "Source: PubMed Central"
+        current_page.insert_text(pymupdf.Point(50, y), id_line, fontsize=8.0, fontname="helv", color=(0.35, 0.35, 0.35))
+        y += 22.0
+        
+        # Divider line
+        current_page.draw_line(pymupdf.Point(50, y), pymupdf.Point(545, y), color=(0.8, 0.8, 0.8), width=0.75)
+        y += 18.0
         
         for sec_name, content in sections:
             # Section header
@@ -478,37 +606,97 @@ class PaperFetcher:
         doc.save(output_path)
         doc.close()
 
-    def _create_abstract_pdf(self, output_path: str, title: str, abstract_text: str, source_info: str):
-        """Generate a clean single-page PDF containing the abstract."""
+    def _create_abstract_pdf(self, output_path: str, title: str, abstract_text: str, metadata: Any = None):
+        """Generate a clean single-page PDF containing the abstract and complete bibliographic metadata."""
+        if isinstance(metadata, str):
+            metadata = {"journal": metadata}
+        elif metadata is None:
+            metadata = {}
+            
         doc = pymupdf.open()
         page = doc.new_page(width=595, height=842)
         
-        y = 50.0
-        page.insert_text(pymupdf.Point(50, y), "[ABSTRACT-ONLY EVALUATION]", fontsize=10, fontname="helv", color=(0.8, 0.2, 0.1))
+        y = 45.0
+        page.insert_text(pymupdf.Point(50, y), "[ABSTRACT-ONLY EVALUATION]", fontsize=9.5, fontname="helv", color=(0.8, 0.2, 0.1))
         y += 20.0
-        page.insert_text(pymupdf.Point(50, y), title[:130], fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
-        y += 20.0
-        page.insert_text(pymupdf.Point(50, y), source_info[:120], fontsize=8.5, fontname="helv", color=(0.4, 0.4, 0.4))
-        y += 30.0
+        
+        # Title Box
+        t_lines = max(1, len(title) // 65 + 1)
+        t_h = t_lines * 16.0 + 8.0
+        page.insert_textbox(pymupdf.Rect(50, y, 545, y + t_h), title, fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
+        y += t_h + 4.0
+        
+        # Authors
+        authors = metadata.get("authors", "Not specified")
+        a_lines = max(1, len(f"Authors: {authors}") // 80 + 1)
+        a_h = a_lines * 13.0 + 8.0
+        page.insert_textbox(pymupdf.Rect(50, y, 545, y + a_h), f"Authors: {authors}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
+        y += a_h + 4.0
+        
+        # Journal & Year
+        journal = metadata.get("journal", "Not specified")
+        year = metadata.get("year", "Not specified")
+        page.insert_text(pymupdf.Point(50, y), f"Journal: {journal} | Year: {year}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))
+        y += 16.0
+        
+        # DOI / PMID
+        doi = metadata.get("doi", "")
+        pmid = metadata.get("pmid", "")
+        id_parts = []
+        if doi:
+            id_parts.append(f"DOI: {doi}")
+        if pmid:
+            id_parts.append(f"PMID: {pmid}")
+        id_line = " | ".join(id_parts) if id_parts else "Source: PubMed"
+        page.insert_text(pymupdf.Point(50, y), id_line, fontsize=8.0, fontname="helv", color=(0.35, 0.35, 0.35))
+        y += 22.0
+        
+        # Divider line
+        page.draw_line(pymupdf.Point(50, y), pymupdf.Point(545, y), color=(0.8, 0.8, 0.8), width=0.75)
+        y += 18.0
         
         page.insert_text(pymupdf.Point(50, y), "ABSTRACT", fontsize=10.5, fontname="helv", color=(0.2, 0.3, 0.6))
-        y += 20.0
+        y += 18.0
         
-        rect = pymupdf.Rect(50, y, 545, 780)
+        rect = pymupdf.Rect(50, y, 545, 800)
         page.insert_textbox(rect, abstract_text, fontsize=9.5, fontname="helv")
         
         doc.save(output_path)
         doc.close()
 
-    def _create_text_pdf(self, output_path: str, title: str, full_text: str):
-        """Convert scraped full text to readable PDF."""
+    def _create_text_pdf(self, output_path: str, title: str, full_text: str, metadata: Any = None):
+        """Convert scraped full text to readable PDF with bibliographic header."""
+        if isinstance(metadata, str):
+            metadata = {"journal": metadata}
+        elif metadata is None:
+            metadata = {}
+
         doc = pymupdf.open()
         paragraphs = [p.strip() for p in full_text.split("\n\n") if len(p.strip()) > 30]
         
         page = doc.new_page(width=595, height=842)
-        y = 50.0
-        page.insert_text(pymupdf.Point(50, y), title[:120], fontsize=13, fontname="helv")
-        y += 35.0
+        y = 45.0
+        page.insert_textbox(pymupdf.Rect(50, y, 545, y + 42), title, fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
+        y += 46.0
+        
+        authors = metadata.get("authors", "")
+        if authors:
+            page.insert_textbox(pymupdf.Rect(50, y, 545, y + 30), f"Authors: {authors}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
+            y += 32.0
+            
+        journal = metadata.get("journal", "")
+        year = metadata.get("year", "")
+        if journal or year:
+            page.insert_text(pymupdf.Point(50, y), f"Journal: {journal or 'Web Publication'} | Year: {year or 'N/A'}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))
+            y += 18.0
+            
+        doi = metadata.get("doi", "")
+        if doi:
+            page.insert_text(pymupdf.Point(50, y), f"DOI: {doi}", fontsize=8.0, fontname="helv", color=(0.35, 0.35, 0.35))
+            y += 20.0
+            
+        page.draw_line(pymupdf.Point(50, y), pymupdf.Point(545, y), color=(0.8, 0.8, 0.8), width=0.75)
+        y += 18.0
         
         for p in paragraphs:
             if y > 760:

@@ -60,7 +60,8 @@ class SynthesisEngine:
             "4. Provide brief, clear plain-language definitions of key statistical metrics used (e.g., Odds Ratio, Hazard Ratio, I^2).\n"
             "5. In '## Assertive Critical Appraisal': Actively critique the study's methods against the triggered bias frameworks (RoB 2, STROBE, RECORD, REMARK, PRISMA, etc.). Explicitly identify potential failure modes such as unmeasured confounding, reverse causality, survival selection, or lack of independent validation.\n"
             "6. Ground EVERY factual claim, statistic, and methodological observation with an exact inline source coordinate anchor (e.g., [Doc_Header], [Methods, Para 4], [Results, Table 2], [Discussion, Para 12]). Never invent coordinates.\n"
-            "7. STRICT NEGATIVE CONSTRAINTS: NO medical disclaimers, NO conversational greetings, pleasantries, or closing sign-offs, and NO therapeutic practice mandates beyond what the source study evaluated.\n"
+            "7. In '## Bibliographic Data': Accurately extract Title, Authors, Journal, Year, and DOI / PubMed ID from [Doc_Header]. Ground them with [Doc_Header]. If authors, journal, year, or DOI/PMID are present in [Doc_Header], extract them and never state 'Not specified'.\n"
+            "8. STRICT NEGATIVE CONSTRAINTS: NO medical disclaimers, NO conversational greetings, pleasantries, or closing sign-offs, and NO therapeutic practice mandates beyond what the source study evaluated.\n"
         )
         
         # Scoped prompt content
