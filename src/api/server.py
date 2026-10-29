@@ -336,6 +336,19 @@ def index_page():
                 color: #ffffff !important;
                 border-color: #0369a1 !important;
             }
+            /* Classic Live Hyperlink Style for DOI & External Links */
+            #outputMarkdown a, .doi-link {
+                color: #0000ee !important;
+                text-decoration: underline !important;
+                font-weight: 500;
+                cursor: pointer;
+                transition: font-weight 0.1s ease, color 0.1s ease;
+            }
+            #outputMarkdown a:hover, .doi-link:hover {
+                color: #0000cc !important;
+                font-weight: 700 !important;
+                text-decoration: underline !important;
+            }
             /* Draggable resizer styling */
             .resizer {
                 width: 8px;
@@ -986,6 +999,28 @@ def index_page():
                 }
             }
 
+            // Configure Marked.js for external links to open in a new tab by default
+            if (window.marked) {
+                const renderer = new marked.Renderer();
+                renderer.link = function(href, title, text) {
+                    let linkHref = href;
+                    let linkTitle = title;
+                    let linkText = text;
+                    if (typeof href === 'object' && href !== null) {
+                        linkHref = href.href || '';
+                        linkTitle = href.title || '';
+                        linkText = href.text || linkHref;
+                    }
+                    const titleAttr = linkTitle ? ` title="${linkTitle}"` : ' title="Open link in new tab"';
+                    return `<a href="${linkHref}"${titleAttr} target="_blank" rel="noopener noreferrer" class="doi-link">${linkText}</a>`;
+                };
+                if (marked.use) {
+                    marked.use({ renderer: renderer, gfm: true, breaks: true });
+                } else if (marked.setOptions) {
+                    marked.setOptions({ renderer: renderer, gfm: true, breaks: true });
+                }
+            }
+
             function renderAppraisalResults(data) {
                 anchorIndex = data.anchor_index || {};
 
@@ -1002,7 +1037,39 @@ def index_page():
                         const enc = encodeURIComponent(match);
                         return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">${match}</button>`;
                     });
-                    document.getElementById('outputMarkdown').innerHTML = html;
+                    
+                    const container = document.getElementById('outputMarkdown');
+                    container.innerHTML = html;
+
+                    // Ensure all <a> tags open in a new tab and have classic hyperlink style
+                    container.querySelectorAll('a').forEach(a => {
+                        a.setAttribute('target', '_blank');
+                        a.setAttribute('rel', 'noopener noreferrer');
+                        a.classList.add('doi-link');
+                        if (!a.getAttribute('title')) {
+                            a.setAttribute('title', 'Open in new tab');
+                        }
+                    });
+
+                    // Convert any unlinked DOI / PubMed text into live links
+                    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+                    const nodesToReplace = [];
+                    while (walker.nextNode()) {
+                        const node = walker.currentNode;
+                        if (node.parentElement && (node.parentElement.tagName === 'A' || node.parentElement.tagName === 'BUTTON')) continue;
+                        if (/https?:\/\/(?:dx\.)?doi\.org\/[^\s\)]+|10\.\d{4,9}\/[^\s\)]+|https?:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/\d+/i.test(node.nodeValue)) {
+                            nodesToReplace.push(node);
+                        }
+                    }
+
+                    nodesToReplace.forEach(node => {
+                        const span = document.createElement('span');
+                        span.innerHTML = node.nodeValue.replace(/(https?:\/\/(?:dx\.)?doi\.org\/[^\s\)]+)|(10\.\d{4,9}\/[^\s\)]+)|(https?:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/\d+\/?)/gi, function(match, fullDoi, rawDoi, pubmedUrl) {
+                            const url = fullDoi || pubmedUrl || ('https://doi.org/' + rawDoi);
+                            return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="doi-link" title="Open in new tab">${match}</a>`;
+                        });
+                        node.parentNode.replaceChild(span, node);
+                    });
                 } else {
                     document.getElementById('outputMarkdown').innerText = content;
                 }
