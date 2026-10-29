@@ -30,7 +30,9 @@ wheels/
 data/uploads/*
 !data/uploads/.gitkeep
 
-# IDE / OS
+# Reference PDFs (Keep local, do not push to remote repository)
+Reference_papers/
+
 .vscode/
 .idea/
 .DS_Store
