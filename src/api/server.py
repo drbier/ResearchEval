@@ -253,10 +253,10 @@ def view_anchor_crop(
         annot.set_colors(stroke=(1.0, 0.9, 0.2))
         annot.update()
         crop_rect = pymupdf.Rect(
-            max(0, rect.x0 - 24),
-            max(0, rect.y0 - 18),
-            min(page.rect.width, rect.x1 + 24),
-            min(page.rect.height, rect.y1 + 18)
+            max(0, rect.x0 - 10),
+            max(0, rect.y0 - 6),
+            min(page.rect.width, rect.x1 + 10),
+            min(page.rect.height, rect.y1 + 6)
         )
         pix1 = page.get_pixmap(clip=crop_rect, dpi=300)
         crops.append(Image.open(io.BytesIO(pix1.tobytes("png"))))
@@ -271,10 +271,10 @@ def view_anchor_crop(
             annot2.set_colors(stroke=(1.0, 0.9, 0.2))
             annot2.update()
             crop_rect2 = pymupdf.Rect(
-                max(0, rect2.x0 - 24),
-                max(0, rect2.y0 - 18),
-                min(p_next.rect.width, rect2.x1 + 24),
-                min(p_next.rect.height, rect2.y1 + 18)
+                max(0, rect2.x0 - 10),
+                max(0, rect2.y0 - 6),
+                min(p_next.rect.width, rect2.x1 + 10),
+                min(p_next.rect.height, rect2.y1 + 6)
             )
             pix2 = p_next.get_pixmap(clip=crop_rect2, dpi=300)
             crops.append(Image.open(io.BytesIO(pix2.tobytes("png"))))
@@ -366,13 +366,13 @@ def index_page():
                 position: fixed;
                 display: none;
                 z-index: 9999;
-                width: 820px;
-                max-width: calc(100vw - 48px);
-                max-height: calc(100vh - 48px);
+                width: 1120px;
+                max-width: calc(100vw - 40px);
+                max-height: calc(100vh - 40px);
                 background: #ffffff;
-                border: 2px solid #0284c7;
-                border-radius: 12px;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 12px 24px -6px rgba(0, 0, 0, 0.2);
+                border: 2.5px solid #0284c7;
+                border-radius: 14px;
+                box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), 0 16px 28px -8px rgba(0, 0, 0, 0.25);
                 overflow: hidden;
                 pointer-events: none;
                 animation: popIn 0.15s ease-out;
@@ -526,8 +526,8 @@ def index_page():
                 </div>
                 <span class="bg-sky-800/80 px-2.5 py-1 rounded text-[11px] font-medium tracking-wide">🔍 Expanded Full-Section View</span>
             </div>
-            <div class="p-4 bg-white max-h-[620px] overflow-y-auto flex items-center justify-center">
-                <img id="popupCropImg" class="w-full h-auto rounded border border-slate-200 shadow-xs" alt="Large Section Crop"/>
+            <div class="p-4 bg-white max-h-[82vh] overflow-y-auto flex items-center justify-center">
+                <img id="popupCropImg" class="w-full h-auto rounded border border-slate-200 shadow-sm" alt="Large Section Crop"/>
             </div>
         </div>
             </div>
@@ -607,28 +607,36 @@ def index_page():
 
                 function positionPopup(e) {
                     const margin = 24;
-                    const popW = Math.min(820, window.innerWidth - 48);
-                    const popH = popup.offsetHeight || 460;
+                    const isCursorOnRight = e.clientX > (window.innerWidth / 2);
                     
-                    let left = e.clientX - popW - margin;
-                    // If not enough room on the left of cursor, position to the right
-                    if (left < 20) {
+                    let popW, left;
+                    if (isCursorOnRight) {
+                        const spaceOnLeft = e.clientX - margin - 20;
+                        popW = Math.min(1150, Math.max(700, spaceOnLeft));
+                        left = e.clientX - popW - margin;
+                        if (left < 20) {
+                            left = 20;
+                            popW = e.clientX - left - margin;
+                        }
+                    } else {
+                        const spaceOnRight = window.innerWidth - e.clientX - margin - 20;
+                        popW = Math.min(1150, Math.max(700, spaceOnRight));
                         left = e.clientX + margin;
-                        // If overflowing off right edge, clamp
                         if (left + popW > window.innerWidth - 20) {
-                            left = window.innerWidth - popW - 20;
+                            popW = window.innerWidth - 20 - left;
                         }
                     }
                     
+                    const popH = popup.offsetHeight || 520;
                     let top = e.clientY - (popH / 2);
                     if (top < 20) top = 20;
                     if (top + popH > window.innerHeight - 20) {
-                        top = window.innerHeight - popH - 20;
+                        top = Math.max(20, window.innerHeight - popH - 20);
                     }
                     
-                    popup.style.width = popW + 'px';
-                    popup.style.left = Math.max(20, left) + 'px';
-                    popup.style.top = top + 'px';
+                    popup.style.width = Math.round(popW) + 'px';
+                    popup.style.left = Math.round(left) + 'px';
+                    popup.style.top = Math.round(top) + 'px';
                 }
             })();
 
