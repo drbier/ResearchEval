@@ -58,6 +58,11 @@ def get_knowledge_bases():
         "triage_definitions": engine.triage_engine.triage_matrix
     }
 
+@app.post("/check-url")
+def check_paper_url(url: str = Form(...)):
+    """Check PubMed/PMC/DOI availability and report whether free full text or abstract only is present."""
+    return fetcher.check_url_availability(url)
+
 @app.post("/resolve-url")
 def resolve_paper_url(url: str = Form(...)):
     """Fetch URL/PMC/PMID/DOI and determine whether full text or abstract is available."""
@@ -308,7 +313,7 @@ def view_pdf(filename: str = Query(...)):
 
 @app.get("/", response_class=HTMLResponse)
 def index_page():
-    return """
+    return r"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -350,16 +355,12 @@ def index_page():
             }
             #highlightHitbox {
                 position: absolute;
-                cursor: pointer;
-                border: 2.5px solid #0284c7;
+                cursor: zoom-in;
+                border: none;
                 background-color: transparent;
-                border-radius: 6px;
-                transition: box-shadow 0.15s ease;
+                border-radius: 4px;
                 z-index: 25;
                 pointer-events: auto;
-            }
-            #highlightHitbox:hover {
-                box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.25);
             }
             #sectionPopup {
                 position: fixed;
@@ -409,10 +410,12 @@ def index_page():
                 <!-- Tab 2: URL / PMC / PubMed Resolution -->
                 <div id="tabUrl" class="hidden space-y-3 pt-2">
                     <div class="flex gap-3 items-center">
-                        <input type="text" id="paperUrl" placeholder="Paste URL (e.g. PubMed Central PMC10787122, PMID 37726553, DOI 10.1007/..., or journal link)" class="block w-full text-sm text-slate-800 bg-slate-50 px-4 py-2.5 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"/>
+                        <input type="text" id="paperUrl" placeholder="Paste PubMed link, PMID (e.g. 37726553), PMC ID (e.g. PMC10643434), or DOI" class="block w-full text-sm text-slate-800 bg-slate-50 px-4 py-2.5 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"/>
                         <button onclick="startUrlResolution()" id="resolveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-6 py-2.5 rounded-md transition shadow flex-shrink-0">Fetch & Evaluate</button>
                     </div>
-                    <p class="text-xs text-slate-400">Supports PubMed Central (PMC), PubMed IDs (PMID), DOI links, and journal webpages. If only an abstract is available, the app will alert you first.</p>
+                    <!-- Live Availability Banner for PubMed / PMC -->
+                    <div id="availabilityNotice" class="hidden p-3 rounded-lg text-xs flex items-center justify-between border transition-all"></div>
+                    <p class="text-xs text-slate-400">Supports PubMed links, PMIDs, and PubMed Central (PMC). If free full text is found, it will be automatically fetched using the PubMed API; if paywalled, you will be prompted to evaluate the abstract only.</p>
                 </div>
             </div>
 
@@ -675,6 +678,71 @@ def index_page():
             }
 
             let pendingResolution = null;
+            let checkTimeout = null;
+
+            // Real-time PubMed / PMC availability listener
+            document.addEventListener('DOMContentLoaded', function() {
+                const urlInput = document.getElementById('paperUrl');
+                const notice = document.getElementById('availabilityNotice');
+                if (!urlInput || !notice) return;
+
+                urlInput.addEventListener('input', function() {
+                    clearTimeout(checkTimeout);
+                    const val = urlInput.value.trim();
+                    if (!val || val.length < 5) {
+                        notice.classList.add('hidden');
+                        return;
+                    }
+
+                    const isLikelyPaper = /pubmed|\d{6,9}|PMC\d+|10\.\d{4,9}\//i.test(val);
+                    if (!isLikelyPaper) {
+                        notice.classList.add('hidden');
+                        return;
+                    }
+
+                    notice.classList.remove('hidden');
+                    notice.className = "p-2.5 rounded-lg text-xs flex items-center justify-between border bg-sky-50 border-sky-200 text-sky-800 transition-all";
+                    notice.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <svg class="animate-spin h-3.5 w-3.5 text-sky-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                            <span>Checking PubMed / PMC API for full-text availability...</span>
+                        </div>
+                    `;
+
+                    checkTimeout = setTimeout(async () => {
+                        try {
+                            const fd = new FormData();
+                            fd.append('url', val);
+                            const r = await fetch('/check-url', { method: 'POST', body: fd });
+                            const d = await r.json();
+
+                            if (d.full_text_available) {
+                                notice.className = "p-2.5 rounded-lg text-xs flex items-center justify-between border bg-emerald-50 border-emerald-300 text-emerald-900 transition-all";
+                                notice.innerHTML = `
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-emerald-600 font-bold text-sm">✓</span>
+                                        <span><strong>Full Text Available:</strong> ${d.message || d.source_type}</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 font-semibold text-[11px]">Free Full Text</span>
+                                `;
+                            } else if (d.is_abstract_only) {
+                                notice.className = "p-2.5 rounded-lg text-xs flex items-center justify-between border bg-amber-50 border-amber-300 text-amber-900 transition-all";
+                                notice.innerHTML = `
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-amber-600 font-bold text-sm">⚠️</span>
+                                        <span><strong>Full Text Unavailable:</strong> Paywalled study. Only official abstract available in PubMed registry.</span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-semibold text-[11px]">Abstract Only</span>
+                                `;
+                            } else {
+                                notice.classList.add('hidden');
+                            }
+                        } catch (e) {
+                            notice.classList.add('hidden');
+                        }
+                    }, 350);
+                });
+            });
 
             function closeAbstractModal() {
                 document.getElementById('abstractModal').classList.add('hidden');
@@ -710,12 +778,24 @@ def index_page():
                 statusIcon.classList.add('hidden');
                 resultBox.classList.add('hidden');
                 resolveBtn.disabled = true;
-                statusText.innerText = 'Resolving URL & checking full-text availability (PMC / Unpaywall)...';
+
+                // Step 1: Pre-check full-text availability via PubMed API
+                statusText.innerHTML = '<span class="font-medium text-sky-700">Checking PubMed API for full-text availability...</span>';
 
                 const formData = new FormData();
                 formData.append('url', rawUrl);
 
                 try {
+                    const checkRes = await fetch('/check-url', { method: 'POST', body: formData });
+                    const checkData = await checkRes.json();
+
+                    if (checkData.full_text_available) {
+                        statusText.innerHTML = `<span class="font-semibold text-emerald-700">✓ Full text available on ${checkData.source_type} (${checkData.pmcid || ''})!</span> Retrieving manuscript via PubMed API...`;
+                    } else if (checkData.is_abstract_only) {
+                        statusText.innerHTML = '<span class="font-semibold text-amber-700">Paywalled manuscript detected.</span> Retrieving abstract from PubMed registry...';
+                    }
+
+                    // Step 2: Fetch and format the manuscript PDF
                     const res = await fetch('/resolve-url', { method: 'POST', body: formData });
                     const data = await res.json();
 
@@ -727,11 +807,12 @@ def index_page():
                         pendingResolution = data;
                         document.getElementById('modalAbstractSnippet').innerText = data.abstract_text || '(Abstract text extracted from publication registry)';
                         document.getElementById('abstractModal').classList.remove('hidden');
-                        statusText.innerText = 'Abstract only detected. Awaiting user confirmation...';
+                        statusText.innerHTML = '<span class="text-amber-700 font-medium">⚠️ Abstract only available.</span> Awaiting user confirmation to evaluate abstract...';
                         return;
                     }
 
                     // Full text PDF retrieved!
+                    statusText.innerHTML = `<span class="font-semibold text-emerald-700">✓ ${data.message || 'Full text retrieved via PubMed API!'}</span> Starting appraisal pipeline...`;
                     await executeAppraisalForFilename(data.pdf_filename, false);
                 } catch (err) {
                     spinner.classList.add('hidden');

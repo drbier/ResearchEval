@@ -11,6 +11,7 @@ from src.ingestion.indexer import parse_and_index_pdf
 from src.triage.classifier import TriageEngine
 from src.appraisal.sanitizer import sanitize_and_verify_appraisal
 from src.appraisal.generator import SynthesisEngine
+from src.ingestion.fetcher import PaperFetcher
 
 class TestResearchEvalPipeline(unittest.TestCase):
     @classmethod
@@ -70,6 +71,32 @@ class TestResearchEvalPipeline(unittest.TestCase):
         self.assertIn("[Doc_Header]", res.verified_anchors)
         self.assertIn("[Invalid, Para 99]", res.invalid_anchors)
         self.assertFalse(res.is_valid)
+
+    def test_05_pubmed_availability_and_retrieval(self):
+        """Verify PubMed availability check via elink and JATS XML full-text retrieval."""
+        upload_dir = os.path.join(self.data_dir, "uploads")
+        fetcher = PaperFetcher(upload_dir)
+
+        # 1. PubMed with full text in PMC
+        res1 = fetcher.check_url_availability("https://pubmed.ncbi.nlm.nih.gov/37726553/")
+        self.assertEqual(res1.get("status"), "success")
+        self.assertTrue(res1.get("full_text_available"))
+        self.assertEqual(res1.get("source_type"), "PubMed Central (PMC)")
+        self.assertEqual(res1.get("pmcid"), "PMC10643434")
+
+        # 2. Paywalled PubMed
+        res2 = fetcher.check_url_availability("35000000")
+        self.assertEqual(res2.get("status"), "success")
+        self.assertFalse(res2.get("full_text_available"))
+        self.assertTrue(res2.get("is_abstract_only"))
+
+        # 3. Full-text retrieval via PMC ID
+        resolved = fetcher.resolve_url("PMC10643434")
+        self.assertEqual(resolved.get("status"), "full_text_pdf")
+        self.assertFalse(resolved.get("is_abstract_only"))
+        pdf_path = os.path.join(upload_dir, resolved.get("pdf_filename"))
+        self.assertTrue(os.path.exists(pdf_path))
+        self.assertGreater(os.path.getsize(pdf_path), 5000)
 
 if __name__ == "__main__":
     unittest.main()

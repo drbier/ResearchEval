@@ -60,6 +60,172 @@ class PaperFetcher:
         # 5. Generic Journal / HTML Webpage
         return self._fetch_generic_webpage(raw_clean)
 
+    def check_url_availability(self, raw_input: str) -> Dict[str, Any]:
+        """
+        Fast preliminary check to see if free full text is available via PMC/Unpaywall
+        or whether only an abstract is available, prior to downloading large files.
+        """
+        raw_clean = raw_input.strip()
+        if not raw_clean:
+            return {"status": "error", "message": "Empty URL or identifier."}
+
+        # 1. Direct PDF URL
+        if raw_clean.lower().endswith(".pdf") or ".pdf?" in raw_clean.lower():
+            return {
+                "status": "success",
+                "input_type": "pdf_url",
+                "full_text_available": True,
+                "is_abstract_only": False,
+                "source_type": "Direct PDF Link",
+                "message": "Direct PDF link detected (full text available)."
+            }
+
+        # 2. PubMed Central (PMC) ID or URL
+        pmc_match = re.search(r'PMC(\d+)', raw_clean, re.IGNORECASE)
+        if pmc_match:
+            pmcid = pmc_match.group(1)
+            return {
+                "status": "success",
+                "input_type": "pmc",
+                "pmcid": f"PMC{pmcid}",
+                "full_text_available": True,
+                "is_abstract_only": False,
+                "source_type": "PubMed Central (PMC)",
+                "message": f"Full text is available on PubMed Central (PMC{pmcid}) via PubMed API."
+            }
+
+        # 3. PubMed (PMID) URL or numeric PMID
+        pmid_match = re.search(r'pubmed\.ncbi\.nlm\.nih\.gov/(\d+)', raw_clean, re.IGNORECASE) or (raw_clean.isdigit() and len(raw_clean) in range(6, 10))
+        if pmid_match:
+            pmid = pmid_match.group(1) if hasattr(pmid_match, 'group') else raw_clean
+            return self._check_pubmed_availability(pmid, raw_clean)
+
+        # 4. DOI
+        doi_match = re.search(r'10\.\d{4,9}/[-._;()/:A-Za-z0-9]+', raw_clean)
+        if doi_match:
+            doi = doi_match.group(0)
+            return self._check_doi_availability(doi, raw_clean)
+
+        # 5. Generic Webpage
+        return {
+            "status": "success",
+            "input_type": "webpage",
+            "full_text_available": True,
+            "is_abstract_only": False,
+            "source_type": "Webpage",
+            "message": "Journal webpage provided. Web article extractor ready."
+        }
+
+    def _check_pubmed_availability(self, pmid: str, source_url: str) -> Dict[str, Any]:
+        """Query NCBI elink and esummary to verify PMC full-text linkage."""
+        try:
+            # 1. Query elink.fcgi for direct PMC linkage
+            elink_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&db=pmc&id={pmid}&retmode=json"
+            r_elink = requests.get(elink_url, timeout=8)
+            if r_elink.status_code == 200:
+                for ls in r_elink.json().get('linksets', []):
+                    for db in ls.get('linksetdbs', []):
+                        if db.get('linkname') == 'pubmed_pmc':
+                            links = db.get('links', [])
+                            if links:
+                                pmcid = str(links[0])
+                                # Fetch title from esummary
+                                title = f"PubMed Article {pmid}"
+                                sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmid}&retmode=json"
+                                r_sum = requests.get(sum_url, timeout=6)
+                                if r_sum.status_code == 200:
+                                    title = r_sum.json().get('result', {}).get(pmid, {}).get('title', title)
+                                return {
+                                    "status": "success",
+                                    "input_type": "pubmed",
+                                    "pmid": pmid,
+                                    "pmcid": f"PMC{pmcid}",
+                                    "full_text_available": True,
+                                    "is_abstract_only": False,
+                                    "source_type": "PubMed Central (PMC)",
+                                    "title": title,
+                                    "message": f"Full text is available on PubMed Central (PMC{pmcid}) via PubMed API."
+                                }
+
+            # 2. Query esummary for DOI and Unpaywall check
+            sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmid}&retmode=json"
+            r_sum = requests.get(sum_url, timeout=8)
+            title = f"PubMed Article {pmid}"
+            doi = None
+            if r_sum.status_code == 200:
+                p_data = r_sum.json().get('result', {}).get(pmid, {})
+                title = p_data.get('title', title)
+                for aid in p_data.get('articleids', []):
+                    if aid.get('idtype') == 'doi':
+                        doi = aid.get('value')
+                        break
+
+            if doi:
+                doi_check = self._check_doi_availability(doi, source_url)
+                if doi_check.get("full_text_available"):
+                    doi_check["pmid"] = pmid
+                    doi_check["title"] = title
+                    return doi_check
+
+            # 3. Paywalled article - retrieve official abstract snippet
+            abstract_text = ""
+            fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
+            r_fetch = requests.get(fetch_url, timeout=8)
+            if r_fetch.status_code == 200:
+                root = ET.fromstring(r_fetch.content)
+                title_el = root.find('.//ArticleTitle')
+                if title_el is not None:
+                    title = ''.join(title_el.itertext())
+                nodes = root.findall('.//AbstractText')
+                abstract_text = "\n\n".join([''.join(n.itertext()) for n in nodes])
+
+            return {
+                "status": "success",
+                "input_type": "pubmed",
+                "pmid": pmid,
+                "full_text_available": False,
+                "is_abstract_only": True,
+                "source_type": "PubMed Registry",
+                "title": title,
+                "abstract_text": abstract_text[:1500] if abstract_text else "No abstract text in registry.",
+                "message": f"This study (PMID {pmid}) is paywalled. No free full-text manuscript was located on PubMed Central (Abstract only)."
+            }
+        except Exception as e:
+            return {"status": "error", "message": f"Error querying PubMed API for PMID {pmid}: {str(e)}"}
+
+    def _check_doi_availability(self, doi: str, source_url: str) -> Dict[str, Any]:
+        """Check Unpaywall for open-access PDF of DOI."""
+        try:
+            unp_url = f"https://api.unpaywall.org/v2/{doi}?email=drbiernd@gmail.com"
+            r = requests.get(unp_url, timeout=8)
+            if r.status_code == 200:
+                data = r.json()
+                title = data.get("title", f"DOI: {doi}")
+                best_oa = data.get("best_oa_location")
+                if best_oa and best_oa.get("url_for_pdf"):
+                    return {
+                        "status": "success",
+                        "input_type": "doi",
+                        "full_text_available": True,
+                        "is_abstract_only": False,
+                        "source_type": "Open Access (Unpaywall)",
+                        "doi": doi,
+                        "title": title,
+                        "message": "Free full-text open access PDF found via Unpaywall."
+                    }
+        except Exception:
+            pass
+        return {
+            "status": "success",
+            "input_type": "doi",
+            "full_text_available": False,
+            "is_abstract_only": True,
+            "source_type": "Journal Paywall",
+            "doi": doi,
+            "title": f"DOI: {doi}",
+            "message": f"No open-access PDF located for DOI {doi} (Paywalled)."
+        }
+
     def _download_direct_pdf(self, pdf_url: str) -> Dict[str, Any]:
         """Download direct PDF link."""
         try:
@@ -117,22 +283,38 @@ class PaperFetcher:
     def _fetch_pubmed_id(self, pmid: str, source_url: str) -> Dict[str, Any]:
         """Fetch paper metadata from PubMed; check if PMC full text is linked, otherwise flag abstract."""
         try:
-            # First check if there is an associated PMC ID
+            # 1. Direct NCBI elink check for PubMed Central full-text linkage
+            elink_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&db=pmc&id={pmid}&retmode=json"
+            r_elink = requests.get(elink_url, timeout=10)
+            if r_elink.status_code == 200:
+                for ls in r_elink.json().get('linksets', []):
+                    for db in ls.get('linksetdbs', []):
+                        if db.get('linkname') == 'pubmed_pmc':
+                            links = db.get('links', [])
+                            if links:
+                                pmc_digits = str(links[0])
+                                res = self._fetch_pmc_fulltext(pmc_digits, source_url)
+                                if res.get("status") == "full_text_pdf":
+                                    res["pmid"] = pmid
+                                    res["pmcid"] = f"PMC{pmc_digits}"
+                                    res["source_type"] = "PMC"
+                                    res["message"] = f"Full text verified on PubMed Central (PMC{pmc_digits}) and retrieved via PubMed/NCBI API."
+                                    return res
+
+            # 2. Check esummary for DOI and open-access via Unpaywall
             sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmid}&retmode=json"
             r_sum = requests.get(sum_url, timeout=10)
             if r_sum.status_code == 200:
                 data = r_sum.json().get('result', {}).get(pmid, {})
                 article_ids = data.get('articleids', [])
                 for aid in article_ids:
-                    if aid.get('idtype') == 'pmc':
-                        pmc_digits = re.sub(r'^[Pp][Mm][Cc]', '', aid['value'])
-                        return self._fetch_pmc_fulltext(pmc_digits, source_url)
-                    elif aid.get('idtype') == 'doi':
+                    if aid.get('idtype') == 'doi':
                         res = self._fetch_via_doi_or_unpaywall(aid['value'], source_url)
                         if res.get("status") == "full_text_pdf":
+                            res["pmid"] = pmid
                             return res
 
-            # If no free full-text found, fetch the official abstract via efetch
+            # 3. If no free full-text found, fetch the official abstract via efetch
             fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
             r_fetch = requests.get(fetch_url, timeout=10)
             if r_fetch.status_code == 200:
@@ -162,9 +344,10 @@ class PaperFetcher:
                         "pdf_filename": filename,
                         "is_abstract_only": True,
                         "title": title,
+                        "pmid": pmid,
                         "abstract_text": abstract_full,
                         "source_url": source_url,
-                        "message": f"Only an abstract is available for PMID {pmid}. No free full-text was located."
+                        "message": f"This study (PMID {pmid}) is paywalled. No free full-text was located on PubMed Central (Abstract only)."
                     }
         except Exception as e:
             pass
