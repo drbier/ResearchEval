@@ -226,24 +226,39 @@ def index_page():
             .resizer:hover, .resizer.resizing {
                 background-color: #0284c7;
             }
-            /* Hover zoom / magnifier lens for the manuscript page */
+            /* Hover highlight popover box on the manuscript page */
             #imageContainer {
                 position: relative;
-                overflow: hidden;
-                cursor: crosshair;
             }
-            #zoomLens {
+            #highlightHitbox {
                 position: absolute;
-                border: 2px solid #0284c7;
-                background-color: rgba(255, 255, 255, 0.95);
-                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
-                border-radius: 8px;
-                pointer-events: none;
+                cursor: pointer;
+                border: 2px dashed rgba(2, 132, 199, 0.6);
+                background-color: rgba(2, 132, 199, 0.05);
+                border-radius: 4px;
+                transition: all 0.15s ease;
+                z-index: 20;
+            }
+            #highlightHitbox:hover {
+                border-color: #0284c7;
+                background-color: rgba(2, 132, 199, 0.12);
+            }
+            #sectionPopup {
+                position: fixed;
                 display: none;
-                z-index: 50;
-                width: 280px;
-                height: 180px;
-                background-repeat: no-repeat;
+                z-index: 9999;
+                max-width: 580px;
+                background: #ffffff;
+                border: 2px solid #0284c7;
+                border-radius: 12px;
+                box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.35), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+                pointer-events: none;
+                animation: popIn 0.15s ease-out;
+            }
+            @keyframes popIn {
+                from { opacity: 0; transform: scale(0.96); }
+                to { opacity: 1; transform: scale(1); }
             }
         </style>
     </head>
@@ -319,25 +334,18 @@ def index_page():
                             </div>
                             <div class="flex items-center gap-2">
                                 <span id="pageBadge" class="hidden px-2.5 py-1 text-xs font-semibold rounded bg-sky-100 text-sky-800 border border-sky-200">Page -</span>
-                                <button onclick="toggleZoomMode()" id="zoomBtn" class="px-2.5 py-1 text-xs font-medium rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition" title="Toggle 2.5x hover magnifier lens">🔍 Magnifier: ON</button>
                             </div>
                         </div>
 
                         <!-- Snippet Text Box (Large Readable Typography) -->
                         <div id="snippetBox" class="hidden p-4 rounded-md bg-amber-50 border border-amber-200 text-sm text-amber-950 leading-relaxed shadow-xs">
                             <span class="font-bold uppercase tracking-wider text-[11px] text-amber-800 block mb-1.5 flex items-center gap-1.5">
-                                <span>📄 Exact Manuscript Paragraph:</span>
+                                <span>📄 Exact Manuscript Text:</span>
                             </span>
-                            <p id="snippetText" class="font-serif italic text-[13.5px]"></p>
+                            <p id="snippetText" class="font-serif italic text-[14px] leading-relaxed"></p>
                         </div>
 
-                        <!-- Ultra-Clear Zoomed Crop Card -->
-                        <div id="cropCard" class="hidden rounded-md border border-sky-200 bg-sky-50/50 p-3">
-                            <span class="font-bold uppercase tracking-wider text-[11px] text-sky-800 block mb-1">🔍 High-Resolution Target Excerpt:</span>
-                            <img id="cropImage" class="w-full h-auto rounded border border-slate-200 shadow-sm bg-white" alt="Zoomed Excerpt"/>
-                        </div>
-
-                        <!-- Full Page Image Viewer with Hover Magnifier -->
+                        <!-- Full Page Image Viewer with Hover Expand Hitbox -->
                         <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 min-h-[500px] flex-1 overflow-y-auto flex items-center justify-center p-2">
                             <div id="viewerPlaceholder" class="text-center p-8 text-slate-400">
                                 <svg class="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -345,7 +353,7 @@ def index_page():
                             </div>
                             <div id="imageContainer" class="hidden relative inline-block">
                                 <img id="highlightedImage" class="max-w-full h-auto rounded shadow select-none" alt="Source Page Preview"/>
-                                <div id="zoomLens"></div>
+                                <div id="highlightHitbox" title="Hover over the highlighted section to pop it up in large print!"></div>
                             </div>
                         </div>
                     </div>
@@ -353,26 +361,23 @@ def index_page():
             </div>
         </div>
 
+        <!-- Hover Popup Card for the Highlighted Section -->
+        <div id="sectionPopup">
+            <div class="bg-sky-700 text-white px-4 py-2 flex justify-between items-center text-xs font-semibold">
+                <span id="popupTitle">Highlighted Manuscript Section</span>
+                <span class="opacity-80">Full-Section Pop-Up</span>
+            </div>
+            <div class="p-3 bg-white">
+                <img id="popupCropImg" class="w-full h-auto rounded border border-slate-200" alt="Large Section Crop"/>
+            </div>
+        </div>
+            </div>
+        </div>
+
         <script>
             let currentFilename = '';
             let anchorIndex = {};
-            let isMagnifierEnabled = true;
-
-            function toggleZoomMode() {
-                isMagnifierEnabled = !isMagnifierEnabled;
-                const btn = document.getElementById('zoomBtn');
-                const lens = document.getElementById('zoomLens');
-                if (isMagnifierEnabled) {
-                    btn.innerText = '🔍 Magnifier: ON';
-                    btn.classList.add('bg-sky-100', 'text-sky-800');
-                    btn.classList.remove('bg-slate-100', 'text-slate-700');
-                } else {
-                    btn.innerText = '🔍 Magnifier: OFF';
-                    btn.classList.remove('bg-sky-100', 'text-sky-800');
-                    btn.classList.add('bg-slate-100', 'text-slate-700');
-                    lens.style.display = 'none';
-                }
-            }
+            let currentMeta = null;
 
             // Draggable Divider Implementation
             (function initResizer() {
@@ -401,6 +406,9 @@ def index_page():
 
                     leftPane.style.width = leftPercent + '%';
                     rightPane.style.width = rightPercent + '%';
+                    
+                    // Reposition hitbox after panel width change
+                    repositionHitbox();
                 });
 
                 document.addEventListener('mouseup', function() {
@@ -413,55 +421,79 @@ def index_page():
                 });
             })();
 
-            // Interactive Magnifier Lens Implementation
-            (function initMagnifier() {
-                const img = document.getElementById('highlightedImage');
-                const lens = document.getElementById('zoomLens');
-                const container = document.getElementById('imageContainer');
+            // Section Hover Popup Implementation
+            (function initSectionPopup() {
+                const hitbox = document.getElementById('highlightHitbox');
+                const popup = document.getElementById('sectionPopup');
+                const popupImg = document.getElementById('popupCropImg');
+                const popupTitle = document.getElementById('popupTitle');
 
-                container.addEventListener('mousemove', function(e) {
-                    if (!isMagnifierEnabled || !img.src) {
-                        lens.style.display = 'none';
-                        return;
-                    }
-
-                    const rect = img.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-
-                    // Only activate if inside the image bounds
-                    if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
-                        lens.style.display = 'none';
-                        return;
-                    }
-
-                    lens.style.display = 'block';
-                    lens.style.backgroundImage = `url('${img.src}')`;
-
-                    // Zoom factor: 2.2x
-                    const zoom = 2.2;
-                    lens.style.backgroundSize = `${rect.width * zoom}px ${rect.height * zoom}px`;
-
-                    const lensW = lens.offsetWidth;
-                    const lensH = lens.offsetHeight;
-
-                    // Position lens centered above mouse
-                    let lensX = x - (lensW / 2);
-                    let lensY = y - (lensH / 2);
-
-                    lens.style.left = `${lensX}px`;
-                    lens.style.top = `${lensY}px`;
-
-                    // Position background to magnify target
-                    const bgX = -(x * zoom - lensW / 2);
-                    const bgY = -(y * zoom - lensH / 2);
-                    lens.style.backgroundPosition = `${bgX}px ${bgY}px`;
+                hitbox.addEventListener('mouseenter', function(e) {
+                    if (!currentMeta) return;
+                    popupTitle.innerText = currentMeta.anchor_id || 'Highlighted Section';
+                    popupImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(currentMeta.anchor_id)}`;
+                    
+                    // Calculate pop-up coordinates near the cursor but staying within screen bounds
+                    popup.style.display = 'block';
+                    positionPopup(e);
                 });
 
-                container.addEventListener('mouseleave', function() {
-                    lens.style.display = 'none';
+                hitbox.addEventListener('mousemove', function(e) {
+                    positionPopup(e);
                 });
+
+                hitbox.addEventListener('mouseleave', function() {
+                    popup.style.display = 'none';
+                });
+
+                function positionPopup(e) {
+                    const margin = 20;
+                    const popW = 560;
+                    const popH = 340;
+                    
+                    let left = e.clientX - popW - margin;
+                    // If not enough room on the left, put it on the right
+                    if (left < 20) {
+                        left = e.clientX + margin;
+                    }
+                    
+                    let top = e.clientY - (popH / 2);
+                    if (top < 20) top = 20;
+                    if (top + popH > window.innerHeight - 20) {
+                        top = window.innerHeight - popH - 20;
+                    }
+                    
+                    popup.style.left = left + 'px';
+                    popup.style.top = top + 'px';
+                }
             })();
+
+            function repositionHitbox() {
+                if (!currentMeta || !currentMeta.bbox) return;
+                const img = document.getElementById('highlightedImage');
+                const hitbox = document.getElementById('highlightHitbox');
+                if (!img || img.naturalWidth === 0) return;
+
+                // PDF standard points to rendered image scaling
+                // PyMuPDF page standard 72 pt width vs rendered img naturalWidth at 200 DPI
+                // Calculate actual scale ratio
+                const scaleX = img.clientWidth / (img.naturalWidth / (200 / 72));
+                const scaleY = img.clientHeight / (img.naturalHeight / (200 / 72));
+
+                const bbox = currentMeta.bbox;
+                const left = bbox[0] * scaleX;
+                const top = bbox[1] * scaleY;
+                const width = (bbox[2] - bbox[0]) * scaleX;
+                const height = (bbox[3] - bbox[1]) * scaleY;
+
+                hitbox.style.left = left + 'px';
+                hitbox.style.top = top + 'px';
+                hitbox.style.width = width + 'px';
+                hitbox.style.height = height + 'px';
+                hitbox.style.display = 'block';
+            }
+
+            window.addEventListener('resize', repositionHitbox);
 
             async function startAppraisal() {
                 const fileInput = document.getElementById('pdfFile');
@@ -563,18 +595,15 @@ def index_page():
                 subtitle.innerText = anchor;
 
                 if (meta) {
+                    currentMeta = Object.assign({ anchor_id: anchor }, meta);
                     pageBadge.innerText = 'Page ' + meta.page;
                     pageBadge.classList.remove('hidden');
                     snippetText.innerText = meta.text;
                     snippetBox.classList.remove('hidden');
-
-                    // Load high-resolution cropped excerpt
-                    cropImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(anchor)}`;
-                    cropCard.classList.remove('hidden');
                 } else {
+                    currentMeta = null;
                     pageBadge.classList.add('hidden');
                     snippetBox.classList.add('hidden');
-                    cropCard.classList.add('hidden');
                 }
 
                 // Load full page image with highlight
@@ -585,6 +614,8 @@ def index_page():
                 img.onload = function() {
                     placeholder.classList.add('hidden');
                     imgContainer.classList.remove('hidden');
+                    // Position highlight hitbox precisely over the yellow section
+                    setTimeout(repositionHitbox, 50);
                 };
                 img.onerror = function() {
                     placeholder.innerHTML = '<p class="text-sm text-red-500">Failed to render page image for this coordinate.</p>';
