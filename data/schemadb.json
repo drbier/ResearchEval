@@ -1,29 +1,28 @@
 {
   "FW_A": {
     "framework_id": "FW_A",
-    "name": "Superiority Randomized Controlled Trial (RCT)",
+    "name": "Randomized Controlled Trial (RCT)",
     "headings": [
       "# [Article Title]",
-      "## Executive Appraisal & Baseline Rigor",
-      "## Primary Efficacy & Safety Evaluation",
-      "## Methodological Flaws & Risk of Bias",
+      "## Clinical Bottom Line",
+      "## Results in Context",
+      "## Assertive Critical Appraisal",
+      "## Research Objective, Design & Setting",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
       "Exact Article Title as root heading",
-      "Inline source coordinate anchors for every factual claim (e.g. [Methods, Para 3], [Results, Table 2])",
-      "Primary & Secondary endpoints with Hazard Ratios, 95% Confidence Intervals, and p-values",
-      "Absolute Risk Reduction (ARR) and Number Needed to Treat (NNT)",
-      "Safety profile with Grade 3-5 Adverse Events, drug discontinuation rates, and treatment-related deaths",
-      "RoB 2 five-domain evaluation: Randomization, Deviations, Missing Data, Measurement, Reported Results",
-      "Evaluation of Proportional Hazards assumption on Kaplan-Meier survival curves",
-      "Complete Bibliographic Citation with DOI / PubMed ID"
+      "Clinical Bottom Line: Direct interpretive takeaway synthesizing efficacy, safety, and validity caveats",
+      "Results in Context: Primary outcome with point estimates, HR/RR, 95% CIs, p-values; absolute risk reduction (ARR) and NNT; secondary endpoints and oncology response criteria; patient-reported outcomes (PROs) with MID thresholds; key Grade 3-5 adverse events drawing from CONSORT Harms 2022",
+      "Assertive Critical Appraisal: RoB 2 overall judgment (Low / Some concerns / High) across all 5 domains; subgroup credibility audit; composite endpoint deconstruction; CONSORT reporting quality (allocation concealment, flow diagram)",
+      "Research Objective, Design & Setting: Hypothesis, trial design (parallel/adaptive), blinding, participant count, eligibility criteria, and setting",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI / PubMed ID"
     ],
     "negative_constraints": [
-      "NO medical disclaimers or legal liability text",
-      "NO conversational filler, greetings, or sign-offs",
-      "NO therapeutic mandates or clinical recommendations beyond the reported study data",
-      "NO uncited baseline balance claims"
+      "NO medical disclaimers",
+      "NO conversational pleasantries or filler phrases",
+      "NO therapeutic mandates beyond what the study evaluated",
+      "Ground EVERY factual claim with an inline coordinate anchor (e.g. [Methods, Para 3], [Results, Table 2])"
     ]
   },
   "FW_B": {
@@ -31,69 +30,71 @@
     "name": "Systematic Review & Meta-Analysis",
     "headings": [
       "# [Article Title]",
-      "## Meta-Analysis Quality & Heterogeneity",
-      "## Pooled Efficacy & Safety Outcomes",
-      "## GRADE Evidence Certainty Analysis",
+      "## Clinical Bottom Line",
+      "## Results in Context",
+      "## Assertive Critical Appraisal",
+      "## Research Objective, Design & Setting",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "PRISMA search databases, date ranges, and study inclusion count",
-      "Pooled effect size metrics (Risk Ratio, Odds Ratio, Hazard Ratio) with 95% Confidence Intervals",
-      "Quantitative heterogeneity assessment: Higgins I^2 percentage and Cochran Q p-value",
-      "Assessment of fixed-effect vs random-effects modeling appropriateness",
-      "Publication bias evaluation via funnel plot symmetry and Egger regression test",
-      "GRADE Certainty ratings (High, Moderate, Low, Very Low) across critical outcomes with downgrade justifications",
-      "Complete Bibliographic Citation"
+      "Clinical Bottom Line: Direct interpretive summary integrating pooled effect estimates with evidence certainty",
+      "Results in Context: Summary of pooled results with exact effect sizes (OR/RR/HR) and 95% CIs; brief definition of statistical terms used; participant/study counts",
+      "Assertive Critical Appraisal: GRADE certainty ratings (High/Moderate/Low/Very Low) per critical outcome with downgrade reasons; Higgins I^2 heterogeneity magnitude and Cochran Q; publication bias assessment (funnel plot / Egger test); special consideration if overall pooled result is significant but individual studies are not; PRISMA reporting quality audit (flow diagram, search strategy)",
+      "Research Objective, Design & Setting: PICO question, databases searched, inclusion criteria",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO medical disclaimers or filler phrases",
-      "NO pooling of statistically heterogeneous studies (I^2 > 50%) under fixed-effect assumptions without critique"
+      "NO medical disclaimers",
+      "NO conversational filler",
+      "Ground every factual claim with an inline coordinate anchor"
     ]
   },
   "FW_C": {
     "framework_id": "FW_C",
-    "name": "Observational / Real-World Evidence (RWE)",
+    "name": "Observational Study / Real-World Evidence",
     "headings": [
       "# [Article Title]",
-      "## Observational Cohort & Confounding Analysis",
-      "## Key Real-World Findings & Associations",
-      "## Methodological Limitations & Bias Evaluation",
+      "## Clinical Bottom Line",
+      "## Results in Context",
+      "## Assertive Critical Appraisal",
+      "## Research Objective, Design & Setting",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Target population, inclusion/exclusion criteria, data source (EHR, claims registry)",
-      "Confounding adjustment mechanisms (multivariable regression, Propensity Score matching, IPTW)",
-      "Immortal time bias audit (definition of entry vs treatment index dates)",
-      "Unmeasured confounding assessment and residual bias critique",
-      "Complete Bibliographic Citation"
+      "Clinical Bottom Line: Interpretive summary of observed associations, explicitly emphasizing that observational studies cannot prove causation due to residual confounding and bias",
+      "Results in Context: Main unadjusted and confounder-adjusted estimates (Odds Ratios, Relative Risks, Hazard Ratios) with 95% CIs for all key exposures/biomarkers; definitions of statistical metrics used; participant counts across follow-up stages",
+      "Assertive Critical Appraisal: STROBE bias critique (residual lifestyle confounding, reverse causality, survival selection, immortal time bias); STROBE confounding adjustment evaluation; RECORD assessment for routine health data / registry linkage (data provenance, ICD diagnostic coding, attrition); generalizability / clinical applicability",
+      "Research Objective, Design & Setting: Specific objectives and hypotheses; study design (prospective/retrospective cohort, case-control); setting, location, dates, participant eligibility and selection criteria",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
       "NO causal assertions (must frame findings strictly as associations)",
-      "NO medical disclaimers or conversational dialogue"
+      "NO medical disclaimers or conversational greetings",
+      "Ground every factual claim with an inline coordinate anchor"
     ]
   },
   "FW_D": {
     "framework_id": "FW_D",
-    "name": "Biomarker & Diagnostic Accuracy Study",
+    "name": "Diagnostic Accuracy & Biomarker Study",
     "headings": [
       "# [Article Title]",
-      "## Biomarker Utility & Assay Technical Validation",
-      "## Clinical Outcome Association & Correlatives",
-      "## Technical Limits & Methodological Assessment",
+      "## Clinical Bottom Line",
+      "## Results in Context",
+      "## Assertive Critical Appraisal",
+      "## Research Objective, Design & Setting",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Marker classification: Prognostic (main effect) vs Predictive (treatment interaction term)",
-      "Diagnostic accuracy metrics: Sensitivity, Specificity, AUC / ROC, PPV, NPV",
-      "Cut-point selection analysis: pre-fixed vs data-derived optimal cut-points",
-      "Independent validation cohort assessment (cross-validation alone is insufficient)",
-      "Assay technical validation, Limit of Detection (LOD), and pre-analytical specimen handling",
-      "Complete Bibliographic Citation"
+      "Clinical Bottom Line: Interpretive summary of biomarker or diagnostic test utility and readiness for clinical implementation",
+      "Results in Context: Association effect sizes (HR/OR) and precision; diagnostic accuracy metrics (Sensitivity, Specificity, AUC/ROC, PPV, NPV) if applicable; clear distinction between prognostic and predictive utility; biomarker technology definition",
+      "Assertive Critical Appraisal: REMARK appraisal of biomarker claim (prognostic vs predictive; flag if predictive claim made without randomized comparison); audit of cut-point selection (pre-fixed vs optimal search); independent validation cohort check (internal cross-validation is insufficient); assay technical limits, LOD, and pre-analytical specimen handling; STARD verification bias audit; clinical applicability",
+      "Research Objective, Design & Setting: Marker examined, hypotheses, study design, case selection, clinical endpoints, patient characteristics",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO clinical utility claims without independent validation cohort confirmation",
-      "NO conflation of prognostic and predictive marker attributes",
-      "NO medical disclaimers"
+      "NO clinical utility claims without independent validation confirmation",
+      "NO medical disclaimers",
+      "Ground every factual claim with an inline coordinate anchor"
     ]
   },
   "FW_E": {
@@ -101,91 +102,95 @@
     "name": "Clinical Trial Protocol & Statistical Analysis Plan",
     "headings": [
       "# [Article Title]",
-      "## Protocol Design & Endpoint Architecture",
-      "## Statistical Power & Planned Analysis",
-      "## Potential Methodological Pitfalls",
+      "## Clinical Bottom Line",
+      "## Planned Interventions and Outcomes",
+      "## Assertive Critical Appraisal",
+      "## Research Objective, Design & Setting",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Trial design, phase, comparator arm, and primary/secondary endpoint definitions",
-      "Sample size calculation assumptions (alpha, beta/power, expected effect size, dropout rate)",
-      "Interim analysis schedule and formal stopping boundaries (e.g. O'Brien-Fleming)",
-      "Handling of protocol deviations, missing data, and crossover",
-      "Complete Bibliographic Citation"
+      "Clinical Bottom Line: Clear statement that this document is a study protocol detailing planned methodology for a future trial and contains NO clinical results; summary of research question significance",
+      "Planned Interventions and Outcomes: Detailed planned interventions for all groups; primary and secondary endpoints",
+      "Assertive Critical Appraisal: SPIRIT quality assessment; sample size power calculation critique; pre-specification of statistical analysis plan, missing data handling, and stopping boundaries",
+      "Research Objective, Design & Setting: Trial objectives, design, framework, allocation, randomization, blinding, eligibility criteria",
+      "Bibliographic Data: Title, Authors, Source, Date, Trial Registration number"
     ],
     "negative_constraints": [
-      "NO extraction of fictitious efficacy results for uncompleted protocol papers",
-      "NO medical disclaimers"
+      "NO fictitious efficacy results",
+      "NO medical disclaimers",
+      "Ground every factual claim with an inline coordinate anchor"
     ]
   },
   "FW_F": {
     "framework_id": "FW_F",
-    "name": "Non-Inferiority & Equivalence RCT",
+    "name": "Non-Inferiority Randomized Controlled Trial",
     "headings": [
       "# [Article Title]",
-      "## Non-Inferiority Design & Margin Rigor",
-      "## Efficacy Bounds & Margin Testing",
-      "## Protocol Adherence & Methodological Critique",
+      "## Clinical Bottom Line",
+      "## Results in Context",
+      "## Assertive Critical Appraisal",
+      "## Research Objective, Design & Setting",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Pre-specified non-inferiority margin (Delta) and historical justification vs active comparator",
-      "Mandatory dual reporting and divergence analysis between Per-Protocol (PP) and Intention-to-Treat (ITT) populations",
-      "Comparison of upper 95% Confidence Interval against the Delta margin",
-      "Audit of biocreep and potential loss of active comparator efficacy retention",
-      "Complete Bibliographic Citation"
+      "Clinical Bottom Line: Direct interpretive summary clarifying whether non-inferiority was demonstrated, whether the new intervention is also similar or statistically inferior to standard, and both ITT and PP implications",
+      "Results in Context: Primary outcome with point estimates, 95% CIs, and comparison against the pre-specified margin (Delta); definition and rationale for non-inferiority design",
+      "Assertive Critical Appraisal: Non-inferiority margin critique (clinical justification, historical control retention, risk of biocreep); mandatory dual-analysis audit (ITT vs Per-Protocol divergence; flag if non-inferiority holds only in ITT); exact interpretation of 'non-inferior' vs equivalent or inferior",
+      "Research Objective, Design & Setting: Objective, stated non-inferiority hypothesis, design, allocation, blinding, setting, eligibility",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO acceptance of non-inferiority claims based exclusively on ITT population",
-      "NO omitted Delta margin definitions",
-      "NO medical disclaimers"
+      "NO acceptance of non-inferiority claims based exclusively on ITT",
+      "NO medical disclaimers",
+      "Ground every factual claim with an inline coordinate anchor"
     ]
   },
   "FW_G": {
     "framework_id": "FW_G",
-    "name": "Health Economics & Outcomes Research (HEOR)",
+    "name": "Health Economic Evaluation",
     "headings": [
       "# [Article Title]",
-      "## Economic Model Architecture & Assumptions",
-      "## Cost-Effectiveness & Utility Estimates",
-      "## Model Vulnerabilities & Sensitivity Critique",
+      "## Clinical Bottom Line",
+      "## Results in Context",
+      "## Assertive Critical Appraisal",
+      "## Research Objective, Design & Setting",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Economic model structure (Markov state-transition, decision tree, discrete event simulation)",
-      "Time horizon, cycle length, and perspective (societal vs health system/payer)",
-      "Annual discount rate applied to costs and health outcomes (typically 3-5%)",
-      "ICER per QALY/DALY gained compared to established Willingness-to-Pay thresholds",
-      "Deterministic and Probabilistic Sensitivity Analysis (PSA / Cost-Effectiveness Acceptability Curve)",
-      "Complete Bibliographic Citation"
+      "Clinical Bottom Line: Interpretive summary of cost-effectiveness and affordability at standard willingness-to-pay thresholds",
+      "Results in Context: Incremental Cost-Effectiveness Ratio (ICER); plain-language definitions of ICER, QALY, and DALY",
+      "Assertive Critical Appraisal: CHEERS reporting quality audit (analytic perspective, time horizon, annual discount rate applied to costs and benefits); model structure critique; deterministic and probabilistic sensitivity analyses",
+      "Research Objective, Design & Setting: Economic objective, evaluation type (CEA/CUA), model used, target population and setting",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO cost-effectiveness claims without explicit discount rate and time horizon disclosure",
-      "NO medical disclaimers"
+      "NO claims without explicit time horizon and discounting disclosure",
+      "NO medical disclaimers",
+      "Ground every factual claim with an inline coordinate anchor"
     ]
   },
   "FW_H": {
     "framework_id": "FW_H",
-    "name": "Narrative Review & Clinical Update",
+    "name": "Narrative Review",
     "headings": [
       "# [Article Title]",
-      "## Narrative Synthesis & Critical Overview",
-      "## Quality of Literature & Expert Consensus",
-      "## Expert Opinion Critique",
+      "## Clinical Bottom Line",
+      "## Key Themes & Evidence Summary",
+      "## Assertive Critical Appraisal",
+      "## Research Objective & Setting",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Scope of review and clinical questions addressed",
-      "SANRA 6-domain critical score assessment (Importance, Aims, Search, Referencing, Reasoning, Data presentation)",
-      "Critique of non-systematic search vulnerabilities and potential selection/cherry-picking bias",
-      "Assessment of author conflicts of interest and funding transparency",
-      "Complete Bibliographic Citation"
+      "Clinical Bottom Line: Direct summary of the authors' main argument, thesis, or clinical perspective",
+      "Key Themes & Evidence Summary: Scope of broad topics covered; main recommendations or assertions",
+      "Assertive Critical Appraisal: Explicit identification as Level 5 evidence / expert opinion; susceptibility to selection bias; full SANRA 6-domain score audit (Importance, Aims, Literature search description, Referencing consistency, Scientific reasoning, Data presentation)",
+      "Research Objective & Setting: Stated purpose of the narrative review",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO presentation of narrative review claims as Level 1 clinical evidence",
-      "NO missing conflict of interest evaluation",
-      "NO medical disclaimers"
+      "NO presentation of narrative claims as Level 1 evidence",
+      "NO medical disclaimers",
+      "Ground every factual claim with an inline coordinate anchor"
     ]
   }
 }
-

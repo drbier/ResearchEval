@@ -51,13 +51,17 @@ class TriageEngine:
                     matched_trigs[fw_id].append(trig)
                     
         # Check explicit priority patterns:
-        # Non-inferiority trials mention 'randomized' but MUST resolve to FW_F
+        # 1. Non-inferiority trials mention 'randomized' but MUST resolve to FW_F
         if "non-inferiority" in eval_text or "noninferiority" in eval_text or "non-inferior" in eval_text:
-            scores["FW_F"] += 10
+            scores["FW_F"] += 15
             
-        # Systematic review PRISMA flow mentions must prioritize FW_B over FW_A
+        # 2. Systematic review PRISMA flow mentions must prioritize FW_B over others
         if "systematic review" in eval_text or "meta-analysis" in eval_text or "prisma" in eval_text:
-            scores["FW_B"] += 10
+            scores["FW_B"] += 15
+
+        # 3. Observational/Cohort studies with biomarker keywords should map to FW_C (with +TAG_BIOMARKER)
+        if ("cohort study" in eval_text or "cohort" in eval_text or "prospective study" in eval_text or "follow-up" in eval_text) and "random" not in eval_text:
+            scores["FW_C"] += 12
             
         # Sort frameworks by score
         best_fw_id = max(scores, key=scores.get)

@@ -1,7 +1,7 @@
 [
   {
     "framework_id": "FW_A",
-    "name": "Superiority Randomized Controlled Trial (RCT)",
+    "name": "Randomized Controlled Trial (RCT)",
     "description": "Prospective parallel-group or multi-arm randomized interventional trial evaluating whether an experimental therapy is superior to control or placebo.",
     "triggers": [
       "randomized",
@@ -11,7 +11,7 @@
       "placebo-controlled",
       "superiority",
       "phase 3",
-      "phase III",
+      "phase iii",
       "parallel-group"
     ],
     "exclusions": [
@@ -21,8 +21,9 @@
       "systematic review",
       "meta-analysis",
       "cost-effectiveness",
-      "observational cohort",
-      "retrospective registry"
+      "cohort study",
+      "observational study",
+      "registry linkage"
     ],
     "applicable_standards": [
       "CONSORT 2010",
@@ -73,25 +74,29 @@
   },
   {
     "framework_id": "FW_C",
-    "name": "Observational / Real-World Evidence (RWE)",
-    "description": "Non-interventional observational studies including cohort, case-control, cross-sectional, and electronic health record / claims registry analyses.",
+    "name": "Observational Study / Real-World Evidence",
+    "description": "Non-interventional observational studies including prospective/retrospective cohort, case-control, cross-sectional, and electronic health record / claims registry analyses.",
     "triggers": [
       "cohort study",
+      "cohort",
       "case-control",
       "cross-sectional",
       "observational",
       "real-world evidence",
       "rwe",
+      "registry",
+      "follow-up",
       "propensity score",
       "inverse probability weighting",
       "claims database",
       "electronic health records",
-      "ehr",
-      "registry data"
+      "ehr"
     ],
     "exclusions": [
-      "randomized allocation",
-      "interventional clinical trial",
+      "randomized controlled trial",
+      "randomized trial",
+      "double-blind placebo",
+      "interventional trial",
       "in vitro bench study",
       "single case report"
     ],
@@ -103,32 +108,33 @@
     "sub_tags": [
       "+TAG_PROPENSITY_MATCHED",
       "+TAG_IMMORTAL_TIME_RISK",
-      "+TAG_UNMEASURED_CONFOUNDING"
+      "+TAG_UNMEASURED_CONFOUNDING",
+      "+TAG_BIOMARKER",
+      "+TAG_EHR_CLAIMS"
     ]
   },
   {
     "framework_id": "FW_D",
-    "name": "Biomarker & Diagnostic Accuracy Study",
-    "description": "Studies evaluating predictive or prognostic tumor markers, genomic profiling, ctDNA liquid biopsies, or diagnostic test sensitivity and specificity against reference standards.",
+    "name": "Diagnostic Accuracy & Biomarker Study",
+    "description": "Studies evaluating novel diagnostic tests, laboratory assay performance against reference standards, or molecular biomarker validation.",
     "triggers": [
-      "biomarker",
-      "prognostic marker",
-      "predictive marker",
       "diagnostic accuracy",
+      "index test",
+      "reference standard",
       "sensitivity and specificity",
       "receiver operating characteristic",
       "roc",
       "auc",
       "positive predictive value",
       "negative predictive value",
-      "ctdna",
-      "liquid biopsy",
-      "next-generation sequencing",
-      "ngs"
+      "quadas",
+      "stard"
     ],
     "exclusions": [
-      "pre-clinical animal model without human clinical correlatives",
-      "pure pharmacokinetic dose-escalation phase 1 without marker evaluation"
+      "prospective cohort study",
+      "population-based cohort",
+      "registry follow-up study",
+      "pre-clinical animal model without human clinical correlatives"
     ],
     "applicable_standards": [
       "STARD 2015",
@@ -170,7 +176,7 @@
   },
   {
     "framework_id": "FW_F",
-    "name": "Non-Inferiority & Equivalence RCT",
+    "name": "Non-Inferiority Randomized Controlled Trial",
     "description": "Randomized controlled trial designed to demonstrate that an experimental treatment is not clinically worse than an active standard control by more than a pre-specified margin.",
     "triggers": [
       "non-inferiority",
@@ -199,7 +205,7 @@
   },
   {
     "framework_id": "FW_G",
-    "name": "Health Economics & Outcomes Research (HEOR)",
+    "name": "Health Economic Evaluation",
     "description": "Economic evaluations assessing the value, cost-effectiveness, cost-utility, or budgetary impact of health interventions.",
     "triggers": [
       "cost-effectiveness",
@@ -228,11 +234,10 @@
   },
   {
     "framework_id": "FW_H",
-    "name": "Narrative Review & Clinical Update",
+    "name": "Narrative Review",
     "description": "Non-systematic medical review, expert commentary, or state-of-the-art summary summarizing disease pathophysiology or therapeutic trends without pooled quantitative synthesis.",
     "triggers": [
       "narrative review",
-      "review article",
       "clinical overview",
       "current concepts",
       "state-of-the-art",
@@ -240,7 +245,8 @@
       "perspectives"
     ],
     "exclusions": [
-      "quantitative systematic review with PRISMA flow diagram and pooled meta-analysis"
+      "systematic review with PRISMA flow diagram and pooled meta-analysis",
+      "original prospective cohort study"
     ],
     "applicable_standards": [
       "SANRA (Scale for Assessment of Narrative Review Articles)"
@@ -252,4 +258,3 @@
     ]
   }
 ]
-
