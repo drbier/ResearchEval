@@ -253,12 +253,12 @@ def view_anchor_crop(
         annot.set_colors(stroke=(1.0, 0.9, 0.2))
         annot.update()
         crop_rect = pymupdf.Rect(
-            max(0, rect.x0 - 20),
-            max(0, rect.y0 - 15),
-            min(page.rect.width, rect.x1 + 20),
-            min(page.rect.height, rect.y1 + 15)
+            max(0, rect.x0 - 24),
+            max(0, rect.y0 - 18),
+            min(page.rect.width, rect.x1 + 24),
+            min(page.rect.height, rect.y1 + 18)
         )
-        pix1 = page.get_pixmap(clip=crop_rect, dpi=250)
+        pix1 = page.get_pixmap(clip=crop_rect, dpi=300)
         crops.append(Image.open(io.BytesIO(pix1.tobytes("png"))))
         
     # If it overflowed onto next page, crop the continuation block too!
@@ -271,12 +271,12 @@ def view_anchor_crop(
             annot2.set_colors(stroke=(1.0, 0.9, 0.2))
             annot2.update()
             crop_rect2 = pymupdf.Rect(
-                max(0, rect2.x0 - 20),
-                max(0, rect2.y0 - 15),
-                min(p_next.rect.width, rect2.x1 + 20),
-                min(p_next.rect.height, rect2.y1 + 15)
+                max(0, rect2.x0 - 24),
+                max(0, rect2.y0 - 18),
+                min(p_next.rect.width, rect2.x1 + 24),
+                min(p_next.rect.height, rect2.y1 + 18)
             )
-            pix2 = p_next.get_pixmap(clip=crop_rect2, dpi=250)
+            pix2 = p_next.get_pixmap(clip=crop_rect2, dpi=300)
             crops.append(Image.open(io.BytesIO(pix2.tobytes("png"))))
             
     doc.close()
@@ -366,11 +366,13 @@ def index_page():
                 position: fixed;
                 display: none;
                 z-index: 9999;
-                max-width: 620px;
+                width: 820px;
+                max-width: calc(100vw - 48px);
+                max-height: calc(100vh - 48px);
                 background: #ffffff;
                 border: 2px solid #0284c7;
                 border-radius: 12px;
-                box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.35), 0 10px 20px -5px rgba(0, 0, 0, 0.15);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 12px 24px -6px rgba(0, 0, 0, 0.2);
                 overflow: hidden;
                 pointer-events: none;
                 animation: popIn 0.15s ease-out;
@@ -515,14 +517,17 @@ def index_page():
             </div>
         </div>
 
-        <!-- Hover Popup Card for the Highlighted Section -->
+        <!-- Hover Popup Card for the Highlighted Section (Enlarged) -->
         <div id="sectionPopup">
-            <div class="bg-sky-700 text-white px-4 py-2 flex justify-between items-center text-xs font-semibold">
-                <span id="popupTitle">Highlighted Manuscript Section</span>
-                <span class="opacity-80">Full-Section Pop-Up</span>
+            <div class="bg-sky-700 text-white px-5 py-2.5 flex justify-between items-center text-xs font-semibold shadow-xs">
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                    <span id="popupTitle" class="font-mono text-sm tracking-wide">Highlighted Manuscript Section</span>
+                </div>
+                <span class="bg-sky-800/80 px-2.5 py-1 rounded text-[11px] font-medium tracking-wide">🔍 Expanded Full-Section View</span>
             </div>
-            <div class="p-3 bg-white">
-                <img id="popupCropImg" class="w-full h-auto rounded border border-slate-200" alt="Large Section Crop"/>
+            <div class="p-4 bg-white max-h-[620px] overflow-y-auto flex items-center justify-center">
+                <img id="popupCropImg" class="w-full h-auto rounded border border-slate-200 shadow-xs" alt="Large Section Crop"/>
             </div>
         </div>
             </div>
@@ -601,14 +606,18 @@ def index_page():
                 });
 
                 function positionPopup(e) {
-                    const margin = 20;
-                    const popW = 560;
-                    const popH = 340;
+                    const margin = 24;
+                    const popW = Math.min(820, window.innerWidth - 48);
+                    const popH = popup.offsetHeight || 460;
                     
                     let left = e.clientX - popW - margin;
-                    // If not enough room on the left, put it on the right
+                    // If not enough room on the left of cursor, position to the right
                     if (left < 20) {
                         left = e.clientX + margin;
+                        // If overflowing off right edge, clamp
+                        if (left + popW > window.innerWidth - 20) {
+                            left = window.innerWidth - popW - 20;
+                        }
                     }
                     
                     let top = e.clientY - (popH / 2);
@@ -617,7 +626,8 @@ def index_page():
                         top = window.innerHeight - popH - 20;
                     }
                     
-                    popup.style.left = left + 'px';
+                    popup.style.width = popW + 'px';
+                    popup.style.left = Math.max(20, left) + 'px';
                     popup.style.top = top + 'px';
                 }
             })();
