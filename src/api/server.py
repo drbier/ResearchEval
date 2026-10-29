@@ -128,10 +128,56 @@ def view_anchor_image(
         annot.set_colors(stroke=(1.0, 0.85, 0.0))  # Vivid golden amber highlight
         annot.update()
         
-    pix = page.get_pixmap(dpi=150)
+    # Render at crisp 200 DPI for high legibility
+    pix = page.get_pixmap(dpi=200)
     img_bytes = pix.tobytes("png")
     doc.close()
     
+    return Response(content=img_bytes, media_type="image/png")
+
+@app.get("/view-anchor-crop")
+def view_anchor_crop(
+    filename: str = Query(...),
+    anchor: str = Query(...)
+):
+    """Render an ultra-clear, zoomed crop of specifically the highlighted paragraph."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Source PDF file not found.")
+        
+    indexed = CACHED_INDEX.get(filename)
+    if not indexed:
+        indexed = parse_and_index_pdf(file_path)
+        CACHED_INDEX[filename] = indexed
+        
+    anchor_clean = urllib.parse.unquote(anchor).strip()
+    meta = indexed.anchor_metadata.get(anchor_clean)
+    if not meta:
+        raise HTTPException(status_code=404, detail=f"Anchor {anchor_clean} not found.")
+        
+    doc = pymupdf.open(file_path)
+    page_idx = max(0, min(len(doc) - 1, meta.page_number - 1))
+    page = doc[page_idx]
+    
+    if meta.bbox and len(meta.bbox) == 4:
+        rect = pymupdf.Rect(meta.bbox[0], meta.bbox[1], meta.bbox[2], meta.bbox[3])
+        # Add a subtle highlight
+        annot = page.add_highlight_annot(rect)
+        annot.set_colors(stroke=(1.0, 0.9, 0.2))
+        annot.update()
+        # Generous padding around the box for context
+        crop_rect = pymupdf.Rect(
+            max(0, rect.x0 - 25),
+            max(0, rect.y0 - 20),
+            min(page.rect.width, rect.x1 + 25),
+            min(page.rect.height, rect.y1 + 20)
+        )
+        pix = page.get_pixmap(clip=crop_rect, dpi=250)
+    else:
+        pix = page.get_pixmap(dpi=200)
+        
+    img_bytes = pix.tobytes("png")
+    doc.close()
     return Response(content=img_bytes, media_type="image/png")
 
 @app.get("/view-pdf")
@@ -166,6 +212,38 @@ def index_page():
                 background-color: #0284c7 !important;
                 color: #ffffff !important;
                 border-color: #0369a1 !important;
+            }
+            /* Draggable resizer styling */
+            .resizer {
+                width: 8px;
+                cursor: col-resize;
+                background-color: #cbd5e1;
+                transition: background-color 0.2s;
+                position: relative;
+                flex-shrink: 0;
+                border-radius: 4px;
+            }
+            .resizer:hover, .resizer.resizing {
+                background-color: #0284c7;
+            }
+            /* Hover zoom / magnifier lens for the manuscript page */
+            #imageContainer {
+                position: relative;
+                overflow: hidden;
+                cursor: crosshair;
+            }
+            #zoomLens {
+                position: absolute;
+                border: 2px solid #0284c7;
+                background-color: rgba(255, 255, 255, 0.95);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                pointer-events: none;
+                display: none;
+                z-index: 50;
+                width: 280px;
+                height: 180px;
+                background-repeat: no-repeat;
             }
         </style>
     </head>
@@ -218,10 +296,10 @@ def index_page():
                     </div>
                 </div>
 
-                <!-- Side-by-Side: Structured Appraisal (Left) & Highlighted Source Evidence (Right) -->
-                <div class="grid grid-cols-12 gap-6 items-start">
-                    <!-- Left: Clinical Appraisal (7 Columns) -->
-                    <div class="col-span-7 bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                <!-- Draggable Split Container: Left Appraisal | Resizer | Right Source Inspector -->
+                <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch">
+                    <!-- Left: Clinical Appraisal -->
+                    <div id="leftPane" class="bg-white p-6 rounded-l-lg border border-slate-200 shadow-sm overflow-y-auto select-text" style="width: 55%; min-width: 25%; max-width: 75%;">
                         <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-2">
                             <h3 class="text-lg font-semibold text-slate-800">Structured Clinical Appraisal</h3>
                             <span class="text-xs text-slate-400 italic">Click any coordinate pill to inspect source text</span>
@@ -229,29 +307,46 @@ def index_page():
                         <div id="outputMarkdown" class="prose max-w-none text-slate-800 bg-slate-50 p-6 rounded-lg border border-slate-200 text-sm leading-relaxed"></div>
                     </div>
 
-                    <!-- Right: Interactive Source Inspector (5 Columns, Sticky) -->
-                    <div class="col-span-5 bg-white p-6 rounded-lg border border-slate-200 shadow-sm sticky top-6 space-y-4">
+                    <!-- Draggable Divider Bar -->
+                    <div id="dragDivider" class="resizer mx-1" title="Drag left or right to resize panels"></div>
+
+                    <!-- Right: Interactive Source Inspector -->
+                    <div id="rightPane" class="bg-white p-6 rounded-r-lg border border-slate-200 shadow-sm flex flex-col space-y-4 select-text" style="width: 45%; min-width: 25%; max-width: 75%;">
                         <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
                             <div>
                                 <h3 class="text-base font-semibold text-slate-800">Source Evidence Inspector</h3>
                                 <p id="inspectSubtitle" class="text-xs text-slate-500 mt-0.5">Select any coordinate pill on the left</p>
                             </div>
-                            <span id="pageBadge" class="hidden px-2.5 py-1 text-xs font-semibold rounded bg-sky-100 text-sky-800 border border-sky-200">Page -</span>
+                            <div class="flex items-center gap-2">
+                                <span id="pageBadge" class="hidden px-2.5 py-1 text-xs font-semibold rounded bg-sky-100 text-sky-800 border border-sky-200">Page -</span>
+                                <button onclick="toggleZoomMode()" id="zoomBtn" class="px-2.5 py-1 text-xs font-medium rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition" title="Toggle 2.5x hover magnifier lens">🔍 Magnifier: ON</button>
+                            </div>
                         </div>
 
-                        <!-- Snippet Text Box -->
-                        <div id="snippetBox" class="hidden p-3.5 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-normal">
-                            <span class="font-bold uppercase tracking-wider text-[10px] text-amber-700 block mb-1">Extracted Source Text:</span>
-                            <p id="snippetText" class="font-serif italic"></p>
+                        <!-- Snippet Text Box (Large Readable Typography) -->
+                        <div id="snippetBox" class="hidden p-4 rounded-md bg-amber-50 border border-amber-200 text-sm text-amber-950 leading-relaxed shadow-xs">
+                            <span class="font-bold uppercase tracking-wider text-[11px] text-amber-800 block mb-1.5 flex items-center gap-1.5">
+                                <span>📄 Exact Manuscript Paragraph:</span>
+                            </span>
+                            <p id="snippetText" class="font-serif italic text-[13.5px]"></p>
                         </div>
 
-                        <!-- Page Image Viewer with Highlight -->
-                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 min-h-[500px] max-h-[700px] overflow-y-auto flex items-center justify-center p-2">
+                        <!-- Ultra-Clear Zoomed Crop Card -->
+                        <div id="cropCard" class="hidden rounded-md border border-sky-200 bg-sky-50/50 p-3">
+                            <span class="font-bold uppercase tracking-wider text-[11px] text-sky-800 block mb-1">🔍 High-Resolution Target Excerpt:</span>
+                            <img id="cropImage" class="w-full h-auto rounded border border-slate-200 shadow-sm bg-white" alt="Zoomed Excerpt"/>
+                        </div>
+
+                        <!-- Full Page Image Viewer with Hover Magnifier -->
+                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 min-h-[500px] flex-1 overflow-y-auto flex items-center justify-center p-2">
                             <div id="viewerPlaceholder" class="text-center p-8 text-slate-400">
                                 <svg class="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                <p class="text-sm">Click any inline coordinate pill to load the manuscript page with the exact text highlighted</p>
+                                <p class="text-sm">Click any inline coordinate pill to inspect the source page</p>
                             </div>
-                            <img id="highlightedImage" class="hidden max-w-full h-auto rounded shadow" alt="Source Page Preview"/>
+                            <div id="imageContainer" class="hidden relative inline-block">
+                                <img id="highlightedImage" class="max-w-full h-auto rounded shadow select-none" alt="Source Page Preview"/>
+                                <div id="zoomLens"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -261,6 +356,112 @@ def index_page():
         <script>
             let currentFilename = '';
             let anchorIndex = {};
+            let isMagnifierEnabled = true;
+
+            function toggleZoomMode() {
+                isMagnifierEnabled = !isMagnifierEnabled;
+                const btn = document.getElementById('zoomBtn');
+                const lens = document.getElementById('zoomLens');
+                if (isMagnifierEnabled) {
+                    btn.innerText = '🔍 Magnifier: ON';
+                    btn.classList.add('bg-sky-100', 'text-sky-800');
+                    btn.classList.remove('bg-slate-100', 'text-slate-700');
+                } else {
+                    btn.innerText = '🔍 Magnifier: OFF';
+                    btn.classList.remove('bg-sky-100', 'text-sky-800');
+                    btn.classList.add('bg-slate-100', 'text-slate-700');
+                    lens.style.display = 'none';
+                }
+            }
+
+            // Draggable Divider Implementation
+            (function initResizer() {
+                const divider = document.getElementById('dragDivider');
+                const leftPane = document.getElementById('leftPane');
+                const rightPane = document.getElementById('rightPane');
+                const container = document.getElementById('splitContainer');
+
+                let isDragging = false;
+
+                divider.addEventListener('mousedown', function(e) {
+                    isDragging = true;
+                    divider.classList.add('resizing');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                });
+
+                document.addEventListener('mousemove', function(e) {
+                    if (!isDragging) return;
+                    const containerRect = container.getBoundingClientRect();
+                    const newLeftWidth = e.clientX - containerRect.left;
+                    const totalWidth = containerRect.width;
+
+                    const leftPercent = Math.max(20, Math.min(80, (newLeftWidth / totalWidth) * 100));
+                    const rightPercent = 100 - leftPercent;
+
+                    leftPane.style.width = leftPercent + '%';
+                    rightPane.style.width = rightPercent + '%';
+                });
+
+                document.addEventListener('mouseup', function() {
+                    if (isDragging) {
+                        isDragging = false;
+                        divider.classList.remove('resizing');
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                });
+            })();
+
+            // Interactive Magnifier Lens Implementation
+            (function initMagnifier() {
+                const img = document.getElementById('highlightedImage');
+                const lens = document.getElementById('zoomLens');
+                const container = document.getElementById('imageContainer');
+
+                container.addEventListener('mousemove', function(e) {
+                    if (!isMagnifierEnabled || !img.src) {
+                        lens.style.display = 'none';
+                        return;
+                    }
+
+                    const rect = img.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    // Only activate if inside the image bounds
+                    if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+                        lens.style.display = 'none';
+                        return;
+                    }
+
+                    lens.style.display = 'block';
+                    lens.style.backgroundImage = `url('${img.src}')`;
+
+                    // Zoom factor: 2.2x
+                    const zoom = 2.2;
+                    lens.style.backgroundSize = `${rect.width * zoom}px ${rect.height * zoom}px`;
+
+                    const lensW = lens.offsetWidth;
+                    const lensH = lens.offsetHeight;
+
+                    // Position lens centered above mouse
+                    let lensX = x - (lensW / 2);
+                    let lensY = y - (lensH / 2);
+
+                    lens.style.left = `${lensX}px`;
+                    lens.style.top = `${lensY}px`;
+
+                    // Position background to magnify target
+                    const bgX = -(x * zoom - lensW / 2);
+                    const bgY = -(y * zoom - lensH / 2);
+                    lens.style.backgroundPosition = `${bgX}px ${bgY}px`;
+                });
+
+                container.addEventListener('mouseleave', function() {
+                    lens.style.display = 'none';
+                });
+            })();
 
             async function startAppraisal() {
                 const fileInput = document.getElementById('pdfFile');
@@ -353,6 +554,9 @@ def index_page():
                 const pageBadge = document.getElementById('pageBadge');
                 const snippetBox = document.getElementById('snippetBox');
                 const snippetText = document.getElementById('snippetText');
+                const cropCard = document.getElementById('cropCard');
+                const cropImg = document.getElementById('cropImage');
+                const imgContainer = document.getElementById('imageContainer');
                 const img = document.getElementById('highlightedImage');
                 const placeholder = document.getElementById('viewerPlaceholder');
 
@@ -363,24 +567,29 @@ def index_page():
                     pageBadge.classList.remove('hidden');
                     snippetText.innerText = meta.text;
                     snippetBox.classList.remove('hidden');
+
+                    // Load high-resolution cropped excerpt
+                    cropImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(anchor)}`;
+                    cropCard.classList.remove('hidden');
                 } else {
                     pageBadge.classList.add('hidden');
                     snippetBox.classList.add('hidden');
+                    cropCard.classList.add('hidden');
                 }
 
-                // Load page image with highlight
+                // Load full page image with highlight
                 placeholder.classList.remove('hidden');
-                img.classList.add('hidden');
+                imgContainer.classList.add('hidden');
 
                 const imgUrl = `/view-anchor-image?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(anchor)}`;
                 img.onload = function() {
                     placeholder.classList.add('hidden');
-                    img.classList.remove('hidden');
+                    imgContainer.classList.remove('hidden');
                 };
                 img.onerror = function() {
                     placeholder.innerHTML = '<p class="text-sm text-red-500">Failed to render page image for this coordinate.</p>';
                     placeholder.classList.remove('hidden');
-                    img.classList.add('hidden');
+                    imgContainer.classList.add('hidden');
                 };
                 img.src = imgUrl;
             }
