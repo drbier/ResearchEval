@@ -11,6 +11,7 @@ import pymupdf
 from PIL import Image
 
 from src.ingestion.indexer import parse_and_index_pdf, IndexedDocument
+from src.ingestion.fetcher import PaperFetcher
 from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL
 
 app = FastAPI(
@@ -33,6 +34,7 @@ UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 engine = SynthesisEngine(DATA_DIR)
+fetcher = PaperFetcher(UPLOAD_DIR)
 
 # In-memory session cache of the most recently indexed document
 CACHED_INDEX: Dict[str, IndexedDocument] = {}
@@ -55,6 +57,52 @@ def get_knowledge_bases():
         "lexicon_terms_count": len(engine.lexicondb),
         "triage_definitions": engine.triage_engine.triage_matrix
     }
+
+@app.post("/resolve-url")
+def resolve_paper_url(url: str = Form(...)):
+    """Fetch URL/PMC/PMID/DOI and determine whether full text or abstract is available."""
+    res = fetcher.resolve_url(url)
+    return res
+
+@app.post("/appraise-fetched")
+def appraise_fetched_paper(
+    filename: str = Form(...),
+    model_override: Optional[str] = Form(None),
+    api_key: Optional[str] = Form(None)
+):
+    """Run full appraisal pipeline on an already-resolved paper or abstract."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Resolved file not found on server.")
+        
+    try:
+        indexed = parse_and_index_pdf(file_path)
+        CACHED_INDEX[filename] = indexed
+        
+        eval_engine = SynthesisEngine(DATA_DIR, api_key=api_key) if api_key else engine
+        result = eval_engine.generate_appraisal(indexed, model_override=model_override)
+        
+        anchor_data = {}
+        for aid, meta in indexed.anchor_metadata.items():
+            anchor_data[aid] = {
+                "page": meta.page_number,
+                "page_width": meta.page_width,
+                "page_height": meta.page_height,
+                "section": meta.section,
+                "text": meta.text[:250],
+                "bbox": meta.bbox,
+                "has_overflow": bool(meta.overflow_page)
+            }
+            
+        result["filename"] = filename
+        result["total_anchors_indexed"] = len(indexed.all_anchors)
+        result["sections_detected"] = list(indexed.sections.keys())
+        result["document_header"] = indexed.doc_header
+        result["anchor_index"] = anchor_data
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/appraise")
 async def appraise_paper(
@@ -345,12 +393,45 @@ def index_page():
                 </div>
             </header>
 
-            <!-- Upload Panel -->
+            <!-- Input Tabs Panel: Upload PDF vs Paper URL / PubMed -->
             <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-4">
-                <h2 class="text-lg font-semibold text-slate-800">Upload Clinical Research Manuscript (PDF)</h2>
-                <div class="flex gap-4 items-center">
+                <div class="flex border-b border-slate-200 gap-6">
+                    <button id="tabPdfBtn" onclick="switchInputTab('pdf')" class="pb-2.5 font-semibold text-sm border-b-2 border-sky-600 text-sky-700 transition">📄 Upload PDF File</button>
+                    <button id="tabUrlBtn" onclick="switchInputTab('url')" class="pb-2.5 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">🔗 Enter Paper URL, PMC, or PubMed ID</button>
+                </div>
+
+                <!-- Tab 1: Local PDF Upload -->
+                <div id="tabPdf" class="flex gap-4 items-center pt-2">
                     <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-sm text-slate-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer bg-slate-50 p-2 rounded-md border border-slate-200"/>
                     <button onclick="startAppraisal()" id="runBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-6 py-2.5 rounded-md transition shadow">Evaluate</button>
+                </div>
+
+                <!-- Tab 2: URL / PMC / PubMed Resolution -->
+                <div id="tabUrl" class="hidden space-y-3 pt-2">
+                    <div class="flex gap-3 items-center">
+                        <input type="text" id="paperUrl" placeholder="Paste URL (e.g. PubMed Central PMC10787122, PMID 37726553, DOI 10.1007/..., or journal link)" class="block w-full text-sm text-slate-800 bg-slate-50 px-4 py-2.5 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"/>
+                        <button onclick="startUrlResolution()" id="resolveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-6 py-2.5 rounded-md transition shadow flex-shrink-0">Fetch & Evaluate</button>
+                    </div>
+                    <p class="text-xs text-slate-400">Supports PubMed Central (PMC), PubMed IDs (PMID), DOI links, and journal webpages. If only an abstract is available, the app will alert you first.</p>
+                </div>
+            </div>
+
+            <!-- Abstract-Only Confirmation Dialog Modal -->
+            <div id="abstractModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-xl max-w-lg w-full p-6 space-y-4">
+                    <div class="flex items-center gap-3 text-amber-600">
+                        <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <h3 class="text-lg font-bold text-slate-900">Full Text Unavailable (Abstract Only)</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        The requested URL or identifier does not have a free full-text manuscript available (likely behind a journal paywall). We retrieved the official published abstract.
+                    </p>
+                    <div class="p-3 bg-amber-50 rounded-md border border-amber-200 text-xs text-amber-900 max-h-36 overflow-y-auto font-serif italic" id="modalAbstractSnippet"></div>
+                    <p class="text-xs font-semibold text-slate-700">Would you like to evaluate the abstract only?</p>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button onclick="closeAbstractModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-md transition">Cancel</button>
+                        <button onclick="proceedWithAbstractOnly()" class="px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-md transition shadow">Evaluate Abstract Only</button>
+                    </div>
                 </div>
             </div>
 
@@ -574,6 +655,161 @@ def index_page():
 
             window.addEventListener('resize', repositionHitbox);
 
+            function switchInputTab(tab) {
+                const tabPdf = document.getElementById('tabPdf');
+                const tabUrl = document.getElementById('tabUrl');
+                const tabPdfBtn = document.getElementById('tabPdfBtn');
+                const tabUrlBtn = document.getElementById('tabUrlBtn');
+
+                if (tab === 'pdf') {
+                    tabPdf.classList.remove('hidden');
+                    tabUrl.classList.add('hidden');
+                    tabPdfBtn.className = "pb-2.5 font-semibold text-sm border-b-2 border-sky-600 text-sky-700 transition";
+                    tabUrlBtn.className = "pb-2.5 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+                } else {
+                    tabPdf.classList.add('hidden');
+                    tabUrl.classList.remove('hidden');
+                    tabUrlBtn.className = "pb-2.5 font-semibold text-sm border-b-2 border-sky-600 text-sky-700 transition";
+                    tabPdfBtn.className = "pb-2.5 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+                }
+            }
+
+            let pendingResolution = null;
+
+            function closeAbstractModal() {
+                document.getElementById('abstractModal').classList.add('hidden');
+                pendingResolution = null;
+                document.getElementById('resolveBtn').disabled = false;
+                document.getElementById('statusBox').classList.add('hidden');
+            }
+
+            async function proceedWithAbstractOnly() {
+                document.getElementById('abstractModal').classList.add('hidden');
+                if (!pendingResolution || !pendingResolution.pdf_filename) return;
+                
+                await executeAppraisalForFilename(pendingResolution.pdf_filename, true);
+            }
+
+            async function startUrlResolution() {
+                const urlInput = document.getElementById('paperUrl');
+                const rawUrl = urlInput.value.trim();
+                if (!rawUrl) {
+                    alert('Please enter a paper URL, PMC ID, PMID, or DOI.');
+                    return;
+                }
+
+                const statusBox = document.getElementById('statusBox');
+                const statusText = document.getElementById('statusText');
+                const spinner = document.getElementById('spinner');
+                const statusIcon = document.getElementById('statusIcon');
+                const resultBox = document.getElementById('resultBox');
+                const resolveBtn = document.getElementById('resolveBtn');
+
+                statusBox.classList.remove('hidden');
+                spinner.classList.remove('hidden');
+                statusIcon.classList.add('hidden');
+                resultBox.classList.add('hidden');
+                resolveBtn.disabled = true;
+                statusText.innerText = 'Resolving URL & checking full-text availability (PMC / Unpaywall)...';
+
+                const formData = new FormData();
+                formData.append('url', rawUrl);
+
+                try {
+                    const res = await fetch('/resolve-url', { method: 'POST', body: formData });
+                    const data = await res.json();
+
+                    if (data.status === 'error') {
+                        throw new Error(data.message || 'Could not resolve or access URL.');
+                    }
+
+                    if (data.status === 'abstract_only') {
+                        pendingResolution = data;
+                        document.getElementById('modalAbstractSnippet').innerText = data.abstract_text || '(Abstract text extracted from publication registry)';
+                        document.getElementById('abstractModal').classList.remove('hidden');
+                        statusText.innerText = 'Abstract only detected. Awaiting user confirmation...';
+                        return;
+                    }
+
+                    // Full text PDF retrieved!
+                    await executeAppraisalForFilename(data.pdf_filename, false);
+                } catch (err) {
+                    spinner.classList.add('hidden');
+                    alert('Error: ' + err.message);
+                    statusText.innerText = 'Failed: ' + err.message;
+                    resolveBtn.disabled = false;
+                }
+            }
+
+            async function executeAppraisalForFilename(filename, isAbstractOnly) {
+                currentFilename = filename;
+                const statusBox = document.getElementById('statusBox');
+                const statusText = document.getElementById('statusText');
+                const spinner = document.getElementById('spinner');
+                const statusIcon = document.getElementById('statusIcon');
+                const resultBox = document.getElementById('resultBox');
+                const resolveBtn = document.getElementById('resolveBtn');
+                const runBtn = document.getElementById('runBtn');
+
+                statusBox.classList.remove('hidden');
+                spinner.classList.remove('hidden');
+                statusIcon.classList.add('hidden');
+                statusText.innerText = isAbstractOnly ? 
+                    'Extracting coordinates & appraising Abstract...' : 
+                    'Ingesting full text layout, triaging & synthesizing appraisal...';
+
+                const formData = new FormData();
+                formData.append('filename', filename);
+
+                try {
+                    const res = await fetch('/appraise-fetched', { method: 'POST', body: formData });
+                    const data = await res.json();
+
+                    if (!res.ok) throw new Error(data.detail || 'Evaluation failed.');
+
+                    renderAppraisalResults(data);
+                } catch (err) {
+                    spinner.classList.add('hidden');
+                    alert('Error: ' + err.message);
+                    statusText.innerText = 'Failed: ' + err.message;
+                } finally {
+                    resolveBtn.disabled = false;
+                    runBtn.disabled = false;
+                }
+            }
+
+            function renderAppraisalResults(data) {
+                anchorIndex = data.anchor_index || {};
+
+                document.getElementById('fwId').innerText = data.triage.primary_framework_id + ': ' + data.triage.framework_name;
+                document.getElementById('rulesCount').innerText = data.triage.applicable_rules.length + ' rules';
+                document.getElementById('anchorCount').innerText = data.total_anchors_indexed + ' anchors';
+
+                let content = data.final_markdown || data.raw_output;
+
+                if (window.marked) {
+                    let html = marked.parse(content);
+                    const anchorRegex = /(\[(?:Doc_Header|Supp_[^,\]]+|[A-Za-z\s]+),\s*(?:Para\s+\d+|Table\s+\d+|Fig\s+\d+)\]|\[Doc_Header\])/g;
+                    html = html.replace(anchorRegex, function(match) {
+                        const enc = encodeURIComponent(match);
+                        return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">${match}</button>`;
+                    });
+                    document.getElementById('outputMarkdown').innerHTML = html;
+                } else {
+                    document.getElementById('outputMarkdown').innerText = content;
+                }
+
+                document.getElementById('resultBox').classList.remove('hidden');
+                document.getElementById('spinner').classList.add('hidden');
+                document.getElementById('statusIcon').classList.remove('hidden');
+                document.getElementById('statusText').innerText = 'Appraisal complete.';
+
+                const firstPill = document.querySelector('.anchor-pill');
+                if (firstPill) {
+                    firstPill.click();
+                }
+            }
+
             async function startAppraisal() {
                 const fileInput = document.getElementById('pdfFile');
                 if (!fileInput.files[0]) {
@@ -607,38 +843,7 @@ def index_page():
 
                     if (!res.ok) throw new Error(data.detail || 'Evaluation failed.');
 
-                    anchorIndex = data.anchor_index || {};
-
-                    document.getElementById('fwId').innerText = data.triage.primary_framework_id + ': ' + data.triage.framework_name;
-                    document.getElementById('rulesCount').innerText = data.triage.applicable_rules.length + ' rules';
-                    document.getElementById('anchorCount').innerText = data.total_anchors_indexed + ' anchors';
-
-                    let content = data.final_markdown || data.raw_output;
-
-                    // Render formatted markdown with interactive clickable pills
-                    if (window.marked) {
-                        let html = marked.parse(content);
-                        // Convert anchor tags [Section, Para X] into interactive button pills
-                        const anchorRegex = /(\[(?:Doc_Header|Supp_[^,\]]+|[A-Za-z\s]+),\s*(?:Para\s+\d+|Table\s+\d+|Fig\s+\d+)\]|\[Doc_Header\])/g;
-                        html = html.replace(anchorRegex, function(match) {
-                            const enc = encodeURIComponent(match);
-                            return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">${match}</button>`;
-                        });
-                        document.getElementById('outputMarkdown').innerHTML = html;
-                    } else {
-                        document.getElementById('outputMarkdown').innerText = content;
-                    }
-
-                    resultBox.classList.remove('hidden');
-                    spinner.classList.add('hidden');
-                    statusIcon.classList.remove('hidden');
-                    statusText.innerText = 'Appraisal complete.';
-
-                    // If pills exist, auto-select the first anchor pill to showcase the viewer
-                    const firstPill = document.querySelector('.anchor-pill');
-                    if (firstPill) {
-                        firstPill.click();
-                    }
+                    renderAppraisalResults(data);
                 } catch (err) {
                     spinner.classList.add('hidden');
                     alert('Error: ' + err.message);
