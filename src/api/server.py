@@ -536,7 +536,7 @@ def index_page():
                         </div>
 
                         <!-- Full Page Image Viewer with Hover Expand Hitbox -->
-                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 min-h-[500px] flex-1 overflow-y-auto flex items-center justify-center p-2">
+                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 min-h-[500px] flex-1 overflow-y-auto flex items-start justify-center p-3">
                             <div id="viewerPlaceholder" class="text-center p-8 text-slate-400">
                                 <svg class="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                 <p class="text-sm">Click any inline coordinate pill to inspect the source page</p>
@@ -612,8 +612,8 @@ def index_page():
                     leftPane.style.width = leftPercent + '%';
                     rightPane.style.width = rightPercent + '%';
                     
-                    // Reposition hitbox after panel width change
-                    repositionHitbox();
+                    // Reposition hitbox after panel width change without forced auto-scroll
+                    repositionHitbox(false);
                 });
 
                 document.addEventListener('mouseup', function() {
@@ -834,7 +834,30 @@ def index_page():
                 });
             })();
 
-            function repositionHitbox() {
+            function centerHighlightInViewer(smooth = true) {
+                const pageViewer = document.getElementById('pageViewer');
+                const imageContainer = document.getElementById('imageContainer');
+                const hitbox = document.getElementById('highlightHitbox');
+                if (!pageViewer || !hitbox || hitbox.style.display === 'none') return;
+
+                requestAnimationFrame(() => {
+                    const hitboxTop = parseFloat(hitbox.style.top) || hitbox.offsetTop;
+                    const hitboxHeight = parseFloat(hitbox.style.height) || hitbox.offsetHeight || 30;
+                    
+                    const containerTop = imageContainer ? imageContainer.offsetTop : 0;
+                    const highlightCenterY = containerTop + hitboxTop + (hitboxHeight / 2);
+                    
+                    const viewerHeight = pageViewer.clientHeight;
+                    const targetScrollTop = Math.max(0, highlightCenterY - (viewerHeight / 2));
+
+                    pageViewer.scrollTo({
+                        top: targetScrollTop,
+                        behavior: smooth ? 'smooth' : 'auto'
+                    });
+                });
+            }
+
+            function repositionHitbox(shouldScroll = false) {
                 if (!currentMeta || !currentMeta.bbox) {
                     const hitbox = document.getElementById('highlightHitbox');
                     if (hitbox) hitbox.style.display = 'none';
@@ -866,9 +889,13 @@ def index_page():
                 hitbox.style.width = (width + 8) + 'px';
                 hitbox.style.height = (height + 6) + 'px';
                 hitbox.style.display = 'block';
+
+                if (shouldScroll) {
+                    centerHighlightInViewer(true);
+                }
             }
 
-            window.addEventListener('resize', repositionHitbox);
+            window.addEventListener('resize', function() { repositionHitbox(false); });
 
             function switchInputTab(tab) {
                 const tabPdf = document.getElementById('tabPdf');
@@ -1257,18 +1284,25 @@ def index_page():
                 imgContainer.classList.add('hidden');
 
                 const imgUrl = `/view-anchor-image?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(anchor)}`;
-                img.onload = function() {
+                
+                // If same image is already loaded and shown, immediately reposition and center on highlight
+                if ((img.src === imgUrl || img.src.endsWith(imgUrl)) && !imgContainer.classList.contains('hidden')) {
                     placeholder.classList.add('hidden');
-                    imgContainer.classList.remove('hidden');
-                    // Position highlight hitbox precisely over the yellow section
-                    setTimeout(repositionHitbox, 50);
-                };
-                img.onerror = function() {
-                    placeholder.innerHTML = '<p class="text-sm text-red-500">Failed to render page image for this coordinate.</p>';
-                    placeholder.classList.remove('hidden');
-                    imgContainer.classList.add('hidden');
-                };
-                img.src = imgUrl;
+                    repositionHitbox(true);
+                } else {
+                    img.onload = function() {
+                        placeholder.classList.add('hidden');
+                        imgContainer.classList.remove('hidden');
+                        // Position highlight hitbox precisely and scroll to center on it
+                        setTimeout(() => repositionHitbox(true), 60);
+                    };
+                    img.onerror = function() {
+                        placeholder.innerHTML = '<p class="text-sm text-red-500">Failed to render page image for this coordinate.</p>';
+                        placeholder.classList.remove('hidden');
+                        imgContainer.classList.add('hidden');
+                    };
+                    img.src = imgUrl;
+                }
             }
         </script>
     </body>
