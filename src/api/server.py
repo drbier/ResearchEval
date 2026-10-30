@@ -389,11 +389,21 @@ def index_page():
             #highlightHitbox {
                 position: absolute;
                 cursor: zoom-in;
-                border: none;
-                background-color: transparent;
+                border: 2px solid #d97706; /* vivid amber-600 border */
+                background-color: rgba(245, 158, 11, 0.28); /* luminous warm amber tint */
                 border-radius: 4px;
+                box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.5), 0 0 15px rgba(245, 158, 11, 0.4);
                 z-index: 25;
                 pointer-events: auto;
+                transition: top 0.15s ease-out, left 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out;
+            }
+            @keyframes highlightPulse {
+                0% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.8), 0 0 20px rgba(245, 158, 11, 0.9); }
+                50% { box-shadow: 0 0 0 5px rgba(251, 191, 36, 1.0), 0 0 30px rgba(245, 158, 11, 1.0); }
+                100% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.5), 0 0 15px rgba(245, 158, 11, 0.4); }
+            }
+            .hitbox-pulse {
+                animation: highlightPulse 0.8s ease-in-out;
             }
             #sectionPopup {
                 position: fixed;
@@ -528,22 +538,22 @@ def index_page():
                 </div>
 
                 <!-- Draggable Split Container: Left Appraisal | Resizer | Right Source Inspector -->
-                <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch">
+                <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch rounded-lg border border-slate-200 shadow-sm overflow-hidden bg-white" style="height: calc(100vh - 180px); min-height: 650px;">
                     <!-- Left: Clinical Appraisal -->
-                    <div id="leftPane" class="bg-white p-6 rounded-l-lg border border-slate-200 shadow-sm overflow-y-auto select-text" style="width: 55%; min-width: 25%; max-width: 75%;">
-                        <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-2">
+                    <div id="leftPane" class="bg-white p-6 border-r border-slate-200 overflow-y-auto select-text flex flex-col h-full" style="width: 55%; min-width: 25%; max-width: 75%;">
+                        <div class="sticky top-0 bg-white z-10 pb-3 border-b border-slate-200 mb-4 flex justify-between items-center">
                             <h3 class="text-lg font-semibold text-slate-800">Structured Clinical Appraisal</h3>
                             <span class="text-xs text-slate-400 italic">Click any coordinate pill to inspect source text</span>
                         </div>
-                        <div id="outputMarkdown" class="prose max-w-none text-slate-800 bg-slate-50 p-6 rounded-lg border border-slate-200 text-sm leading-relaxed"></div>
+                        <div id="outputMarkdown" class="prose max-w-none text-slate-800 bg-slate-50 p-6 rounded-lg border border-slate-200 text-sm leading-relaxed flex-1"></div>
                     </div>
 
                     <!-- Draggable Divider Bar -->
-                    <div id="dragDivider" class="resizer mx-1" title="Drag left or right to resize panels"></div>
+                    <div id="dragDivider" class="resizer" title="Drag left or right to resize panels"></div>
 
                     <!-- Right: Interactive Source Inspector -->
-                    <div id="rightPane" class="bg-white p-6 rounded-r-lg border border-slate-200 shadow-sm flex flex-col space-y-4 select-text" style="width: 45%; min-width: 25%; max-width: 75%;">
-                        <div class="border-b border-slate-200 pb-3 flex justify-between items-center">
+                    <div id="rightPane" class="bg-white p-6 flex flex-col space-y-4 select-text h-full overflow-hidden" style="width: 45%; min-width: 25%; max-width: 75%;">
+                        <div class="border-b border-slate-200 pb-3 flex justify-between items-center flex-shrink-0">
                             <div>
                                 <h3 class="text-base font-semibold text-slate-800">Source Evidence Inspector</h3>
                                 <p id="inspectSubtitle" class="text-xs text-slate-500 mt-0.5">Select any coordinate pill on the left</p>
@@ -554,7 +564,7 @@ def index_page():
                         </div>
 
                         <!-- Snippet Text Box (Large Readable Typography) -->
-                        <div id="snippetBox" class="hidden p-4 rounded-md bg-amber-50 border border-amber-200 text-sm text-amber-950 leading-relaxed shadow-xs">
+                        <div id="snippetBox" class="hidden p-4 rounded-md bg-amber-50 border border-amber-200 text-sm text-amber-950 leading-relaxed shadow-xs flex-shrink-0 max-h-40 overflow-y-auto">
                             <span class="font-bold uppercase tracking-wider text-[11px] text-amber-800 block mb-1.5 flex items-center gap-1.5">
                                 <span>📄 Exact Manuscript Text:</span>
                             </span>
@@ -562,7 +572,7 @@ def index_page():
                         </div>
 
                         <!-- Full Page Image Viewer with Hover Expand Hitbox -->
-                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 min-h-[500px] flex-1 overflow-y-auto flex items-start justify-center p-3">
+                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 flex-1 min-h-0 overflow-y-auto flex items-start justify-center p-3">
                             <div id="viewerPlaceholder" class="text-center p-8 text-slate-400">
                                 <svg class="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                 <p class="text-sm">Click any inline coordinate pill to inspect the source page</p>
@@ -862,24 +872,29 @@ def index_page():
 
             function centerHighlightInViewer(smooth = true) {
                 const pageViewer = document.getElementById('pageViewer');
-                const imageContainer = document.getElementById('imageContainer');
                 const hitbox = document.getElementById('highlightHitbox');
                 if (!pageViewer || !hitbox || hitbox.style.display === 'none') return;
 
                 requestAnimationFrame(() => {
-                    const hitboxTop = parseFloat(hitbox.style.top) || hitbox.offsetTop;
-                    const hitboxHeight = parseFloat(hitbox.style.height) || hitbox.offsetHeight || 30;
-                    
-                    const containerTop = imageContainer ? imageContainer.offsetTop : 0;
-                    const highlightCenterY = containerTop + hitboxTop + (hitboxHeight / 2);
-                    
-                    const viewerHeight = pageViewer.clientHeight;
-                    const targetScrollTop = Math.max(0, highlightCenterY - (viewerHeight / 2));
+                    const viewerRect = pageViewer.getBoundingClientRect();
+                    const hitboxRect = hitbox.getBoundingClientRect();
+
+                    if (viewerRect.height === 0 || hitboxRect.height === 0) return;
+
+                    // Calculate precise relative offset of hitbox within pageViewer
+                    const currentScroll = pageViewer.scrollTop;
+                    const relativeTop = hitboxRect.top - viewerRect.top;
+                    const targetScroll = currentScroll + relativeTop - (viewerRect.height / 2) + (hitboxRect.height / 2);
 
                     pageViewer.scrollTo({
-                        top: targetScrollTop,
+                        top: Math.max(0, targetScroll),
                         behavior: smooth ? 'smooth' : 'auto'
                     });
+
+                    // Trigger pulse animation to draw immediate visual attention
+                    hitbox.classList.remove('hitbox-pulse');
+                    void hitbox.offsetWidth; // Force reflow
+                    hitbox.classList.add('hitbox-pulse');
                 });
             }
 
@@ -893,22 +908,22 @@ def index_page():
                 const hitbox = document.getElementById('highlightHitbox');
                 if (!img || img.naturalWidth === 0) return;
 
-                // When consecutive pages are stitched, naturalHeight reflects both pages + 16px divider
-                // Calculate exact single page dimensions
-                const pWidth = currentMeta.page_width || 547.0;
-                const pHeight = currentMeta.page_height || 737.0;
+                if (img.clientWidth === 0) {
+                    // Layout pending reflow; retry on next frame
+                    requestAnimationFrame(() => repositionHitbox(shouldScroll));
+                    return;
+                }
 
-                // Scale factor from PDF points (72 DPI) to rendered image natural pixels (150 DPI)
-                const ptToPx = img.naturalWidth / pWidth;
+                const pWidth = currentMeta.page_width || 581.0;
                 
-                // CSS scaling from natural image dimensions to client display width/height
-                const cssScale = img.clientWidth / img.naturalWidth;
+                // CSS scaling from natural PDF point coordinates to rendered client display width
+                const scale = img.clientWidth / pWidth;
 
                 const bbox = currentMeta.bbox;
-                const left = bbox[0] * ptToPx * cssScale;
-                const top = bbox[1] * ptToPx * cssScale;
-                const width = (bbox[2] - bbox[0]) * ptToPx * cssScale;
-                const height = (bbox[3] - bbox[1]) * ptToPx * cssScale;
+                const left = bbox[0] * scale;
+                const top = bbox[1] * scale;
+                const width = (bbox[2] - bbox[0]) * scale;
+                const height = (bbox[3] - bbox[1]) * scale;
 
                 hitbox.style.left = Math.max(0, left - 4) + 'px';
                 hitbox.style.top = Math.max(0, top - 3) + 'px';
@@ -1158,7 +1173,7 @@ def index_page():
 
                 if (window.marked) {
                     let html = marked.parse(content);
-                    const anchorRegex = /(\[(?:Doc_Header|Supp_[^,\]]+|[A-Za-z\s]+),\s*(?:Para\s+\d+|Table\s+\d+|Fig\s+\d+)\]|\[Doc_Header\])/g;
+                    const anchorRegex = /(\[(?:Doc_Header|Supp_[^,\]]+|[A-Za-z\s]+),\s*(?:Para\s+[\d,\s]+|Table\s+\d+|Fig\s+\d+)\]|\[Doc_Header\])/g;
                     html = html.replace(anchorRegex, function(match) {
                         const enc = encodeURIComponent(match);
                         return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">${match}</button>`;
@@ -1204,6 +1219,12 @@ def index_page():
                 document.getElementById('spinner').classList.add('hidden');
                 document.getElementById('statusIcon').classList.remove('hidden');
                 document.getElementById('statusText').innerText = 'Appraisal complete.';
+
+                // Smoothly scroll down to the split workspace
+                const splitContainer = document.getElementById('splitContainer');
+                if (splitContainer) {
+                    splitContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
 
                 const firstPill = document.querySelector('.anchor-pill');
                 if (firstPill) {
@@ -1267,13 +1288,20 @@ def index_page():
                     }
                 });
 
-                const meta = anchorIndex[anchor];
+                let meta = anchorIndex[anchor];
+                // Support multi-paragraph citations like [Results, Para 67, 77]
+                if (!meta && anchor.includes(',')) {
+                    const match = anchor.match(/\[([A-Za-z\s]+),\s*Para\s+(\d+)/i);
+                    if (match) {
+                        const fallbackId = `[${match[1].trim()}, Para ${match[2]}]`;
+                        meta = anchorIndex[fallbackId];
+                    }
+                }
+
                 const subtitle = document.getElementById('inspectSubtitle');
                 const pageBadge = document.getElementById('pageBadge');
                 const snippetBox = document.getElementById('snippetBox');
                 const snippetText = document.getElementById('snippetText');
-                const cropCard = document.getElementById('cropCard');
-                const cropImg = document.getElementById('cropImage');
                 const imgContainer = document.getElementById('imageContainer');
                 const img = document.getElementById('highlightedImage');
                 const placeholder = document.getElementById('viewerPlaceholder');
@@ -1305,22 +1333,23 @@ def index_page():
                     if (popup) popup.style.display = 'none';
                 }
 
-                // Load full page image with highlight
-                placeholder.classList.remove('hidden');
-                imgContainer.classList.add('hidden');
+                placeholder.classList.add('hidden');
+                imgContainer.classList.remove('hidden');
 
                 const imgUrl = `/view-anchor-image?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(anchor)}`;
                 
-                // If same image is already loaded and shown, immediately reposition and center on highlight
-                if ((img.src === imgUrl || img.src.endsWith(imgUrl)) && !imgContainer.classList.contains('hidden')) {
-                    placeholder.classList.add('hidden');
+                const applyPosition = () => {
                     repositionHitbox(true);
+                    setTimeout(() => repositionHitbox(true), 80);
+                    setTimeout(() => repositionHitbox(true), 250);
+                };
+
+                // If image URL is already loaded and ready, immediately reposition and center
+                if (img.src && (img.src === imgUrl || img.src.endsWith(imgUrl)) && img.complete && img.naturalWidth > 0) {
+                    applyPosition();
                 } else {
                     img.onload = function() {
-                        placeholder.classList.add('hidden');
-                        imgContainer.classList.remove('hidden');
-                        // Position highlight hitbox precisely and scroll to center on it
-                        setTimeout(() => repositionHitbox(true), 60);
+                        applyPosition();
                     };
                     img.onerror = function() {
                         placeholder.innerHTML = '<p class="text-sm text-red-500">Failed to render page image for this coordinate.</p>';
@@ -1328,6 +1357,9 @@ def index_page():
                         imgContainer.classList.add('hidden');
                     };
                     img.src = imgUrl;
+                    if (img.complete && img.naturalWidth > 0) {
+                        applyPosition();
+                    }
                 }
             }
         </script>
