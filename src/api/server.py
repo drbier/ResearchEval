@@ -5,7 +5,7 @@ import urllib.parse
 from typing import Optional, Dict
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import pymupdf
 from PIL import Image
@@ -32,6 +32,25 @@ app.add_middleware(
 DATA_DIR = os.getenv("RESEARCH_EVAL_DATA_DIR", r"D:\SSD-Drive\Antigravity\ResearchEval\data")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.get("/elf-thinker.png")
+def get_elf_thinker_logo():
+    logo_file = os.path.join(STATIC_DIR, "elf-thinker.png")
+    if os.path.exists(logo_file):
+        return FileResponse(logo_file, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Logo not found")
+
+@app.get("/favicon.ico")
+def get_favicon():
+    logo_file = os.path.join(STATIC_DIR, "elf-thinker.png")
+    if os.path.exists(logo_file):
+        return FileResponse(logo_file, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 engine = SynthesisEngine(DATA_DIR)
 fetcher = PaperFetcher(UPLOAD_DIR)
@@ -319,6 +338,7 @@ def index_page():
     <head>
         <meta charset="UTF-8">
         <title>Research Evaluation App - Clinical Appraiser</title>
+        <link rel="icon" type="image/png" href="/elf-thinker.png" />
         <script src="https://cdn.tailwindcss.com"></script>
         <!-- Marked.js for rich markdown rendering -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -421,12 +441,18 @@ def index_page():
         <div class="max-w-7xl mx-auto space-y-6">
             <!-- Header -->
             <header class="border-b border-slate-200 pb-4 flex justify-between items-center bg-white p-6 rounded-lg shadow-sm">
-                <div>
-                    <h1 class="text-3xl font-bold text-sky-700">Research Evaluation App</h1>
-                    <p class="text-slate-500 text-sm mt-1">Deterministic Clinical Research Appraiser with Interactive Source Grounding</p>
-                </div>
-                <div class="text-right text-xs text-slate-500">
-                    <span class="inline-block px-3 py-1 bg-sky-50 text-sky-700 rounded-full border border-sky-200 font-medium">Model: gemini-3.1-flash-lite</span>
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-sm shrink-0">
+                        <img 
+                            src="/elf-thinker.png" 
+                            alt="Elf Thinker Logo" 
+                            class="w-full h-full object-contain p-1"
+                        />
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-sky-700">Research Evaluation App</h1>
+                        <p class="text-slate-500 text-sm mt-0.5">Deterministic Clinical Research Appraiser with Interactive Source Grounding</p>
+                    </div>
                 </div>
             </header>
 
