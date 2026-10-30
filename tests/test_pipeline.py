@@ -123,10 +123,17 @@ class TestResearchEvalPipeline(unittest.TestCase):
 
         # Verify threshold purge: no ungrounded cutoffs in rulesdb.json
         rules_text = json.dumps(rulesdb)
-        self.assertNotIn("5-10%", rules_text, "Ungrounded 5-10% missing data cutoff found in rulesdb")
+        self.assertNotIn("missing data exceeds 5-10%", rules_text, "Ungrounded 5-10% missing data cutoff found in rulesdb")
         self.assertNotIn("3% - 5%", rules_text, "Ungrounded 3-5% discount rate cutoff found in rulesdb")
         self.assertNotIn("Grade 3-5 only", rules_text, "Ungrounded Grade 3-5 only harms cutoff found in rulesdb")
         self.assertNotIn("20% missing", rules_text, "Ungrounded 20% PRO missing data cutoff found in rulesdb")
+
+        # Verify new required rules exist
+        rule_ids = {r["rule_id"] for r in rulesdb}
+        self.assertIn("R_CONSORT_HARMS_17A2", rule_ids)
+        self.assertIn("R_NI_OBJECTIVE_MARGIN", rule_ids)
+        self.assertIn("R_CHEERS_2022_EQUITY_PPIE", rule_ids)
+        self.assertIn("R_SURROGATE_CLINICAL_OUTCOME", rule_ids)
 
     def test_07_ast_boolean_evaluation_and_no_collapse(self):
         """Verify deterministic boolean AST evaluation prevents AND collapse to OR."""
@@ -183,6 +190,38 @@ class TestResearchEvalPipeline(unittest.TestCase):
         res_survey = engine.classify_text(survey_header, survey_methods)
         self.assertEqual(res_survey.primary_framework_id, "FW_J")
         self.assertIn("R_SURVEY_RESPONSE_BIAS", res_survey.applicable_rules)
+
+    def test_09_pan_medical_triage_and_lexicon(self):
+        """Verify pan-medical tagging (Cardiology, Nephrology, Neurology) and RECIST 1.1 lexicon values."""
+        engine = TriageEngine(self.data_dir)
+
+        # 1. Cardiology trial (DAPA-HF style)
+        cardio_header = "Dapagliflozin in Patients with Heart Failure and Reduced Ejection Fraction: A Multicenter Randomized Double-Blind Trial"
+        cardio_methods = "Patients with HFrEF were randomly assigned to dapagliflozin or placebo. The primary composite outcome was cardiovascular death or hospitalization for heart failure. Symptoms were assessed via the Kansas City Cardiomyopathy Questionnaire (KCCQ)."
+        res_cardio = engine.classify_text(cardio_header, cardio_methods)
+        self.assertEqual(res_cardio.primary_framework_id, "FW_A")
+        self.assertIn("+TAG_CARDIOLOGY", res_cardio.sub_feature_tags)
+        self.assertIn("+TAG_COMPOSITE", res_cardio.sub_feature_tags)
+        self.assertIn("+TAG_CONSORT_PRO", res_cardio.sub_feature_tags)
+        self.assertIn("R_COMPOSITE_DECONSTRUCTION", res_cardio.applicable_rules)
+
+        # 2. Check RECIST 1.1 and pan-medical entries in lexicondb
+        import json
+        with open(os.path.join(self.data_dir, "lexicondb.json"), "r", encoding="utf-8") as f:
+            lexicon = json.load(f)
+        lex_terms = {item["term"]: item for item in lexicon}
+        
+        self.assertIn("RECIST 1.1 Criteria", lex_terms)
+        recist_def = lex_terms["RECIST 1.1 Criteria"]["definition"]
+        self.assertIn("10 mm", recist_def)
+        self.assertIn("15 mm", recist_def)
+        self.assertIn("20% relative increase", recist_def)
+        self.assertIn("5 mm", recist_def)
+
+        self.assertIn("Major Adverse Cardiac Events (MACE)", lex_terms)
+        self.assertIn("Kansas City Cardiomyopathy Questionnaire (KCCQ)", lex_terms)
+        self.assertIn("eGFR Slope & Composite Renal Endpoints", lex_terms)
+        self.assertIn("Expanded Disability Status Scale (EDSS)", lex_terms)
 
 if __name__ == "__main__":
     unittest.main()

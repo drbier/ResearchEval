@@ -244,7 +244,7 @@
       "tag": "+TAG_CONSORT_PRO"
     },
     "directional_bias": "PRO Attrition & Clinical Irrelevance Bias",
-    "appraisal_action": "Examine whether the PRO instrument is validated in the target population and whether compliance and completion rates over longitudinal follow-up are documented. Audit the pre-specified statistical approach for handling missing PRO data (Item P12a). Verify whether observed score differences meet the a priori Minimally Important Difference (MID / MCID) threshold rather than asserting clinical benefit on statistical significance (p < 0.05) alone."
+    "appraisal_action": "Examine whether the PRO instrument is validated in the target population and whether compliance and completion rates over longitudinal follow-up are documented. Audit the pre-specified statistical approach for handling missing PRO data (Item P12a), flagging naive Last Observation Carried Forward (LOCF) for informative dropout (MNAR). Enforce a two-tiered MID audit: (1) verify whether observed score differences meet an a priori instrument-specific, anchor-based Minimally Important Difference (MID / MCID); (2) if no anchor-based MID exists, verify whether a validated distribution-based benchmark (e.g. 0.5 SD or 5-10% of scale range) was justified, rather than asserting clinical benefit on statistical significance (p < 0.05) alone."
   },
   {
     "rule_id": "R_NI_DUAL_ANALYSIS",
@@ -342,8 +342,8 @@
     "appraisal_action": "Assess whether control arm patients crossed over to the experimental agent or received active subsequent lines upon disease progression. Evaluate whether statistical adjustment models for treatment switching (such as Rank-Preserving Structural Failure Time [RPSFT] or two-stage estimation) were reported alongside naive ITT analyses to account for OS dilution."
   },
   {
-    "rule_id": "R_SURROGATE_PFS_OS",
-    "target_domain": "Oncology Endpoints: Progression-Free Survival vs Overall Survival Dissociation",
+    "rule_id": "R_SURROGATE_CLINICAL_OUTCOME",
+    "target_domain": "Clinical Trial Endpoints: Surrogate vs Hard Clinical Outcome Dissociation",
     "framework_ids": [
       "FW_A",
       "FW_F"
@@ -358,20 +358,27 @@
       "endpoint"
     ],
     "trigger": {
-      "all": [
+      "any": [
         {
-          "frameworks": [
-            "FW_A",
-            "FW_F"
+          "all": [
+            {
+              "frameworks": [
+                "FW_A",
+                "FW_F"
+              ]
+            },
+            {
+              "tag": "+TAG_ONCOLOGY"
+            }
           ]
         },
         {
-          "tag": "+TAG_ONCOLOGY"
+          "tag": "+TAG_SURROGATE_ENDPOINT"
         }
       ]
     },
-    "directional_bias": "Surrogate Invalidation Bias (PFS gains failing to confer survival or quality-of-life benefit)",
-    "appraisal_action": "Examine whether statistically significant gains in intermediate surrogate endpoints (such as PFS or objective response rate [ORR]) translate into a demonstrable overall survival (OS) benefit or verified quality-of-life improvement. Explicitly assess potential dissociation between surrogate improvements and long-term clinical survival."
+    "directional_bias": "Surrogate Invalidation Bias (intermediate marker gains failing to translate into hard survival or functional benefits)",
+    "appraisal_action": "Examine whether statistically significant gains in intermediate surrogate endpoints (such as PFS/ORR in oncology, LDL-C/blood pressure in cardiology, eGFR decline in nephrology, or HbA1c in diabetology) translate into demonstrable hard clinical outcomes (overall survival, reduced irreversible organ failure, or verified health-related quality of life). Explicitly audit potential dissociation between surrogate improvements and patient-centered clinical endpoints."
   },
   {
     "rule_id": "R_IRECIST_PSEUDOPROGRESSION",
@@ -423,7 +430,7 @@
       ]
     },
     "directional_bias": "Model Misspecification Bias (inaccurate summary Hazard Ratio when hazards are non-proportional)",
-    "appraisal_action": "Inspect Kaplan-Meier survival curves for crossing curves, delayed separation, or converging tails. Such patterns violate the proportional hazards assumption of the Cox model, rendering a single constant Hazard Ratio (HR) misleading. Verify whether formal tests of proportional hazards (e.g. Schoenfeld residuals) and non-proportional alternatives (such as restricted mean survival time [RMST] or milestone survival rates) were provided."
+    "appraisal_action": "Inspect Kaplan-Meier survival curves for crossing curves, delayed separation, or converging tails. Such patterns violate the proportional hazards assumption of the Cox model, rendering a single constant Hazard Ratio (HR) misleading. Audit the text for formal tests of proportional hazards (e.g. Schoenfeld residuals) or non-proportional alternatives (such as restricted mean survival time [RMST] or milestone survival rates). If the manuscript is silent on proportional hazards testing, document this as an unverified methodological assumption requiring clinician visual inspection of the survival curves."
   },
   {
     "rule_id": "R_SUBGROUP_INTERACTION",
@@ -514,7 +521,7 @@
       "framework": "FW_B"
     },
     "directional_bias": "Dissemination Bias (selective publication inflating pooled effect sizes)",
-    "appraisal_action": "Assess whether publication bias and small-study effects were evaluated using funnel plots and quantitative asymmetry tests (e.g. Egger linear regression or Begg rank correlation). Evaluate the likely direction and magnitude of bias on the summary estimate, and verify whether comprehensive searches covered clinical trial registries, regulatory documents, and grey literature to mitigate selective suppression."
+    "appraisal_action": "Assess whether publication bias and small-study effects were evaluated. Restrict formal statistical asymmetry tests (e.g. Egger linear regression or Begg rank correlation) to meta-analyses with at least 10 included trials (k >= 10) to avoid false-positive or underpowered conclusions. Evaluate the likely direction and magnitude of bias on the summary estimate before downgrading evidence certainty, acknowledging that unpublished small trials do not universally alter the clinical bottom line."
   },
   {
     "rule_id": "R_PRISMA_EFFECT_SIZE_VS_STUDY_POWER",
@@ -1002,7 +1009,7 @@
       "tag": "+TAG_LIQUID_BIOPSY_CTDNA"
     },
     "directional_bias": "False-Positive Somatic Mutation Misclassification",
-    "appraisal_action": "Audit assay Limit of Detection (LOD) and Variant Allele Fraction (VAF%). Verify whether matched peripheral blood mononuclear cell (PBMC) sequencing was conducted to exclude Clonal Hematopoiesis of Indeterminate Potential (CHIP) mutations, which frequently mimic somatic tumor-derived ctDNA alterations."
+    "appraisal_action": "Audit assay Limit of Detection (LOD) and Variant Allele Fraction (VAF%). Classify the ctDNA Minimal Residual Disease (MRD) assay architecture: explicitly document whether it is 'tumor-informed' (bespoke patient-specific variant panel, high analytical sensitivity LOD <= 0.01% VAF) or 'tumor-naïve' (fixed plasma-only hotspot panel, carrying higher false-negative rates for low-shedding microscopic residual disease). Verify whether matched peripheral blood mononuclear cell (PBMC) sequencing was conducted to exclude Clonal Hematopoiesis of Indeterminate Potential (CHIP) mutations."
   },
   {
     "rule_id": "R_SURVEY_SAMPLING_FRAME",
@@ -1069,5 +1076,81 @@
     },
     "directional_bias": "Measurement Error & Instrument Invalidation",
     "appraisal_action": "Examine whether the survey questions utilized previously validated psychometric scales or underwent formal cognitive pre-testing and pilot testing. Audit item clarity, neutral framing, avoidance of leading or double-barreled questions, and internal consistency reliability."
+  },
+  {
+    "rule_id": "R_CONSORT_HARMS_17A2",
+    "target_domain": "CONSORT Harms 2022: Omitted Harms Rationale & Zero-Event Disclosure",
+    "framework_ids": [
+      "FW_A",
+      "FW_F"
+    ],
+    "provenance": "checklist",
+    "source_file": "Reference_papers/1.Foundational/Core 10/CONSORT Harms 2022 statement, explanation, and elaboration.pdf",
+    "source_item": "Items 17a2, 17c",
+    "source_page": 13,
+    "key_terms": [
+      "item 17a2",
+      "rationale",
+      "harms"
+    ],
+    "trigger": {
+      "any": [
+        {
+          "framework": "FW_A"
+        },
+        {
+          "framework": "FW_F"
+        },
+        {
+          "tag": "+TAG_SAFETY_HARMS"
+        }
+      ]
+    },
+    "directional_bias": "Selective Safety Suppression Bias",
+    "appraisal_action": "Verify that when assessed harm outcomes lack presented effect estimates, an explicit scientific rationale and repository data-access link are provided (Item 17a2). Audit whether prespecified harm outcomes that yielded zero occurrences are explicitly declared (Item 17c) rather than silently omitted from the results."
+  },
+  {
+    "rule_id": "R_NI_OBJECTIVE_MARGIN",
+    "target_domain": "Non-Inferiority: Strategic Objective (Alternative vs Replacement) & Margin Calibration",
+    "framework_ids": [
+      "FW_F"
+    ],
+    "provenance": "derived",
+    "source_file": "Reference_papers/2.Statistics/Exploring_different_objectives_in_non-inferiority_.pdf",
+    "source_item": "Section: Objectives of Non-inferiority Trials",
+    "source_page": 2,
+    "key_terms": [
+      "non-inferiority",
+      "margin",
+      "objective",
+      "safety"
+    ],
+    "trigger": {
+      "framework": "FW_F"
+    },
+    "directional_bias": "Unjustified Efficacy Sacrifice (accepting inferior efficacy without compensating secondary benefit)",
+    "appraisal_action": "Audit the strategic objective of the non-inferiority trial. If designed as a 'replacement' intervention (promising improved safety, tolerability, convenience, or cost), verify that the non-inferiority margin (Delta) is clinically calibrated to and outweighed by the demonstrated secondary benefit. If designed purely as an 'alternative' option with no secondary advantages, challenge any margin that permits meaningful loss of efficacy."
+  },
+  {
+    "rule_id": "R_CHEERS_2022_EQUITY_PPIE",
+    "target_domain": "CHEERS 2022: Analysis Plan, Distributional Equity & Patient Involvement",
+    "framework_ids": [
+      "FW_G"
+    ],
+    "provenance": "checklist",
+    "source_file": "Reference_papers/5.Real-World Evidence & Health Economics/Consolidated Health Economic Evaluation Reporting Standards 2022 (CHEERS 2022) statement updated reporting guidance for health economic evaluations.pdf",
+    "source_item": "Items 4, 19, 21, 25",
+    "source_page": 4,
+    "key_terms": [
+      "economic evaluation",
+      "distributional",
+      "equity",
+      "patient"
+    ],
+    "trigger": {
+      "framework": "FW_G"
+    },
+    "directional_bias": "Equity Neglect & Stakeholder Misalignment",
+    "appraisal_action": "Audit whether an a priori Health Economic Analysis Plan (HEAP) was registered (Item 4). Verify whether distributional cost-effectiveness and equity impacts across patient subgroups were assessed (Item 19). Audit reporting of patient and public involvement (PPIE) in study conceptualization and interpretation (Items 21 & 25). For pre-2022 evaluations, document absence as an evolving reporting limitation rather than an invalidating flaw."
   }
 ]

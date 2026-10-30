@@ -15,7 +15,7 @@
     "mandatory_elements": [
       "Exact Article Title as root heading",
       "Clinical Bottom Line: Direct interpretive takeaway synthesizing therapeutic efficacy, safety profile, and methodological validity caveats",
-      "Results in Context: Primary outcome with point estimates, HR/RR, 95% CIs, p-values; absolute risk reduction (ARR) and NNT; secondary endpoints and oncology response criteria; patient-reported outcomes (PROs) with MID thresholds; key adverse events drawing from CONSORT Harms 2022",
+      "Results in Context: Primary outcome with point estimates, HR/RR, 95% CIs, p-values; absolute risk reduction (ARR) and NNT; primary and disease-specific secondary/surrogate endpoints with validated clinical criteria (e.g. RECIST/iRECIST in oncology, MACE in cardiology, eGFR slope in nephrology, EDSS in neurology, HbA1c in diabetology); patient-reported outcomes (PROs) with anchor-based MID thresholds; key adverse events drawing from CONSORT Harms 2022",
       "Assertive Critical Appraisal: RoB 2 overall judgment (Low / Some concerns / High) across all 5 domains; subgroup credibility audit; composite endpoint deconstruction; CONSORT reporting quality (allocation concealment, flow diagram)",
       "Research Objective: Explicit trial hypothesis, primary and secondary research questions",
       "Study Design: Trial design (parallel-group, multi-arm, crossover, factorial, adaptive), randomization methodology, blinding of participants/personnel/assessors",
@@ -161,8 +161,8 @@
     ],
     "mandatory_elements": [
       "Clinical Bottom Line: Direct verdict on whether non-inferiority was conclusively demonstrated, secondary superiority claims, and safety trade-offs",
-      "Results in Context: Point estimates and two-sided 95% (or 90%) confidence intervals compared against the pre-specified delta margin for both ITT and Per-Protocol (PP) populations; ARR, NNT, and harm metrics",
-      "Assertive Critical Appraisal: Dual ITT and Per-Protocol analysis concordance audit (challenging non-inferiority if PP fails or is omitted); statistical and clinical justification of Delta margin (preserving >= 50% active control historical efficacy); assay sensitivity and constancy assumption evaluation; biocreep risk; RoB 2 appraisal",
+      "Results in Context: Point estimates and two-sided 95% (or 90%) confidence intervals compared against the pre-specified delta margin for both ITT and Per-Protocol (PP) populations; ARR, NNT, and harm metrics; disease-specific secondary and surrogate endpoints with validated clinical criteria (e.g. MACE, mortality, functional scores)",
+      "Assertive Critical Appraisal: Dual ITT and Per-Protocol analysis concordance audit (challenging non-inferiority if PP fails or is omitted); strategic trial objective audit (replacement trial promising safety/convenience trade-offs vs pure alternative option trial); statistical and clinical justification of Delta margin (preserving >= 50% active control historical efficacy); assay sensitivity and constancy assumption evaluation; biocreep risk; RoB 2 appraisal",
       "Research Objective: Non-inferiority hypothesis and active comparator rationale",
       "Study Design: Parallel-group active-controlled design, blinding, pre-specified delta margin",
       "Setting and Participants: Participant counts across ITT and PP sets, trial centers, eligibility criteria",
@@ -191,7 +191,7 @@
     "mandatory_elements": [
       "Clinical Bottom Line: Clear statement of cost-effectiveness or budget impact relative to standard willingness-to-pay thresholds",
       "Results in Context: Incremental cost-effectiveness ratio (ICER) or incremental cost-utility ratio (ICUR) per QALY/DALY; total incremental costs and incremental health outcomes; cost currency and reference price year",
-      "Assertive Critical Appraisal: CHEERS 2022 compliance; time horizon and discount rate rationale audit; decision model structural assumptions; deterministic sensitivity analysis (tornado diagrams) and probabilistic sensitivity analysis (PSA / CEAC curves); health state utility valuation methods",
+      "Assertive Critical Appraisal: CHEERS 2022 compliance; time horizon and discount rate rationale audit; presence of a priori Health Economic Analysis Plan (HEAP); distributional cost-effectiveness and equity impacts across subgroups; patient and public involvement (PPIE); decision model structural assumptions; deterministic sensitivity analysis (tornado diagrams) and probabilistic sensitivity analysis (PSA / CEAC curves); health state utility valuation methods",
       "Research Objective: Economic evaluation perspective (societal, healthcare payer) and target policy question",
       "Study Design: Model type (Markov cohort, decision tree, microsimulation, trial-based CEA), cycle length, time horizon",
       "Setting and Participants: Target patient cohort, clinical setting, jurisdiction / healthcare system context",
@@ -251,7 +251,7 @@
       "Results in Context: Point estimates, Hazard Ratios (HR), Odds Ratios (OR), or AUC with 95% CIs across biomarker strata; assay Limit of Detection (LOD), Variant Allele Fraction (VAF%), or biomarker concentration ranges",
       "Assertive Critical Appraisal: REMARK guideline adherence; pre-analytical biospecimen handling and assay reproducibility; cut-point pre-specification audit (flagging data-driven optimal cutpoints without holdout validation); multivariable survival models demonstrating independent prognostic value beyond standard clinical staging; distinction between prognostic vs predictive biomarker roles (requiring interaction tests); for ctDNA, exclusion of CHIP mutations",
       "Research Objective: Biomarker biological rationale, prospective vs retrospective validation question",
-      "Study Design: Cohort or embedded trial design, biospecimen sampling timeline, analytical platform (NGS, PCR, IHC)",
+      "Study Design: Cohort or embedded trial design, biospecimen sampling timeline, analytical platform (NGS, PCR, IHC), and ctDNA assay classification: explicitly specify whether the assay is tumor-informed (patient-specific, personalized variant tracking) or tumor-naïve (fixed panel hotspot tracking), noting implications for analytical sensitivity and MRD false-negative rates",
       "Setting and Participants: Patient cohort size, specimen repository source, clinical stages, inclusion and exclusion criteria",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],

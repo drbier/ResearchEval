@@ -151,7 +151,7 @@ class TriageEngine:
         
         tag_heuristics = {
             "+TAG_NON_INFERIORITY": ["non-inferiority", "noninferiority", "non-inferior", "per-protocol"],
-            "+TAG_CONSORT_PRO": ["patient-reported", "quality of life", "hrqol", "prom", "eortc", "fact-", "pro-ctcae"],
+            "+TAG_CONSORT_PRO": ["patient-reported", "quality of life", "hrqol", "prom", "proms", "eortc", "fact-", "pro-ctcae", "kccq", "eq-5d", "sf-36", "haq-di"],
             "+TAG_BIOMARKER": ["biomarker", "ctdna", "mutation", "ngs", "vaf", "liquid biopsy", "immunohistochemistry", "tumor marker"],
             "+TAG_CROSSOVER": ["cross-over", "crossover", "switched to", "subsequent therapy", "treatment switching"],
             "+TAG_SAFETY_HARMS": ["adverse events", "toxicities", "treatment-emergent", "grade 3", "grade 4", "discontinuation", "harms"],
@@ -163,7 +163,11 @@ class TriageEngine:
             "+TAG_COHORT": ["cohort", "cohort study", "longitudinal follow-up", "registry cohort", "population-based cohort"],
             "+TAG_EHR_CLAIMS": ["electronic health records", "ehr", "claims database", "administrative data", "registry linkage", "icd-9", "icd-10"],
             "+TAG_SURVEY": ["survey", "questionnaire", "likert scale", "response rate", "respondents"],
-            "+TAG_IMMORTAL_TIME_RISK": ["immortal time", "time-dependent covariate", "landmark analysis", "time from diagnosis to treatment"]
+            "+TAG_IMMORTAL_TIME_RISK": ["immortal time", "time-dependent covariate", "landmark analysis", "time from diagnosis to treatment"],
+            "+TAG_CARDIOLOGY": ["cardiovascular", "mace", "heart failure", "myocardial infarction", "ejection fraction", "lvef", "kccq", "nyha", "stemi", "revascularization"],
+            "+TAG_NEPHROLOGY": ["egfr", "kidney disease", "renal", "proteinuria", "creatinine", "esrd", "dialysis", "nephropathy"],
+            "+TAG_NEUROLOGY": ["edss", "multiple sclerosis", "stroke", "nihss", "disability progression", "relapse rate", "parkinson", "alzheimer"],
+            "+TAG_SURROGATE_ENDPOINT": ["surrogate endpoint", "surrogate", "progression-free", "pfs", "dfs", "event-free", "hba1c", "ldl-c", "blood pressure", "biomarker endpoint"]
         }
         
         for tag, keywords in tag_heuristics.items():

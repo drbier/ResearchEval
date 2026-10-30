@@ -27,7 +27,7 @@
     "term": "Minimal Important Difference (MID / MCID)",
     "definition": "The smallest difference in score in an outcome of interest that informed patients or clinicians perceive as beneficial and that would mandate a change in patient management.",
     "formula": "Determined via Anchor-based methods (e.g. Global Rating of Change) or Distribution-based methods (e.g. 0.5 * baseline Standard Deviation)",
-    "critical_caveat": "Statistical significance (p < 0.05) does NOT equate to clinical relevance. In large sample sizes, a tiny, clinically meaningless 1-point change on a 100-point symptom scale can reach statistical significance but fails to provide noticeable patient benefit."
+    "critical_caveat": "Statistical significance (p < 0.05) does NOT equate to clinical relevance. In large sample sizes, a tiny, clinically meaningless 1-point change on a 100-point symptom scale can reach statistical significance but fails to provide noticeable patient benefit. Primary appraisal must enforce anchor-based MIDs specific to the validated instrument (e.g. KCCQ >= 5 points, EORTC QLQ-C30 >= 10 points) before accepting claims of clinical improvement."
   },
   {
     "term": "Intention-to-Treat (ITT) vs. Per-Protocol (PP)",
@@ -39,7 +39,13 @@
     "term": "Non-Inferiority Margin (Delta)",
     "definition": "The maximum clinically acceptable difference between the standard therapy and the experimental therapy that allows the experimental therapy to still be considered non-inferior.",
     "formula": "Null Hypothesis H0: (Treatment - Control) >= Delta (for harmful endpoints)",
-    "critical_caveat": "The non-inferiority margin must be pre-specified based on historical trial data establishing the efficacy of the active control over placebo. If Delta is chosen too wide, a truly inferior, ineffective drug can be inappropriately approved ('biocreep')."
+    "critical_caveat": "The non-inferiority margin must be pre-specified based on historical trial data establishing the efficacy of the active control over placebo (preserving >= 50% of active control benefit, M1/2). If Delta is calibrated based on secondary benefits ('replacement' trial), the secondary advantage must justify the efficacy sacrifice; in pure 'alternative' trials, any substantial loss of efficacy is unacceptable."
+  },
+  {
+    "term": "RECIST 1.1 Criteria",
+    "category": "Oncology Response Evaluation",
+    "definition": "Standardized criteria for evaluating tumor burden changes in solid tumors. Measurable lesions require a longest diameter >= 10 mm by CT scan; pathological lymph nodes require a short axis >= 15 mm. Progressive Disease (PD) is defined as at least a 20% relative increase AND an absolute increase >= 5 mm in the sum of diameters over the nadir (smallest sum on study), or appearance of >= 1 new lesion.",
+    "critical_caveat": "Immune checkpoint inhibitors may induce transient pseudo-progression (immune cell infiltration) that falsely meets RECIST 1.1 PD; iRECIST requires a repeat confirmatory scan 4-8 weeks later (iUPD to iCPD) while clinically stable."
   },
   {
     "term": "iRECIST (iUPD vs. iCPD)",
@@ -54,10 +60,10 @@
     "critical_caveat": "Demonstrating that biomarker-positive patients have better survival on a given drug does NOT prove the marker is predictive—it may simply reflect a benign prognostic biology. Proving predictive utility requires randomized comparisons and formal statistical interaction testing."
   },
   {
-    "term": "ctDNA / Liquid Biopsy & VAF",
-    "definition": "Circulating tumor DNA released into plasma by apoptotic/necrotic tumor cells, measured by Variant Allele Fraction (VAF%). Used for minimal residual disease (MRD) detection and genomic profiling.",
+    "term": "ctDNA Minimal Residual Disease: Tumor-Informed vs. Tumor-Naïve",
+    "definition": "Circulating tumor DNA assays for Minimal Residual Disease (MRD) detection: Tumor-informed assays use whole-exome sequencing of primary tumor tissue to design bespoke multiplex panels tracking patient-specific variants (LOD <= 0.01% VAF). Tumor-naïve (plasma-only) assays use fixed hotspot gene panels without prior tumor sequencing.",
     "formula": "VAF% = (Mutant Allele Reads / Total Allele Reads) * 100",
-    "critical_caveat": "Clonal Hematopoiesis of Indeterminate Potential (CHIP) causes age-related mutations in hematopoietic stem cells (e.g. TP53, DNMT3A, TET2) that are shed into plasma and frequently misidentified as tumor mutations. Matched peripheral blood mononuclear cell (PBMC) sequencing is necessary to eliminate false positives."
+    "critical_caveat": "Tumor-naïve assays carry significantly higher false-negative rates for microscopic MRD due to lower analytical sensitivity. Clonal Hematopoiesis of Indeterminate Potential (CHIP) causes age-related mutations in white blood cells (e.g. TP53, DNMT3A, TET2) that mimic somatic mutations; matched PBMC sequencing is necessary to prevent false-positive calls."
   },
   {
     "term": "Post-Progression Crossover & Dilution Bias",
@@ -66,10 +72,33 @@
     "critical_caveat": "When substantial crossover occurs (> 20-30%), standard ITT overall survival (OS) analyses are severely diluted, potentially yielding a non-significant OS difference despite substantial efficacy. Unadjusted OS analyses should be scrutinized alongside crossover-adjusted survival models."
   },
   {
+    "term": "Major Adverse Cardiac Events (MACE)",
+    "definition": "Standard composite endpoint in cardiovascular clinical trials, classically comprising cardiovascular death, non-fatal myocardial infarction (MI), and non-fatal ischemic stroke (3-point MACE), often expanded to include urgent coronary revascularization or heart failure hospitalization (4-point or 5-point MACE).",
+    "formula": "Time to first event among composite components",
+    "critical_caveat": "Composite outcomes can be misleading if a statistically significant treatment effect is driven entirely by a softer, more subjective component (such as elective revascularization or angina hospitalizations) while hard endpoints (all-cause mortality or stroke) show no benefit. Individual component deconstruction is mandatory."
+  },
+  {
+    "term": "Kansas City Cardiomyopathy Questionnaire (KCCQ)",
+    "definition": "Validated patient-reported outcome measure quantifying symptom frequency, physical limitations, social limitations, and quality of life in patients with heart failure (scale 0-100, higher scores indicate better health status).",
+    "formula": "Overall Summary Score (KCCQ-OS) and Clinical Summary Score (KCCQ-CSS)",
+    "critical_caveat": "Clinical significance requires meeting established anchor-based MID thresholds: a change of >= 5 points represents a small but clinically meaningful improvement; >= 10 points represents a moderate-to-large improvement; >= 20 points represents a substantial clinical transformation."
+  },
+  {
+    "term": "eGFR Slope & Composite Renal Endpoints",
+    "definition": "Nephrology clinical trial outcomes measuring chronic kidney disease progression. Hard renal composite endpoints comprise End-Stage Renal Disease (ESRD / maintenance dialysis or kidney transplantation), sustained >= 40-50% decline in estimated Glomerular Filtration Rate (eGFR), or renal death. eGFR slope (chronic rate of eGFR decline over time in mL/min/1.73 m^2/year) serves as a validated surrogate endpoint.",
+    "formula": "eGFR decline rate via mixed-effects linear spline modeling",
+    "critical_caveat": "Acute hemodynamic drops in eGFR upon initiating SGLT2 inhibitors or RAAS blockers represent reversible functional changes rather than true nephron injury; long-term chronic slope after the initial acute phase must be evaluated to confirm true kidney preservation."
+  },
+  {
+    "term": "Expanded Disability Status Scale (EDSS)",
+    "definition": "Standardized scale (0 to 10 in 0.5-unit increments) quantifying neurological impairment across eight functional systems in multiple sclerosis.",
+    "formula": "Confirmed Disability Progression (CDP): Sustained EDSS increase (>= 1.0 point if baseline <= 5.5, or >= 0.5 points if baseline > 5.5) confirmed at 12 or 24 weeks",
+    "critical_caveat": "Transient fluctuations in EDSS caused by infections or heat (Uhthoff phenomenon) can mimic disability progression. Confirmation of progression at a separate evaluation 12 or 24 weeks later without an active relapse is mandatory to establish permanent disability accumulation."
+  },
+  {
     "term": "Incremental Cost-Effectiveness Ratio (ICER) & QALY",
     "definition": "The ratio of the difference in total monetary costs between two interventions to the difference in their health benefits, measured in Quality-Adjusted Life Years (QALYs).",
     "formula": "ICER = (Cost_Treatment - Cost_Control) / (QALY_Treatment - QALY_Control)",
-    "critical_caveat": "Economic models are highly sensitive to the assumed time horizon and discount rate (standard 3-5% annually). QALY utilities derived from unvalidated instruments or expert guesses can distort cost-effectiveness, and willingness-to-pay (WTP) thresholds vary widely by jurisdiction ($50k-$150k in the US; £20k-£30k in the UK NICE system)."
+    "critical_caveat": "Economic models are highly sensitive to the assumed time horizon and discount rate. CHEERS 2022 mandates reporting the discount rate with an explicit evidence-based rationale, rather than defaulting to arbitrary percentages. QALY utilities derived from unvalidated instruments or expert guesses can distort cost-effectiveness, and willingness-to-pay (WTP) thresholds vary widely by jurisdiction."
   }
 ]
-
