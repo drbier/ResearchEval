@@ -39,8 +39,19 @@ class SynthesisEngine:
         """Construct the strictly scoped context injection payload."""
         fw_schema = self.schemadb.get(triage.primary_framework_id, {})
         
-        # Collect only triggered rules
-        active_rules = [self.rulesdb[rid] for rid in triage.applicable_rules if rid in self.rulesdb]
+        # Collect only triggered rules and format for injection
+        active_rules = []
+        for rid in triage.applicable_rules:
+            if rid in self.rulesdb:
+                r = self.rulesdb[rid]
+                src_filename = os.path.basename(r.get("source_file", ""))
+                active_rules.append({
+                    "rule_id": r["rule_id"],
+                    "target_domain": r.get("target_domain", ""),
+                    "citation": f"{r.get('source_item', '')} ({src_filename}, p. {r.get('source_page', '')})",
+                    "directional_bias": r.get("directional_bias", ""),
+                    "appraisal_action": r.get("appraisal_action", "")
+                })
         
         # Assemble relevant lexicon definitions
         relevant_lexicon = []
@@ -58,7 +69,7 @@ class SynthesisEngine:
             "2. Start with '## Clinical Bottom Line': provide a direct, interpretive takeaway synthesizing clinical findings and validity caveats (not just a descriptive summary).\n"
             "3. In '## Results in Context': Extract EXACT quantitative figures (e.g., exact Odds Ratios, Hazard Ratios, 95% Confidence Intervals, p-values, NNT/ARR) for ALL major endpoints or biomarkers. Do not speak in vague generalities.\n"
             "4. Provide brief, clear plain-language definitions of key statistical metrics used (e.g., Odds Ratio, Hazard Ratio, I^2).\n"
-            "5. In '## Assertive Critical Appraisal': Actively critique the study's methods against the triggered bias frameworks (RoB 2, STROBE, RECORD, REMARK, PRISMA, etc.). Explicitly identify potential failure modes such as unmeasured confounding, reverse causality, survival selection, or lack of independent validation.\n"
+            "5. In '## Assertive Critical Appraisal': Actively critique the study's methods against the triggered bias frameworks. Every critical appraisal point MUST cite the relevant rule ID (e.g. {R_ROB2_D1_RANDOMIZATION}, {R_NI_DUAL_ANALYSIS}) and an exact manuscript coordinate anchor. STRICT RULE: You are FORBIDDEN from applying arbitrary external thresholds or cut-offs not specified in the injected rules (for example, do not invent percentage cut-offs for missing data, or require Grade 3-5 only for harms).\n"
             "6. Ground EVERY factual claim, statistic, and methodological observation with an exact inline source coordinate anchor (e.g., [Doc_Header], [Methods, Para 4], [Results, Table 2], [Discussion, Para 12]). Never invent coordinates.\n"
             "7. In '## Bibliographic Data': Accurately extract Title, Authors, Journal, Year, and DOI / PubMed ID from [Doc_Header]. Ground them with [Doc_Header]. Always format the DOI / PubMed ID as a full live URL (e.g., https://doi.org/10.xxxx/xxxx or https://pubmed.ncbi.nlm.nih.gov/xxxx/). If authors, journal, year, or DOI/PMID are present in [Doc_Header], extract them and never state 'Not specified'.\n"
             "8. STRICT NEGATIVE CONSTRAINTS: NO medical disclaimers, NO conversational greetings, pleasantries, or closing sign-offs, and NO therapeutic practice mandates beyond what the source study evaluated.\n"

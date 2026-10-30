@@ -7,22 +7,27 @@
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
-      "## Research Objective, Design & Setting",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
       "Exact Article Title as root heading",
-      "Clinical Bottom Line: Direct interpretive takeaway synthesizing efficacy, safety, and validity caveats",
-      "Results in Context: Primary outcome with point estimates, HR/RR, 95% CIs, p-values; absolute risk reduction (ARR) and NNT; secondary endpoints and oncology response criteria; patient-reported outcomes (PROs) with MID thresholds; key Grade 3-5 adverse events drawing from CONSORT Harms 2022",
+      "Clinical Bottom Line: Direct interpretive takeaway synthesizing therapeutic efficacy, safety profile, and methodological validity caveats",
+      "Results in Context: Primary outcome with point estimates, HR/RR, 95% CIs, p-values; absolute risk reduction (ARR) and NNT; secondary endpoints and oncology response criteria; patient-reported outcomes (PROs) with MID thresholds; key adverse events drawing from CONSORT Harms 2022",
       "Assertive Critical Appraisal: RoB 2 overall judgment (Low / Some concerns / High) across all 5 domains; subgroup credibility audit; composite endpoint deconstruction; CONSORT reporting quality (allocation concealment, flow diagram)",
-      "Research Objective, Design & Setting: Hypothesis, trial design (parallel/adaptive), blinding, participant count, eligibility criteria, and setting",
+      "Research Objective: Explicit trial hypothesis, primary and secondary research questions",
+      "Study Design: Trial design (parallel-group, multi-arm, crossover, factorial, adaptive), randomization methodology, blinding of participants/personnel/assessors",
+      "Setting and Participants: Participant count, recruitment period, setting/centers, inclusion and exclusion criteria",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI / PubMed ID"
     ],
     "negative_constraints": [
       "NO medical disclaimers",
       "NO conversational pleasantries or filler phrases",
       "NO therapeutic mandates beyond what the study evaluated",
-      "Ground EVERY factual claim with an inline coordinate anchor (e.g. [Methods, Para 3], [Results, Table 2])"
+      "Ground EVERY factual claim with an inline coordinate anchor (e.g. [Methods, Para 3], [Results, Table 2])",
+      "Cite the matching rule ID (e.g. {R_ROB2_D1_RANDOMIZATION}) for every critical appraisal point"
     ]
   },
   "FW_B": {
@@ -33,20 +38,25 @@
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
-      "## Research Objective, Design & Setting",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
       "Clinical Bottom Line: Direct interpretive summary integrating pooled effect estimates with evidence certainty",
-      "Results in Context: Summary of pooled results with exact effect sizes (OR/RR/HR) and 95% CIs; brief definition of statistical terms used; participant/study counts",
+      "Results in Context: Summary of pooled results with exact effect sizes (OR/RR/HR) and 95% CIs; brief definition of statistical terms used; participant and included study counts",
       "Assertive Critical Appraisal: GRADE certainty ratings (High/Moderate/Low/Very Low) per critical outcome with downgrade reasons; Higgins I^2 heterogeneity magnitude and Cochran Q; publication bias assessment (funnel plot / Egger test); special consideration if overall pooled result is significant but individual studies are not; PRISMA reporting quality audit (flow diagram, search strategy)",
-      "Research Objective, Design & Setting: PICO question, databases searched, inclusion criteria",
+      "Research Objective: PICO question (Population, Intervention, Comparator, Outcomes)",
+      "Study Design: Systematic review protocol registration, databases searched, search date range, pooling model (random vs fixed effects)",
+      "Setting and Participants: Included trial settings, total pooled participant count, inclusion and exclusion criteria",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
       "NO medical disclaimers",
       "NO conversational filler",
-      "Ground every factual claim with an inline coordinate anchor"
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
     ]
   },
   "FW_C": {
@@ -57,44 +67,54 @@
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
-      "## Research Objective, Design & Setting",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
       "Clinical Bottom Line: Interpretive summary of observed associations, explicitly emphasizing that observational studies cannot prove causation due to residual confounding and bias",
       "Results in Context: Main unadjusted and confounder-adjusted estimates (Odds Ratios, Relative Risks, Hazard Ratios) with 95% CIs for all key exposures/biomarkers; definitions of statistical metrics used; participant counts across follow-up stages",
       "Assertive Critical Appraisal: STROBE bias critique (residual lifestyle confounding, reverse causality, survival selection, immortal time bias); STROBE confounding adjustment evaluation; RECORD assessment for routine health data / registry linkage (data provenance, ICD diagnostic coding, attrition); generalizability / clinical applicability",
-      "Research Objective, Design & Setting: Specific objectives and hypotheses; study design (prospective/retrospective cohort, case-control); setting, location, dates, participant eligibility and selection criteria",
+      "Research Objective: Specific observational objectives, exposure-outcome hypotheses",
+      "Study Design: Design type (prospective/retrospective cohort, case-control, cross-sectional), follow-up duration, statistical adjustment methods",
+      "Setting and Participants: Setting, location, data collection dates, registry sources, participant eligibility and selection criteria",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO causal assertions (must frame findings strictly as associations)",
-      "NO medical disclaimers or conversational greetings",
-      "Ground every factual claim with an inline coordinate anchor"
+      "NO medical disclaimers",
+      "NO conversational filler",
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
     ]
   },
   "FW_D": {
     "framework_id": "FW_D",
-    "name": "Diagnostic Accuracy & Biomarker Study",
+    "name": "Diagnostic Accuracy Study",
     "headings": [
       "# [Article Title]",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
-      "## Research Objective, Design & Setting",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Clinical Bottom Line: Interpretive summary of biomarker or diagnostic test utility and readiness for clinical implementation",
-      "Results in Context: Association effect sizes (HR/OR) and precision; diagnostic accuracy metrics (Sensitivity, Specificity, AUC/ROC, PPV, NPV) if applicable; clear distinction between prognostic and predictive utility; biomarker technology definition",
-      "Assertive Critical Appraisal: REMARK appraisal of biomarker claim (prognostic vs predictive; flag if predictive claim made without randomized comparison); audit of cut-point selection (pre-fixed vs optimal search); independent validation cohort check (internal cross-validation is insufficient); assay technical limits, LOD, and pre-analytical specimen handling; STARD verification bias audit; clinical applicability",
-      "Research Objective, Design & Setting: Marker examined, hypotheses, study design, case selection, clinical endpoints, patient characteristics",
+      "Clinical Bottom Line: Definitive assessment of diagnostic utility, clinical applicability, and test safety",
+      "Results in Context: Sensitivity, specificity, positive and negative predictive values (PPV/NPV), positive and negative likelihood ratios (LR+/LR-), and area under the receiver operating characteristic curve (AUC/ROC) with 95% CIs; 2x2 contingency table cross-tabulation",
+      "Assertive Critical Appraisal: STARD 2015 adherence; gold reference standard validity and independence; blinding between index test and reference standard interpreters; verification bias (partial work-up bias); spectrum bias / case-mix representativeness",
+      "Research Objective: Stated clinical role of the index test (triage, screening, replacement, add-on)",
+      "Study Design: Prospective vs retrospective diagnostic design, consecutive vs convenience sampling, timing of index test and reference standard",
+      "Setting and Participants: Clinical setting (primary, secondary, emergency), patient presenting symptoms, inclusion and exclusion criteria",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO clinical utility claims without independent validation confirmation",
       "NO medical disclaimers",
-      "Ground every factual claim with an inline coordinate anchor"
+      "NO conversational filler",
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
     ]
   },
   "FW_E": {
@@ -103,22 +123,27 @@
     "headings": [
       "# [Article Title]",
       "## Clinical Bottom Line",
-      "## Planned Interventions and Outcomes",
+      "## Results in Context",
       "## Assertive Critical Appraisal",
-      "## Research Objective, Design & Setting",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Clinical Bottom Line: Clear statement that this document is a study protocol detailing planned methodology for a future trial and contains NO clinical results; summary of research question significance",
-      "Planned Interventions and Outcomes: Detailed planned interventions for all groups; primary and secondary endpoints",
-      "Assertive Critical Appraisal: SPIRIT quality assessment; sample size power calculation critique; pre-specification of statistical analysis plan, missing data handling, and stopping boundaries",
-      "Research Objective, Design & Setting: Trial objectives, design, framework, allocation, randomization, blinding, eligibility criteria",
-      "Bibliographic Data: Title, Authors, Source, Date, Trial Registration number"
+      "Clinical Bottom Line: Methodological summary of the trial protocol, evaluating feasibility, ethical integrity, and potential design pitfalls prior to trial completion",
+      "Results in Context: Planned outcome metrics, targeted effect size, projected sample size, statistical power (1-beta), and alpha thresholds; anticipated timeline and milestones",
+      "Assertive Critical Appraisal: SPIRIT 2013 checklist adherence; sample size calculation assumptions audit; statistical analysis plan (SAP) pre-specification (primary models, missing data strategies); interim analysis and stopping rules for efficacy, futility, or safety harms; DSMB governance",
+      "Research Objective: Primary and secondary research questions, trial hypotheses",
+      "Study Design: Allocation ratio, blinding mechanisms, intervention and comparator dosing schedules, master protocol / adaptive design features",
+      "Setting and Participants: Target enrollment count, participating trial centers, inclusion and exclusion criteria",
+      "Bibliographic Data: Title, Authors, Journal, Year, Protocol Version, ClinicalTrials.gov ID"
     ],
     "negative_constraints": [
-      "NO fictitious efficacy results",
       "NO medical disclaimers",
-      "Ground every factual claim with an inline coordinate anchor"
+      "NO conversational filler",
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
     ]
   },
   "FW_F": {
@@ -129,20 +154,25 @@
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
-      "## Research Objective, Design & Setting",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Clinical Bottom Line: Direct interpretive summary clarifying whether non-inferiority was demonstrated, whether the new intervention is also similar or statistically inferior to standard, and both ITT and PP implications",
-      "Results in Context: Primary outcome with point estimates, 95% CIs, and comparison against the pre-specified margin (Delta); definition and rationale for non-inferiority design",
-      "Assertive Critical Appraisal: Non-inferiority margin critique (clinical justification, historical control retention, risk of biocreep); mandatory dual-analysis audit (ITT vs Per-Protocol divergence; flag if non-inferiority holds only in ITT); exact interpretation of 'non-inferior' vs equivalent or inferior",
-      "Research Objective, Design & Setting: Objective, stated non-inferiority hypothesis, design, allocation, blinding, setting, eligibility",
+      "Clinical Bottom Line: Direct verdict on whether non-inferiority was conclusively demonstrated, secondary superiority claims, and safety trade-offs",
+      "Results in Context: Point estimates and two-sided 95% (or 90%) confidence intervals compared against the pre-specified delta margin for both ITT and Per-Protocol (PP) populations; ARR, NNT, and harm metrics",
+      "Assertive Critical Appraisal: Dual ITT and Per-Protocol analysis concordance audit (challenging non-inferiority if PP fails or is omitted); statistical and clinical justification of Delta margin (preserving >= 50% active control historical efficacy); assay sensitivity and constancy assumption evaluation; biocreep risk; RoB 2 appraisal",
+      "Research Objective: Non-inferiority hypothesis and active comparator rationale",
+      "Study Design: Parallel-group active-controlled design, blinding, pre-specified delta margin",
+      "Setting and Participants: Participant counts across ITT and PP sets, trial centers, eligibility criteria",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO acceptance of non-inferiority claims based exclusively on ITT",
       "NO medical disclaimers",
-      "Ground every factual claim with an inline coordinate anchor"
+      "NO conversational filler",
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
     ]
   },
   "FW_G": {
@@ -153,20 +183,25 @@
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
-      "## Research Objective, Design & Setting",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Clinical Bottom Line: Interpretive summary of cost-effectiveness and affordability at standard willingness-to-pay thresholds",
-      "Results in Context: Incremental Cost-Effectiveness Ratio (ICER); plain-language definitions of ICER, QALY, and DALY",
-      "Assertive Critical Appraisal: CHEERS reporting quality audit (analytic perspective, time horizon, annual discount rate applied to costs and benefits); model structure critique; deterministic and probabilistic sensitivity analyses",
-      "Research Objective, Design & Setting: Economic objective, evaluation type (CEA/CUA), model used, target population and setting",
+      "Clinical Bottom Line: Clear statement of cost-effectiveness or budget impact relative to standard willingness-to-pay thresholds",
+      "Results in Context: Incremental cost-effectiveness ratio (ICER) or incremental cost-utility ratio (ICUR) per QALY/DALY; total incremental costs and incremental health outcomes; cost currency and reference price year",
+      "Assertive Critical Appraisal: CHEERS 2022 compliance; time horizon and discount rate rationale audit; decision model structural assumptions; deterministic sensitivity analysis (tornado diagrams) and probabilistic sensitivity analysis (PSA / CEAC curves); health state utility valuation methods",
+      "Research Objective: Economic evaluation perspective (societal, healthcare payer) and target policy question",
+      "Study Design: Model type (Markov cohort, decision tree, microsimulation, trial-based CEA), cycle length, time horizon",
+      "Setting and Participants: Target patient cohort, clinical setting, jurisdiction / healthcare system context",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO claims without explicit time horizon and discounting disclosure",
       "NO medical disclaimers",
-      "Ground every factual claim with an inline coordinate anchor"
+      "NO conversational filler",
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
     ]
   },
   "FW_H": {
@@ -175,22 +210,85 @@
     "headings": [
       "# [Article Title]",
       "## Clinical Bottom Line",
-      "## Key Themes & Evidence Summary",
+      "## Results in Context",
       "## Assertive Critical Appraisal",
-      "## Research Objective & Setting",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Clinical Bottom Line: Direct summary of the authors' main argument, thesis, or clinical perspective",
-      "Key Themes & Evidence Summary: Scope of broad topics covered; main recommendations or assertions",
-      "Assertive Critical Appraisal: Explicit identification as Level 5 evidence / expert opinion; susceptibility to selection bias; full SANRA 6-domain score audit (Importance, Aims, Literature search description, Referencing consistency, Scientific reasoning, Data presentation)",
-      "Research Objective & Setting: Stated purpose of the narrative review",
+      "Clinical Bottom Line: Narrative perspective summary emphasizing clinical implications and highlighting that narrative reviews provide commentary rather than systematic proof",
+      "Results in Context: Synthesis of key clinical concepts, physiological mechanisms, or therapeutic summaries presented with cited evidentiary support",
+      "Assertive Critical Appraisal: Assessment across the 6 SANRA quality domains (justification of importance, statement of aims, literature search methodology, referencing consistency, scientific reasoning, and outcome presentation); scrutiny of selective citation / cherry-picking; clarity on evidentiary gaps",
+      "Research Objective: Scope and aims of the narrative review",
+      "Study Design: Non-systematic literature overview / expert commentary framework",
+      "Setting and Participants: Target clinical domain, patient populations discussed",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
     "negative_constraints": [
-      "NO presentation of narrative claims as Level 1 evidence",
       "NO medical disclaimers",
-      "Ground every factual claim with an inline coordinate anchor"
+      "NO conversational filler",
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
+    ]
+  },
+  "FW_I": {
+    "framework_id": "FW_I",
+    "name": "Biomarker & Genomic Medicine Study",
+    "headings": [
+      "# [Article Title]",
+      "## Clinical Bottom Line",
+      "## Results in Context",
+      "## Assertive Critical Appraisal",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
+      "## Bibliographic Data"
+    ],
+    "mandatory_elements": [
+      "Clinical Bottom Line: Direct summary of biomarker prognostic or predictive validity and potential clinical utility in patient management",
+      "Results in Context: Point estimates, Hazard Ratios (HR), Odds Ratios (OR), or AUC with 95% CIs across biomarker strata; assay Limit of Detection (LOD), Variant Allele Fraction (VAF%), or biomarker concentration ranges",
+      "Assertive Critical Appraisal: REMARK guideline adherence; pre-analytical biospecimen handling and assay reproducibility; cut-point pre-specification audit (flagging data-driven optimal cutpoints without holdout validation); multivariable survival models demonstrating independent prognostic value beyond standard clinical staging; distinction between prognostic vs predictive biomarker roles (requiring interaction tests); for ctDNA, exclusion of CHIP mutations",
+      "Research Objective: Biomarker biological rationale, prospective vs retrospective validation question",
+      "Study Design: Cohort or embedded trial design, biospecimen sampling timeline, analytical platform (NGS, PCR, IHC)",
+      "Setting and Participants: Patient cohort size, specimen repository source, clinical stages, inclusion and exclusion criteria",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI"
+    ],
+    "negative_constraints": [
+      "NO medical disclaimers",
+      "NO conversational filler",
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
+    ]
+  },
+  "FW_J": {
+    "framework_id": "FW_J",
+    "name": "Survey Research",
+    "headings": [
+      "# [Article Title]",
+      "## Clinical Bottom Line",
+      "## Results in Context",
+      "## Assertive Critical Appraisal",
+      "## Research Objective",
+      "## Study Design",
+      "## Setting and Participants",
+      "## Bibliographic Data"
+    ],
+    "mandatory_elements": [
+      "Clinical Bottom Line: Direct summary of survey findings, attitudes, or organizational practices with caveats regarding sampling and generalizability",
+      "Results in Context: Summary of survey responses with frequency counts, percentages, Likert scale distributions, and 95% CIs; comparative analyses between respondent subgroups",
+      "Assertive Critical Appraisal: Good Practice in Survey Research (Kelley et al.) adherence; sampling frame coverage and representativeness; response rate calculation and non-response bias assessment (early vs late responders); questionnaire instrument validity, cognitive pre-testing, and pilot testing; neutral question framing",
+      "Research Objective: Survey aims, research questions, target constructs measured",
+      "Study Design: Survey methodology (web-based, postal, telephone, interview), questionnaire structure, distribution strategy",
+      "Setting and Participants: Target population, sample size, eligible respondents, geographic or clinical setting",
+      "Bibliographic Data: Title, Authors, Journal, Year, DOI"
+    ],
+    "negative_constraints": [
+      "NO medical disclaimers",
+      "NO conversational filler",
+      "Ground EVERY factual claim with an inline coordinate anchor",
+      "Cite the matching rule ID for every critical appraisal point"
     ]
   }
 }

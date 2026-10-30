@@ -98,6 +98,92 @@ class TestResearchEvalPipeline(unittest.TestCase):
         self.assertTrue(os.path.exists(pdf_path))
         self.assertGreater(os.path.getsize(pdf_path), 5000)
 
+    def test_06_framework_coverage_and_threshold_audit(self):
+        """Verify all 10 frameworks have schema, triage config, and >=1 rule; audit threshold purge."""
+        import json
+        with open(os.path.join(self.data_dir, "triagedb.json"), "r", encoding="utf-8") as f:
+            triagedb = json.load(f)
+        with open(os.path.join(self.data_dir, "schemadb.json"), "r", encoding="utf-8") as f:
+            schemadb = json.load(f)
+        with open(os.path.join(self.data_dir, "rulesdb.json"), "r", encoding="utf-8") as f:
+            rulesdb = json.load(f)
+
+        expected_fws = [f"FW_{c}" for c in ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]]
+        
+        triage_fw_ids = [fw["framework_id"] for fw in triagedb]
+        for fw_id in expected_fws:
+            self.assertIn(fw_id, triage_fw_ids, f"Missing framework {fw_id} in triagedb")
+            self.assertIn(fw_id, schemadb, f"Missing framework {fw_id} in schemadb")
+            
+            # Check schemadb has granular headings
+            headings = schemadb[fw_id]["headings"]
+            self.assertIn("## Research Objective", headings)
+            self.assertIn("## Study Design", headings)
+            self.assertIn("## Setting and Participants", headings)
+
+        # Verify threshold purge: no ungrounded cutoffs in rulesdb.json
+        rules_text = json.dumps(rulesdb)
+        self.assertNotIn("5-10%", rules_text, "Ungrounded 5-10% missing data cutoff found in rulesdb")
+        self.assertNotIn("3% - 5%", rules_text, "Ungrounded 3-5% discount rate cutoff found in rulesdb")
+        self.assertNotIn("Grade 3-5 only", rules_text, "Ungrounded Grade 3-5 only harms cutoff found in rulesdb")
+        self.assertNotIn("20% missing", rules_text, "Ungrounded 20% PRO missing data cutoff found in rulesdb")
+
+    def test_07_ast_boolean_evaluation_and_no_collapse(self):
+        """Verify deterministic boolean AST evaluation prevents AND collapse to OR."""
+        from src.triage.classifier import evaluate_trigger_ast
+
+        # Rule requiring both FW_A and +TAG_ONCOLOGY
+        ast_and = {
+            "all": [
+                {"framework": "FW_A"},
+                {"tag": "+TAG_ONCOLOGY"}
+            ]
+        }
+        # FW_A without tag -> must be False
+        self.assertFalse(evaluate_trigger_ast(ast_and, "FW_A", []))
+        # Tag present but FW_B -> must be False
+        self.assertFalse(evaluate_trigger_ast(ast_and, "FW_B", ["+TAG_ONCOLOGY"]))
+        # Both present -> must be True
+        self.assertTrue(evaluate_trigger_ast(ast_and, "FW_A", ["+TAG_ONCOLOGY"]))
+
+        # Disjunction: FW_A OR FW_F
+        ast_or = {
+            "any": [
+                {"framework": "FW_A"},
+                {"framework": "FW_F"}
+            ]
+        }
+        self.assertTrue(evaluate_trigger_ast(ast_or, "FW_A", []))
+        self.assertTrue(evaluate_trigger_ast(ast_or, "FW_F", []))
+        self.assertFalse(evaluate_trigger_ast(ast_or, "FW_C", []))
+
+    def test_08_triage_precedence_ladder(self):
+        """Verify precedence ladder: Protocol traps FW_E, Biomarker traps FW_I over FW_C, Survey traps FW_J."""
+        engine = TriageEngine(self.data_dir)
+
+        # 1. Protocol with trial mention -> must resolve to FW_E, not FW_A
+        proto_header = "Study protocol for a randomized trial evaluating immunotherapy in lung cancer (SPIRIT 2013)"
+        proto_methods = "This trial protocol describes the planned design, sample size power calculations, and statistical analysis plan."
+        res_proto = engine.classify_text(proto_header, proto_methods)
+        self.assertEqual(res_proto.primary_framework_id, "FW_E")
+        self.assertIn("R_SPIRIT_POWER_SAMPLE_SIZE", res_proto.applicable_rules)
+
+        # 2. AMORIS Biomarker Cohort -> must resolve to FW_I, not generic FW_C
+        amoris_header = "Blood biomarker profiles and exceptional longevity in a 35-year follow-up of the Swedish AMORIS cohort"
+        amoris_methods = "We evaluated biomarker profiles including glucose, uric acid, creatinine in 44,636 participants in the AMORIS cohort."
+        res_amoris = engine.classify_text(amoris_header, amoris_methods)
+        self.assertEqual(res_amoris.primary_framework_id, "FW_I")
+        self.assertIn("+TAG_COHORT", res_amoris.sub_feature_tags)
+        self.assertIn("+TAG_BIOMARKER", res_amoris.sub_feature_tags)
+        self.assertIn("R_REMARK_SPECIMEN_ASSAY", res_amoris.applicable_rules)
+
+        # 3. Survey Research -> must resolve to FW_J
+        survey_header = "Physician attitudes toward oncology guidelines: A cross-sectional survey questionnaire"
+        survey_methods = "A cross-sectional survey was distributed to clinicians with 5-point Likert scales. Response rate and non-response bias were evaluated."
+        res_survey = engine.classify_text(survey_header, survey_methods)
+        self.assertEqual(res_survey.primary_framework_id, "FW_J")
+        self.assertIn("R_SURVEY_RESPONSE_BIAS", res_survey.applicable_rules)
+
 if __name__ == "__main__":
     unittest.main()
 

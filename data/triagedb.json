@@ -1,7 +1,171 @@
 [
   {
+    "framework_id": "FW_E",
+    "name": "Clinical Trial Protocol & Statistical Analysis Plan",
+    "hierarchy_rank": 1,
+    "description": "Pre-specified methodological protocol or statistical analysis plan for an ongoing or planned interventional trial prior to study completion and outcome reporting.",
+    "triggers": [
+      "study protocol",
+      "trial protocol",
+      "protocol for a",
+      "statistical analysis plan",
+      "spirit statement",
+      "spirit 2013",
+      "prospective protocol",
+      "rationale and design of",
+      "design and rationale"
+    ],
+    "design_exclusions": [
+      "completed trial with primary efficacy results",
+      "we report the results of",
+      "the primary outcome was observed in"
+    ],
+    "applicable_standards": [
+      "SPIRIT 2013 Statement",
+      "SPIRIT-PRO Extension"
+    ],
+    "sub_tags": [
+      "+TAG_MASTER_PROTOCOL",
+      "+TAG_ADAPTIVE_DESIGN",
+      "+TAG_INTERIM_STOPPING_RULES",
+      "+TAG_CONSORT_PRO"
+    ]
+  },
+  {
+    "framework_id": "FW_B",
+    "name": "Systematic Review & Meta-Analysis",
+    "hierarchy_rank": 2,
+    "description": "Systematic search across medical bibliographic databases with pooled quantitative effect estimates, heterogeneity assessment, and risk of bias synthesis.",
+    "triggers": [
+      "systematic review",
+      "meta-analysis",
+      "pooled analysis",
+      "forest plot",
+      "prisma",
+      "random-effects model",
+      "fixed-effect model",
+      "funnel plot",
+      "egger test"
+    ],
+    "design_exclusions": [
+      "narrative review",
+      "scoping review without quantitative pooling",
+      "single trial protocol",
+      "individual patient observational study"
+    ],
+    "applicable_standards": [
+      "PRISMA 2020",
+      "GRADE Handbook",
+      "Cochrane Handbook"
+    ],
+    "sub_tags": [
+      "+TAG_NETWORK_META",
+      "+TAG_IPD_META",
+      "+TAG_HIGH_HETEROGENEITY"
+    ]
+  },
+  {
+    "framework_id": "FW_F",
+    "name": "Non-Inferiority Randomized Controlled Trial",
+    "hierarchy_rank": 3,
+    "description": "Randomized controlled trial designed to demonstrate that an experimental treatment is not clinically worse than an active standard control by more than a pre-specified margin.",
+    "triggers": [
+      "non-inferiority",
+      "noninferiority",
+      "non-inferior",
+      "equivalence trial",
+      "non-inferiority margin",
+      "delta margin",
+      "per-protocol analysis",
+      "active control"
+    ],
+    "design_exclusions": [
+      "superiority-only trial without non-inferiority hypothesis",
+      "uncontrolled single-arm trial"
+    ],
+    "applicable_standards": [
+      "Extended CONSORT for Non-Inferiority Trials",
+      "FDA Non-Inferiority Guidance",
+      "Cuzick & Sasieni Principles"
+    ],
+    "sub_tags": [
+      "+TAG_NON_INFERIORITY",
+      "+TAG_MARGIN_PRESPECIFICATION",
+      "+TAG_ITT_PP_DIVERGENCE",
+      "+TAG_ASSAY_SENSITIVITY",
+      "+TAG_CONSORT_PRO",
+      "+TAG_SAFETY_HARMS"
+    ]
+  },
+  {
+    "framework_id": "FW_D",
+    "name": "Diagnostic Accuracy Study",
+    "hierarchy_rank": 4,
+    "description": "Studies evaluating the performance of diagnostic tests, imaging modalities, or screening assays against an established reference standard.",
+    "triggers": [
+      "diagnostic accuracy",
+      "index test",
+      "reference standard",
+      "sensitivity and specificity",
+      "receiver operating characteristic",
+      "roc curve",
+      "positive predictive value",
+      "negative predictive value",
+      "diagnostic odds ratio",
+      "stard",
+      "quadas"
+    ],
+    "design_exclusions": [
+      "pre-clinical animal model without human clinical correlatives"
+    ],
+    "applicable_standards": [
+      "STARD 2015",
+      "QUADAS-2"
+    ],
+    "sub_tags": [
+      "+TAG_DIAGNOSTIC",
+      "+TAG_VERIFICATION_BIAS",
+      "+TAG_SPECTRUM_BIAS"
+    ]
+  },
+  {
+    "framework_id": "FW_I",
+    "name": "Biomarker Study",
+    "hierarchy_rank": 5,
+    "description": "Studies evaluating molecular, genomic, proteomic, or circulating tumor biomarkers for prognostic risk stratification or therapeutic prediction.",
+    "triggers": [
+      "biomarker",
+      "biomarkers",
+      "prognostic marker",
+      "predictive biomarker",
+      "ctdna",
+      "liquid biopsy",
+      "variant allele fraction",
+      "vaf",
+      "ngs",
+      "gene expression profile",
+      "tumor marker",
+      "remark"
+    ],
+    "design_exclusions": [
+      "in vitro drug discovery without human patient survival or clinical outcome correlatives"
+    ],
+    "applicable_standards": [
+      "REMARK Guidelines",
+      "NCI-EORTC Biomarker Criteria"
+    ],
+    "sub_tags": [
+      "+TAG_BIOMARKER",
+      "+TAG_LIQUID_BIOPSY_CTDNA",
+      "+TAG_CUTPOINT_OPTIMIZATION",
+      "+TAG_PREDICTIVE_VS_PROGNOSTIC",
+      "+TAG_COHORT"
+    ]
+  },
+  {
     "framework_id": "FW_A",
     "name": "Randomized Controlled Trial (RCT)",
+    "hierarchy_rank": 6,
     "description": "Prospective parallel-group or multi-arm randomized interventional trial evaluating whether an experimental therapy is superior to control or placebo.",
     "triggers": [
       "randomized",
@@ -12,16 +176,14 @@
       "superiority",
       "phase 3",
       "phase iii",
+      "phase 2 randomized",
       "parallel-group"
     ],
-    "exclusions": [
-      "non-inferiority",
-      "noninferiority",
-      "equivalence",
+    "design_exclusions": [
+      "study protocol",
       "systematic review",
       "meta-analysis",
-      "cost-effectiveness",
-      "cohort study",
+      "non-inferiority",
       "observational study",
       "registry linkage"
     ],
@@ -36,45 +198,44 @@
       "+TAG_BIOMARKER",
       "+TAG_CROSSOVER",
       "+TAG_SUBGROUP",
-      "+TAG_SAFETY_HARMS"
+      "+TAG_SAFETY_HARMS",
+      "+TAG_ONCOLOGY"
     ]
   },
   {
-    "framework_id": "FW_B",
-    "name": "Systematic Review & Meta-Analysis",
-    "description": "Systematic search across medical bibliographic databases with pooled quantitative effect estimates, heterogeneity assessment, and risk of bias synthesis.",
+    "framework_id": "FW_G",
+    "name": "Health Economic Evaluation",
+    "hierarchy_rank": 7,
+    "description": "Economic evaluations assessing the value, cost-effectiveness, cost-utility, or budgetary impact of health interventions.",
     "triggers": [
-      "systematic review",
-      "meta-analysis",
-      "pooled analysis",
-      "forest plot",
-      "prisma",
-      "random-effects model",
-      "fixed-effect model",
-      "funnel plot",
-      "egger test"
+      "cost-effectiveness",
+      "cost-utility",
+      "icer",
+      "incremental cost-effectiveness ratio",
+      "qaly",
+      "quality-adjusted life year",
+      "daly",
+      "willingness-to-pay",
+      "markov model",
+      "cheers"
     ],
-    "exclusions": [
-      "narrative review",
-      "scoping review without quantitative pooling",
-      "single trial protocol",
-      "individual patient observational study"
+    "design_exclusions": [
+      "clinical efficacy analysis without cost or economic modeling"
     ],
     "applicable_standards": [
-      "PRISMA 2020",
-      "AMSTAR 2",
-      "GRADE Handbook",
-      "Cochrane Handbook"
+      "CHEERS 2022 Statement",
+      "NICE Reference Case"
     ],
     "sub_tags": [
-      "+TAG_NETWORK_META",
-      "+TAG_IPD_META",
-      "+TAG_HIGH_HETEROGENEITY"
+      "+TAG_DISCOUNTING_HORIZON",
+      "+TAG_PROBABILISTIC_SENSITIVITY",
+      "+TAG_UTILITY_WEIGHT_UNCERTAINTY"
     ]
   },
   {
     "framework_id": "FW_C",
     "name": "Observational Study / Real-World Evidence",
+    "hierarchy_rank": 8,
     "description": "Non-interventional observational studies including prospective/retrospective cohort, case-control, cross-sectional, and electronic health record / claims registry analyses.",
     "triggers": [
       "cohort study",
@@ -92,13 +253,11 @@
       "electronic health records",
       "ehr"
     ],
-    "exclusions": [
+    "design_exclusions": [
+      "study protocol",
       "randomized controlled trial",
-      "randomized trial",
       "double-blind placebo",
-      "interventional trial",
-      "in vitro bench study",
-      "single case report"
+      "systematic review and meta-analysis"
     ],
     "applicable_standards": [
       "STROBE Statement",
@@ -106,135 +265,45 @@
       "ROBINS-I"
     ],
     "sub_tags": [
+      "+TAG_COHORT",
       "+TAG_PROPENSITY_MATCHED",
       "+TAG_IMMORTAL_TIME_RISK",
       "+TAG_UNMEASURED_CONFOUNDING",
-      "+TAG_BIOMARKER",
       "+TAG_EHR_CLAIMS"
     ]
   },
   {
-    "framework_id": "FW_D",
-    "name": "Diagnostic Accuracy & Biomarker Study",
-    "description": "Studies evaluating novel diagnostic tests, laboratory assay performance against reference standards, or molecular biomarker validation.",
+    "framework_id": "FW_J",
+    "name": "Survey Research",
+    "hierarchy_rank": 9,
+    "description": "Quantitative or mixed-methods survey research evaluating clinician or patient attitudes, practices, knowledge, or organizational patterns.",
     "triggers": [
-      "diagnostic accuracy",
-      "index test",
-      "reference standard",
-      "sensitivity and specificity",
-      "receiver operating characteristic",
-      "roc",
-      "auc",
-      "positive predictive value",
-      "negative predictive value",
-      "quadas",
-      "stard"
+      "survey",
+      "questionnaire",
+      "cross-sectional survey",
+      "response rate",
+      "non-response bias",
+      "likert scale",
+      "survey research"
     ],
-    "exclusions": [
-      "prospective cohort study",
-      "population-based cohort",
-      "registry follow-up study",
-      "pre-clinical animal model without human clinical correlatives"
+    "design_exclusions": [
+      "randomized trial",
+      "systematic review",
+      "biomarker assay validation"
     ],
     "applicable_standards": [
-      "STARD 2015",
-      "REMARK Guidelines",
-      "QUADAS-2"
+      "Good Practice in the Conduct and Reporting of Survey Research (Kelley et al.)"
     ],
     "sub_tags": [
-      "+TAG_LIQUID_BIOPSY_CTDNA",
-      "+TAG_CUTPOINT_OPTIMIZATION",
-      "+TAG_PREDICTIVE_VS_PROGNOSTIC"
-    ]
-  },
-  {
-    "framework_id": "FW_E",
-    "name": "Clinical Trial Protocol & Statistical Analysis Plan",
-    "description": "Methodological specification of planned or ongoing clinical trials prior to study completion, detailing endpoints, sample size calculations, and statistical analysis plans.",
-    "triggers": [
-      "study protocol",
-      "trial design and rationale",
-      "statistical analysis plan",
-      "sap",
-      "spirit statement",
-      "prospective protocol",
-      "planned sample size"
-    ],
-    "exclusions": [
-      "completed trial with published primary efficacy results",
-      "retrospective cohort analysis"
-    ],
-    "applicable_standards": [
-      "SPIRIT 2013 Statement",
-      "SPIRIT-PRO Extension"
-    ],
-    "sub_tags": [
-      "+TAG_MASTER_PROTOCOL",
-      "+TAG_ADAPTIVE_DESIGN",
-      "+TAG_INTERIM_STOPPING_RULES"
-    ]
-  },
-  {
-    "framework_id": "FW_F",
-    "name": "Non-Inferiority Randomized Controlled Trial",
-    "description": "Randomized controlled trial designed to demonstrate that an experimental treatment is not clinically worse than an active standard control by more than a pre-specified margin.",
-    "triggers": [
-      "non-inferiority",
-      "noninferiority",
-      "non-inferior",
-      "equivalence trial",
-      "non-inferiority margin",
-      "delta margin",
-      "per-protocol analysis",
-      "active control"
-    ],
-    "exclusions": [
-      "superiority-only trial without non-inferiority hypothesis",
-      "uncontrolled single-arm trial"
-    ],
-    "applicable_standards": [
-      "Extended CONSORT for Non-Inferiority Trials",
-      "FDA Non-Inferiority Guidance",
-      "Cuzick & Sasieni Principles"
-    ],
-    "sub_tags": [
-      "+TAG_MARGIN_PRESPECIFICATION",
-      "+TAG_ITT_PP_DIVERGENCE",
-      "+TAG_ASSAY_SENSITIVITY"
-    ]
-  },
-  {
-    "framework_id": "FW_G",
-    "name": "Health Economic Evaluation",
-    "description": "Economic evaluations assessing the value, cost-effectiveness, cost-utility, or budgetary impact of health interventions.",
-    "triggers": [
-      "cost-effectiveness",
-      "cost-utility",
-      "icer",
-      "incremental cost-effectiveness ratio",
-      "qaly",
-      "quality-adjusted life year",
-      "daly",
-      "willingness-to-pay",
-      "markov model",
-      "cheers"
-    ],
-    "exclusions": [
-      "clinical efficacy analysis without cost or economic modeling"
-    ],
-    "applicable_standards": [
-      "CHEERS 2022 Statement",
-      "NICE Reference Case"
-    ],
-    "sub_tags": [
-      "+TAG_DISCOUNTING_HORIZON",
-      "+TAG_PROBABILISTIC_SENSITIVITY",
-      "+TAG_UTILITY_WEIGHT_UNCERTAINTY"
+      "+TAG_SURVEY",
+      "+TAG_NON_RESPONSE_BIAS",
+      "+TAG_INSTRUMENT_VALIDITY"
     ]
   },
   {
     "framework_id": "FW_H",
     "name": "Narrative Review",
+    "hierarchy_rank": 10,
     "description": "Non-systematic medical review, expert commentary, or state-of-the-art summary summarizing disease pathophysiology or therapeutic trends without pooled quantitative synthesis.",
     "triggers": [
       "narrative review",
@@ -244,8 +313,9 @@
       "expert consensus",
       "perspectives"
     ],
-    "exclusions": [
+    "design_exclusions": [
       "systematic review with PRISMA flow diagram and pooled meta-analysis",
+      "randomized trial",
       "original prospective cohort study"
     ],
     "applicable_standards": [
