@@ -68,6 +68,57 @@ def detect_section_header(line: str) -> Optional[str]:
                 return section_map[key]
     return None
 
+def is_junk_block(b, page, text: str) -> bool:
+    """Filter out publisher watermarks, barcodes, margin running heads, and disconnected axis fragments."""
+    h = page.rect.height
+    clean_t = text.strip()
+    
+    # 1. Top/bottom running headers and footers
+    if b[1] < 45 and (re.search(r'GeroScience|\d{4}|Vol[:\.]|https?://|[©\u00a9]', clean_t) or len(clean_t) < 40):
+        return True
+    if b[3] > h - 45 and (re.search(r'Vol[:\.]|1\s+3|\d{1,4}', clean_t) or len(clean_t) < 30):
+        return True
+    # 2. Publisher volume tags, barcodes, pagination marks
+    if re.search(r'^(?:Vol[:\.]+\s*\(?\d+\)?|1\s+3|\d{1,5}|[0-9\s\.\(\)\-\u2013/:]+)$', clean_t, re.IGNORECASE):
+        return True
+    # 3. Disconnected plot/axis labels without word structure
+    if len(clean_t) < 25 and not re.search(r'[a-zA-Z]{3,}', clean_t):
+        return True
+    # 4. Standalone copyright notice
+    if re.match(r'^[©\u00a9]\s*The\s+Author', clean_t, re.IGNORECASE):
+        return True
+    return False
+
+def order_page_blocks(raw_blocks, page) -> List[Any]:
+    """Sort text blocks in true human reading order, supporting two-column academic layouts."""
+    valid = []
+    for b in raw_blocks:
+        t = b[4].strip().replace('\xa0', ' ')
+        if not t or is_junk_block(b, page, t):
+            continue
+        valid.append((b, t))
+        
+    if not valid:
+        return []
+        
+    mid_x = page.rect.width * 0.48
+    col1 = [item for item in valid if item[0][2] <= mid_x + 35]
+    col2 = [item for item in valid if item[0][0] >= mid_x - 35]
+    full_w = [item for item in valid if item[0][0] < mid_x - 35 and item[0][2] > mid_x + 35]
+    
+    # If majority of blocks fit standard two-column boundaries
+    if len(col1) + len(col2) >= len(valid) * 0.6 and len(col1) > 0 and len(col2) > 0:
+        col1.sort(key=lambda x: x[0][1])
+        col2.sort(key=lambda x: x[0][1])
+        full_w.sort(key=lambda x: x[0][1])
+        top_full = [x for x in full_w if x[0][1] < page.rect.height * 0.35]
+        bottom_full = [x for x in full_w if x[0][1] >= page.rect.height * 0.35]
+        return top_full + col1 + col2 + bottom_full
+    else:
+        # Standard single-column top-to-bottom reading order
+        valid.sort(key=lambda x: (x[0][1], x[0][0]))
+        return valid
+
 def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     """Parse a medical paper PDF into structured, coordinate-indexed blocks."""
     if not os.path.exists(pdf_path):
@@ -107,13 +158,9 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         page_text = page.get_text("text")
         full_text_accumulator.append(page_text)
         
-        # Split by double newline or block clusters
-        blocks = page.get_text("blocks")
-        for b in blocks:
-            block_text = clean_text(b[4])
-            if not block_text:
-                continue
-            
+        # Order blocks according to two-column human reading layout, filtering junk
+        blocks = order_page_blocks(page.get_text("blocks"), page)
+        for b, block_text in blocks:
             # Check for section header
             first_line = block_text.split('\n')[0].strip()
             detected = detect_section_header(first_line)
@@ -128,23 +175,32 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             if not block_text:
                 continue
             
-            # Detect tables or figures
-            is_table = bool(re.search(r'^(Table\s+\d+|TABLE\s+\d+)', block_text, re.IGNORECASE))
-            is_fig = bool(re.search(r'^(Fig(?:ure)?\.?\s+\d+)', block_text, re.IGNORECASE))
+            # Distinguish narrative discussion sentences from true Table/Figure captions
+            is_narrative = bool(re.search(
+                r'^(?:Fig(?:ure)?|Table)\s*\d+\s+(?:shows?|presents?|displays?|depicts?|illustrates?|demonstrates?|compares?|indicates?|reveals?|summarizes?|lists?|reports?|provides?|plots?|evaluates?)\b',
+                block_text, re.IGNORECASE
+            ))
             
-            if is_table:
-                section_table_counters[current_section] = section_table_counters.get(current_section, 0) + 1
-                t_idx = section_table_counters[current_section]
-                anchor_id = f"[{current_section}, Table {t_idx}]"
-                item_type = "table"
-                idx = t_idx
-            elif is_fig:
-                section_fig_counters[current_section] = section_fig_counters.get(current_section, 0) + 1
-                f_idx = section_fig_counters[current_section]
-                anchor_id = f"[{current_section}, Fig {f_idx}]"
-                item_type = "fig"
-                idx = f_idx
-            else:
+            is_table = False
+            is_fig = False
+            
+            if not is_narrative:
+                tbl_match = re.match(r'^(?:Table\s*(\d+)[\s\.:\-\u2013\u2014|]+(?![a-z]))', block_text, re.IGNORECASE)
+                fig_match = re.match(r'^(?:Fig(?:ure)?\.?\s*(\d+)[\s\.:\-\u2013\u2014|]+(?![a-z]))', block_text, re.IGNORECASE)
+                if tbl_match:
+                    is_table = True
+                    tbl_num = tbl_match.group(1)
+                    anchor_id = f"[{current_section}, Table {tbl_num}]"
+                    item_type = "table"
+                    idx = int(tbl_num)
+                elif fig_match:
+                    is_fig = True
+                    fig_num = fig_match.group(1)
+                    anchor_id = f"[{current_section}, Fig {fig_num}]"
+                    item_type = "fig"
+                    idx = int(fig_num)
+            
+            if not is_table and not is_fig:
                 section_para_counters[current_section] = section_para_counters.get(current_section, 0) + 1
                 p_idx = section_para_counters[current_section]
                 anchor_id = f"[{current_section}, Para {p_idx}]"
@@ -169,7 +225,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             indexed_doc.all_anchors[anchor_id] = block_text
             indexed_doc.anchor_metadata[anchor_id] = anchor_obj
             
-    # Post-process: Check for paragraphs ending mid-sentence that overflow to next page
+    # Post-process: Check only the last body paragraph on the page if it overflows mid-sentence
     for i in range(len(doc) - 1):
         p_curr = i + 1
         p_next = i + 2
@@ -179,28 +235,23 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         if not anchors_on_curr:
             continue
             
-        # Check all paragraphs on the page that end without terminal punctuation
-        for candidate in anchors_on_curr:
-            t = candidate.text.strip()
-            # If line ends without period, question mark, exclamation point, or colon
-            if t and not re.search(r'[\.\?!:]["\'\]\)]*$', t):
-                # Search next page for the continuation block
-                blocks_next = doc[i + 1].get_text("blocks")
-                for b_next in blocks_next:
-                    b_text = clean_text(b_next[4])
-                    # Skip running header, volume number, and page numbers
-                    if not b_text or len(b_text) < 10 or re.match(r'^(?:Vol\.|GeroScience|\d{3,}|\d+\s+\d+)', b_text):
-                        continue
+        last_para = anchors_on_curr[-1]
+        t = last_para.text.strip()
+        # If line ends without terminal punctuation and is not a short header/fragment
+        if t and len(t) > 60 and not re.search(r'[\.\?!:]["\'\]\)]*$', t):
+            blocks_next = order_page_blocks(doc[i + 1].get_text("blocks"), doc[i + 1])
+            for b_next, b_text in blocks_next:
+                if detect_section_header(b_text.split('\n')[0]):
+                    break
+                # Only merge if next block starts with lowercase or continuation word
+                if re.match(r'^[a-z0-9]|^(?:and|or|of|to|with|in|that|which|the|is|was|are|were)\b', b_text, re.IGNORECASE):
+                    last_para.overflow_page = p_next
+                    last_para.overflow_bbox = [float(b_next[0]), float(b_next[1]), float(b_next[2]), float(b_next[3])]
+                    last_para.overflow_text = b_text
                     
-                    # If this block continues the sentence (e.g. starts with lowercase or continuation word)
-                    candidate.overflow_page = p_next
-                    candidate.overflow_bbox = [float(b_next[0]), float(b_next[1]), float(b_next[2]), float(b_next[3])]
-                    candidate.overflow_text = b_text
-                    
-                    # Merge text so downstream readers get the complete sentence
-                    merged_text = f"{candidate.text} {b_text}"
-                    candidate.text = merged_text
-                    indexed_doc.all_anchors[candidate.anchor_id] = merged_text
+                    merged_text = f"{last_para.text} {b_text}"
+                    last_para.text = merged_text
+                    indexed_doc.all_anchors[last_para.anchor_id] = merged_text
                     break
 
     indexed_doc.raw_text = clean_text("\n\n".join(full_text_accumulator))
