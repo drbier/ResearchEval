@@ -338,7 +338,7 @@ def index_page():
     <head>
         <meta charset="UTF-8">
         <title>Research Evaluation App - Clinical Appraiser</title>
-        <link rel="icon" type="image/png" href="/elf-thinker.png" />
+        <link rel="icon" type="image/png" href="/elf-thinker.png?v=owen" />
         <script src="https://cdn.tailwindcss.com"></script>
         <!-- Marked.js for rich markdown rendering -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -444,9 +444,9 @@ def index_page():
                 <div class="flex items-center gap-4">
                     <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-sm shrink-0">
                         <img 
-                            src="/elf-thinker.png" 
-                            alt="Elf Thinker Logo" 
-                            class="w-full h-full object-contain p-1"
+                            src="/elf-thinker.png?v=owen" 
+                            alt="OWEN Elf Thinker Logo" 
+                            class="w-full h-full object-contain p-0.5"
                         />
                     </div>
                     <div>
