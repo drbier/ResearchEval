@@ -452,7 +452,7 @@ def index_page():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>F.A.S.T. — Find. Appraise. Summarize Trials</title>
+        <title>F.A.S.T. — Find · Appraise · Summarize Trials</title>
         <link rel="icon" type="image/png" href="/elf-thinker.png?v=owen" />
         <script src="https://cdn.tailwindcss.com"></script>
         <!-- Marked.js for rich markdown rendering -->
@@ -689,7 +689,7 @@ def index_page():
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">F.A.S.T.</h1>
-                        <p class="text-slate-500 text-[11px] font-medium mt-0.5">Find. Appraise. Summarize Trials</p>
+                        <p class="text-slate-500 text-[11px] font-medium mt-0.5">Find <span class="text-slate-400 font-bold mx-1">·</span> Appraise <span class="text-slate-400 font-bold mx-1">·</span> Summarize Trials</p>
                     </div>
                 </div>
 
@@ -702,7 +702,7 @@ def index_page():
                         <span>🔬</span> <span>Appraise</span>
                     </button>
                     <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
-                        <span>📝</span> <span>Summarize Trials</span>
+                        <span>📝</span> <span>Summarize</span>
                         <span id="summarizerBatchBadge" class="hidden ml-1 px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[10px] font-bold">0</span>
                     </button>
                 </div>
