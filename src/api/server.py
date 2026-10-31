@@ -1106,10 +1106,10 @@ def index_page():
                         <div class="bg-white border border-slate-200 rounded-md p-3.5 shadow-2xs hover:border-slate-300 transition">
                             <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-xs font-bold text-slate-500 font-mono">${idx + 1}.</span>
-                                    <span class="font-mono text-xs font-bold text-sky-900 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">${escapeHtml(r.rule_id || 'RULE')}</span>
+                                    <span class="text-xs font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-full font-mono">${idx + 1}</span>
+                                    <span class="text-xs font-bold text-slate-900">${escapeHtml(r.target_domain || 'Methodological Standard')}</span>
                                 </div>
-                                <span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${escapeHtml(r.target_domain || 'Methodological Domain')}</span>
+                                ${r.citation ? `<span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${escapeHtml(r.citation)}</span>` : ''}
                             </div>
                             <p class="text-xs text-slate-800 font-medium mb-2 leading-relaxed">
                                 ${escapeHtml(r.appraisal_action || '')}
@@ -1427,13 +1427,18 @@ ${escapeHtml(thought)}
                     if (tipDesc) tipDesc.innerText = data.triage.description || 'Deterministic bias auditing rules tailored to this study design.';
 
                     if (tipList) {
-                        tipList.innerHTML = applicableRules.length > 0 
-                            ? applicableRules.map(r => `<li><span class="font-mono text-sky-300 font-bold">${r}</span></li>`).join('')
-                            : '<li>Standard critical appraisal framework</li>';
+                        const rulesList = (data.active_rules_detail && data.active_rules_detail.length > 0)
+                            ? data.active_rules_detail.map(r => `<li><span class="text-sky-200 font-medium">${escapeHtml(r.target_domain || r.rule_id)}</span></li>`).join('')
+                            : (applicableRules.length > 0 
+                                ? applicableRules.map(r => `<li><span class="text-sky-200 font-medium">${escapeHtml(r)}</span></li>`).join('')
+                                : '<li>Standard critical appraisal framework</li>');
+                        tipList.innerHTML = rulesList;
                     }
                 }
 
-                let content = data.final_markdown || data.raw_output;
+                let content = data.final_markdown || data.raw_output || '';
+                // Strip raw {R_...} or [R_...] rule tags if emitted by model
+                content = content.replace(/\s*\{R_[A-Z0-9_]+\}/g, '').replace(/\s*\[R_[A-Z0-9_]+\]/g, '');
 
                 if (window.marked) {
                     let html = marked.parse(content);

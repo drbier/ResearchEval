@@ -42,6 +42,10 @@ def sanitize_and_verify_appraisal(markdown_text: str, valid_anchor_set: Dict[str
             stripped_fillers.extend(matches)
             cleaned = re.sub(pat, '', cleaned)
             
+    # 3. Strip Raw Rule Identifier Codes (e.g. {R_ROB2_...} or [R_ROB2_...])
+    cleaned = re.sub(r'\s*\{R_[A-Z0-9_]+\}', '', cleaned)
+    cleaned = re.sub(r'\s*\[R_[A-Z0-9_]+\]', '', cleaned)
+
     # Clean up empty lines created by removals
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     
