@@ -548,3 +548,4 @@ class PaperSummarizer:
             "model_designation": MODEL_DESIGNATION,
             "model_endpoint": PRIMARY_MODEL
         }
+
