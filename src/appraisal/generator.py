@@ -12,14 +12,17 @@ from src.appraisal.sanitizer import sanitize_and_verify_appraisal, SanitizationR
 load_dotenv(r"D:\SSD-Drive\Antigravity\ResearchEval\.env")
 
 # Model Hierarchy (Verified endpoints in order of preference & active responsiveness)
+# Primary: gemini-3.8-flash (Active GA, Google's flagship flash model for autonomous reasoning & software analysis)
+# Secondary: gemini-3.6-flash (Active GA previous-gen Flash)
+# Fallback: gemini-3.5-flash-lite (Active low-latency high-throughput Flash-Lite)
 MODEL_HIERARCHY = [
-    "gemini-3.1-flash-lite",
-    "gemini-3-flash-preview",
     "gemini-3.8-flash",
-    "gemini-3.1-pro-preview"
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3-flash-preview"
 ]
 PRIMARY_MODEL = MODEL_HIERARCHY[0]
-PRO_REASONING_MODEL = "gemini-3.1-pro-preview"
+PRO_REASONING_MODEL = "gemini-3.8-flash"
 
 class SynthesisEngine:
     def __init__(self, data_dir: str, api_key: Optional[str] = None):

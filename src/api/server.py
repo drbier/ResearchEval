@@ -545,7 +545,7 @@ def index_page():
                         <!-- Tooltip Container -->
                         <div class="study-badge-tooltip">
                             <div class="font-bold text-sky-300 mb-1 flex items-center justify-between border-b border-slate-700 pb-1">
-                                <span id="tooltipFwId">Framework ID</span>
+                                <span id="tooltipFwId">Study Design</span>
                                 <span id="tooltipRulesCount" class="text-amber-300 font-normal text-[11px]">0 Rules</span>
                             </div>
                             <p id="tooltipFwDesc" class="text-slate-300 text-[11px] mb-2 leading-relaxed">Framework description</p>
@@ -1049,6 +1049,32 @@ def index_page():
                 }
             }
 
+            const TAG_LABELS = {
+                '+TAG_NON_INFERIORITY': 'Non-Inferiority Design',
+                '+TAG_CONSORT_PRO': 'Patient-Reported Outcomes (PRO)',
+                '+TAG_BIOMARKER': 'Biomarker Analysis',
+                '+TAG_CROSSOVER': 'Crossover Design',
+                '+TAG_SAFETY_HARMS': 'Safety & Adverse Events',
+                '+TAG_IMMUNOTHERAPY': 'Immunotherapy',
+                '+TAG_ONCOLOGY': 'Oncology',
+                '+TAG_SUBGROUP': 'Subgroup Analysis',
+                '+TAG_LIQUID_BIOPSY_CTDNA': 'Liquid Biopsy / ctDNA',
+                '+TAG_COMPOSITE': 'Composite Endpoints',
+                '+TAG_COHORT': 'Observational Cohort',
+                '+TAG_EHR_CLAIMS': 'EHR / Claims Linkage',
+                '+TAG_SURVEY': 'Survey / Questionnaire',
+                '+TAG_IMMORTAL_TIME_RISK': 'Immortal Time Bias Risk',
+                '+TAG_CARDIOLOGY': 'Cardiology',
+                '+TAG_NEPHROLOGY': 'Nephrology',
+                '+TAG_NEUROLOGY': 'Neurology',
+                '+TAG_SURROGATE_ENDPOINT': 'Surrogate Endpoints'
+            };
+
+            function formatTagLabel(tag) {
+                if (TAG_LABELS[tag]) return TAG_LABELS[tag];
+                return tag.replace(/^\+?TAG_/, '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+            }
+
             function renderThinkingAudit(data) {
                 const container = document.getElementById('thinkingContainer');
                 if (!container) return;
@@ -1056,18 +1082,17 @@ def index_page():
                 const triage = data.triage || {};
                 const rulesDetail = data.active_rules_detail || [];
                 const thought = (data.thought_output || '').trim();
-                const selectedModel = data.selected_model || 'Gemini 2.5';
+                const selectedModel = data.selected_model || 'gemini-3.8-flash';
 
                 // 1. Triage Rationale
-                const fwId = triage.primary_framework_id || 'FW';
                 const fwName = triage.framework_name || 'Clinical Study';
                 const confPercent = Math.round((triage.confidence || 0) * 100);
                 const rationaleText = triage.rationale || 'Selected via deterministic trigger scoring against manuscript abstract and methods sections.';
                 
                 const tags = triage.sub_feature_tags || [];
                 const tagsHtml = tags.length > 0
-                    ? tags.map(t => `<span class="px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-mono font-semibold text-[11px] border border-sky-200">${escapeHtml(t)}</span>`).join(' ')
-                    : '<span class="text-slate-400 italic text-[11px]">No specific sub-feature tags detected</span>';
+                    ? tags.map(t => `<span class="px-2.5 py-1 rounded bg-sky-50 text-sky-800 font-medium text-xs border border-sky-200">${escapeHtml(formatTagLabel(t))}</span>`).join(' ')
+                    : '<span class="text-slate-400 italic text-xs">Standard study features</span>';
 
                 const triggers = triage.matched_triggers || [];
                 const triggersHtml = triggers.length > 0
@@ -1103,18 +1128,18 @@ def index_page():
                     `;
                 }
 
-                // 3. Deliberation & Chain of Thought
+                // 3. Deliberation & Chain of Thought (Clean Light Mode Theme)
                 let thoughtBodyHtml = '';
                 if (thought) {
                     thoughtBodyHtml = `
-                        <div class="font-mono text-xs leading-relaxed max-h-[460px] overflow-y-auto whitespace-pre-wrap text-slate-300 bg-slate-950/80 p-4 rounded border border-slate-800 shadow-inner select-text">
+                        <div class="font-mono text-xs leading-relaxed max-h-[460px] overflow-y-auto whitespace-pre-wrap text-slate-700 bg-white p-4 rounded border border-slate-200 shadow-2xs select-text">
 ${escapeHtml(thought)}
                         </div>
                     `;
                 } else {
                     thoughtBodyHtml = `
-                        <div class="text-xs text-slate-400 bg-slate-950/60 p-4 rounded border border-slate-800/80 italic leading-relaxed">
-                            <span class="text-sky-400 font-semibold not-italic">Direct Synthesis Mode:</span> The verified model evaluated the study and grounded bias rules directly against the manuscript coordinates without emitting a separate internal thought buffer.
+                        <div class="text-xs text-slate-600 bg-white p-4 rounded border border-slate-200 italic leading-relaxed">
+                            <span class="text-sky-700 font-semibold not-italic">Direct Synthesis Mode:</span> The verified model evaluated the study and grounded bias rules directly against the manuscript coordinates without emitting a separate internal thought buffer.
                         </div>
                     `;
                 }
@@ -1125,7 +1150,7 @@ ${escapeHtml(thought)}
                         <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-200 pb-2.5">
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-bold text-slate-800">1. Deterministic Triage Rationale</span>
-                                <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-sky-100 text-sky-800 border border-sky-200">${escapeHtml(fwId)}: ${escapeHtml(fwName)}</span>
+                                <span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-200">${escapeHtml(fwName)}</span>
                             </div>
                             <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">${confPercent}% Confidence</span>
                         </div>
@@ -1134,7 +1159,7 @@ ${escapeHtml(thought)}
                         </p>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
                             <div>
-                                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Detected Sub-Feature Tags</span>
+                                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Detected Clinical & Study Features</span>
                                 <div class="flex flex-wrap gap-1.5">
                                     ${tagsHtml}
                                 </div>
@@ -1165,13 +1190,13 @@ ${escapeHtml(thought)}
                         </div>
                     </div>
 
-                    <!-- Card 3: Model Deliberation & Chain of Thought -->
-                    <div class="bg-slate-900 text-slate-100 border border-slate-800 rounded-lg p-5 shadow-xs">
-                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-800 pb-2.5">
+                    <!-- Card 3: Model Deliberation & Chain of Thought (Clean Light Mode Theme) -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-200 pb-2.5">
                             <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-slate-100">3. Synthesis Deliberation & Chain-of-Thought</span>
+                                <span class="text-sm font-bold text-slate-800">3. Synthesis Deliberation & Chain-of-Thought</span>
                             </div>
-                            <span class="font-mono text-[11px] text-sky-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${escapeHtml(selectedModel)}</span>
+                            <span class="font-mono text-[11px] text-sky-800 bg-sky-50 px-2.5 py-0.5 rounded border border-sky-200 font-semibold">${escapeHtml(selectedModel)}</span>
                         </div>
                         ${thoughtBodyHtml}
                     </div>
@@ -1397,7 +1422,7 @@ ${escapeHtml(thought)}
                     const applicableRules = data.triage.applicable_rules || [];
 
                     badgeText.innerText = fwName;
-                    if (tipFw) tipFw.innerText = fwId + ': ' + fwName;
+                    if (tipFw) tipFw.innerText = fwName;
                     if (tipRules) tipRules.innerText = applicableRules.length + ' Rules Triggered';
                     if (tipDesc) tipDesc.innerText = data.triage.description || 'Deterministic bias auditing rules tailored to this study design.';
 

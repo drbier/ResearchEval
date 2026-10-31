@@ -201,13 +201,14 @@ class TriageEngine:
             if match and rule_id not in applicable_rules:
                 applicable_rules.append(rule_id)
 
-        # Build descriptive rationale
+        # Build descriptive clinical rationale (human-readable study designs without internal framework codes)
+        fw_name_map = {f["framework_id"]: f["name"] for f in self.triage_matrix}
         top_candidates = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:3]
-        top_summary = ", ".join([f"{k}: {v}" for k, v in top_candidates if v > 0])
+        top_summary = ", ".join([f"{fw_name_map.get(k, k)} (score {v})" for k, v in top_candidates if v > 0])
         rationale = (
-            f"Classified as {best_fw_id} ({best_fw['name']}) with score {scores[best_fw_id]} "
-            f"(Top candidates: {top_summary}). "
-            f"Triggered {len(detected_tags)} sub-tags and {len(applicable_rules)} appraisal rules."
+            f"Classified as {best_fw['name']} with match score {scores[best_fw_id]} "
+            f"(Evaluated candidate designs: {top_summary}). "
+            f"Triggered {len(detected_tags)} study feature tags and {len(applicable_rules)} critical appraisal rules."
         )
 
         return TriageResult(
