@@ -137,10 +137,26 @@ class TriageEngine:
         if any(k in full_text for k in ["cost-effectiveness", "cost-utility", "icer", "qaly", "markov model", "cheers"]):
             scores["FW_G"] += 15
 
-        # 7. Survey Research (FW_J): Surveys and questionnaires
-        if any(k in design_scope_text for k in ["survey", "questionnaire", "cross-sectional survey", "response rate"]):
-            if "trial" not in design_scope_text and "systematic review" not in design_scope_text:
+        # 7. Survey Research (FW_J): Strictly surveys and questionnaires, NOT clinical trials with questionnaires or response rates
+        if any(k in design_scope_text for k in ["survey", "cross-sectional survey", "questionnaire"]):
+            header_and_methods = (doc_header + " " + design_scope_text).lower()
+            is_clinical_interventional = any(k in header_and_methods for k in [
+                "trial", "phase i", "phase ii", "phase 1", "phase 2", "pilot study",
+                "chemotherapy", "folfox", "bevacizumab", "dose escalation", "adverse events"
+            ])
+            if not is_clinical_interventional and "systematic review" not in design_scope_text:
                 scores["FW_J"] += 15
+
+        # 8. Single-arm / Early Phase Clinical Trials (Phase I/II, Pilot Trials): Route to Clinical Trial / Real-World Evidence
+        is_phase_trial = any(k in full_text for k in [
+            "phase i", "phase ii", "phase 1", "phase 2", "phase i/ii", "phase 1/2",
+            "pilot study", "pilot trial", "first-in-human"
+        ])
+        if is_phase_trial:
+            if "random" in full_text:
+                scores["FW_A"] += 15
+            else:
+                scores["FW_C"] += 15  # Observational / Real-World Evidence framework handles prospective non-randomized cohorts
 
         # Resolve primary framework using scores and hierarchy rank
         best_fw_id = max(scores, key=lambda k: (scores[k], -next(f.get("hierarchy_rank", 99) for f in self.triage_matrix if f["framework_id"] == k)))

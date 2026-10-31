@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import io
 import urllib.parse
@@ -7,6 +8,11 @@ import requests
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 import pymupdf
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 class PaperFetcher:
     """Intelligent paper fetcher supporting PMC, PubMed, DOI, and journal URLs."""

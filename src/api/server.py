@@ -1,8 +1,14 @@
 import os
+import sys
 import shutil
 import io
 import urllib.parse
 from typing import Optional, Dict
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse, FileResponse

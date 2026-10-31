@@ -1,8 +1,14 @@
 import os
+import sys
 import re
 from typing import List, Dict, Any, Optional
 import pymupdf
 from pydantic import BaseModel, Field
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 class CoordinateAnchor(BaseModel):
     anchor_id: str
@@ -38,7 +44,7 @@ def detect_section_header(line: str) -> Optional[str]:
     clean_line = line.strip().strip(':').strip('.').strip('#').strip()
     upper = clean_line.upper()
     
-    # Common standard sections
+    # Common standard sections and clinical trial subheadings
     section_map = {
         'ABSTRACT': 'Abstract',
         'INTRODUCTION': 'Introduction',
@@ -47,8 +53,15 @@ def detect_section_header(line: str) -> Optional[str]:
         'PATIENTS AND METHODS': 'Methods',
         'MATERIALS AND METHODS': 'Methods',
         'STUDY DESIGN': 'Methods',
+        'PATIENT POPULATION': 'Methods',
+        'TREATMENT PLAN': 'Methods',
+        'ASSESSMENTS': 'Methods',
+        'STATISTICAL ANALYSIS': 'Methods',
         'RESULTS': 'Results',
         'FINDINGS': 'Results',
+        'EFFICACY': 'Results',
+        'SAFETY': 'Results',
+        'TREATMENT EXPOSURE': 'Results',
         'DISCUSSION': 'Discussion',
         'CONCLUSIONS': 'Discussion',
         'CONCLUSION': 'Discussion',
@@ -135,8 +148,28 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     indexed_doc = IndexedDocument(filename=filename, doc_header="")
     full_text_accumulator: List[str] = []
     
+    # Locate local Tessdata directory for automatic OCR fallback on scanned PDFs
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    tessdata_dir = os.path.join(base_dir, "data", "tessdata")
+    has_tessdata = os.path.exists(os.path.join(tessdata_dir, "eng.traineddata"))
+    
+    # Detect if PDF contains selectable digital text or is a scanned/flattened image PDF
+    sample_text = "".join(doc[i].get_text().strip() for i in range(min(5, len(doc))))
+    is_scanned_pdf = (len(sample_text) < 100) and has_tessdata
+    if is_scanned_pdf:
+        safe_name = filename.encode('ascii', errors='replace').decode('ascii')
+        print(f"[Indexer] Scanned / image-only PDF detected ({safe_name}). Activating high-precision OCR pipeline...")
+
     # Step 1: Extract Document Header (First ~500 words or Page 1 Top)
-    page1_text = doc[0].get_text() if len(doc) > 0 else ""
+    if is_scanned_pdf and has_tessdata:
+        try:
+            tp0 = doc[0].get_textpage_ocr(tessdata=tessdata_dir, dpi=200, full=True)
+            page1_text = tp0.extractText()
+        except Exception:
+            page1_text = doc[0].get_text() if len(doc) > 0 else ""
+    else:
+        page1_text = doc[0].get_text() if len(doc) > 0 else ""
+
     header_lines = [l.strip() for l in page1_text.split('\n') if l.strip()]
     doc_header = "\n".join(header_lines[:35])[:2500]
     indexed_doc.doc_header = doc_header
@@ -155,22 +188,36 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     
     for page_idx, page in enumerate(doc):
         page_num = page_idx + 1
-        page_text = page.get_text("text")
+        
+        if is_scanned_pdf and has_tessdata:
+            try:
+                tp = page.get_textpage_ocr(tessdata=tessdata_dir, dpi=200, full=True)
+                page_text = tp.extractText()
+                raw_blocks = tp.extractBLOCKS()
+            except Exception as e:
+                print(f"[Indexer] Warning: OCR failed on page {page_num}: {e}")
+                page_text = page.get_text("text")
+                raw_blocks = page.get_text("blocks")
+        else:
+            page_text = page.get_text("text")
+            raw_blocks = page.get_text("blocks")
+
         full_text_accumulator.append(page_text)
         
         # Order blocks according to two-column human reading layout, filtering junk
-        blocks = order_page_blocks(page.get_text("blocks"), page)
+        blocks = order_page_blocks(raw_blocks, page)
         for b, block_text in blocks:
-            # Check for section header
-            first_line = block_text.split('\n')[0].strip()
-            detected = detect_section_header(first_line)
-            if detected:
-                current_section = detected
-                # If block had only the header, move to next
-                if len(first_line) == len(block_text):
-                    continue
-                else:
-                    block_text = block_text[len(first_line):].strip()
+            # Check lines for section header (supports standalone lines and OCR-merged blocks)
+            lines = [l.strip() for l in block_text.split('\n') if l.strip()]
+            for l_idx, line in enumerate(lines[:3]):
+                detected = detect_section_header(line)
+                if detected:
+                    current_section = detected
+                    if len(lines) == 1:
+                        block_text = ""
+                    elif l_idx == 0:
+                        block_text = "\n".join(lines[1:]).strip()
+                    break
             
             if not block_text:
                 continue
