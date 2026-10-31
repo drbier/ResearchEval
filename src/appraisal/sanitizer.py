@@ -22,11 +22,72 @@ FILLER_PATTERNS = [
     r'(?i)\n(?:i\s+hope\s+this\s+helps|let\s+me\s+know\s+if\s+you\s+need|feel\s+free\s+to\s+ask|as\s+an\s+ai|thank\s+you)[^\n]*$'
 ]
 
+def clean_latex_math(text: str) -> str:
+    """Clean LaTeX math markup, dollar-sign wrappers, and macros into clean clinical Unicode text."""
+    if not text:
+        return ""
+    # 1. Replace \text{...}, \mathrm{...}, \mathbf{...} with inner content
+    text = re.sub(r'\\(?:text|mathrm|mathbf|mathit|mathsf)\{([^}]+)\}', r'\1', text)
+
+    # 2. Convert common superscripts: ^+ -> ⁺, ^- -> ⁻, ^2 -> ², ^3 -> ³, etc.
+    sup_map = {
+        r'\^\+': '⁺',
+        r'\^-': '⁻',
+        r'\^2': '²',
+        r'\^3': '³',
+        r'\^0': '⁰',
+        r'\^1': '¹',
+        r'\^4': '⁴',
+    }
+    for pat, sup in sup_map.items():
+        text = re.sub(pat, sup, text)
+
+    # 3. Common Greek letters and mathematical symbols
+    greek_and_math = [
+        (r'\\alpha\b', 'α'),
+        (r'\\beta\b', 'β'),
+        (r'\\gamma\b', 'γ'),
+        (r'\\delta\b', 'δ'),
+        (r'\\epsilon\b', 'ε'),
+        (r'\\theta\b', 'θ'),
+        (r'\\lambda\b', 'λ'),
+        (r'\\mu\b', 'μ'),
+        (r'\\pi\b', 'π'),
+        (r'\\sigma\b', 'σ'),
+        (r'\\tau\b', 'τ'),
+        (r'\\phi\b', 'φ'),
+        (r'\\chi\b', 'χ'),
+        (r'\\omega\b', 'ω'),
+        (r'\\pm\b', '±'),
+        (r'\\times\b', '×'),
+        (r'\\geq?\b', '≥'),
+        (r'\\leq?\b', '≤'),
+        (r'\\neq\b', '≠'),
+        (r'\\approx\b', '≈'),
+        (r'\\infty\b', '∞'),
+        (r'\\rightarrow\b', '→'),
+        (r'\\to\b', '→'),
+    ]
+    for macro, sym in greek_and_math:
+        text = re.sub(macro, sym, text)
+
+    # 4. Strip $...$ and $$...$$ LaTeX math wrappers
+    text = re.sub(r'\$\$([^\$]+?)\$\$', r'\1', text)
+    text = re.sub(r'\$([^\$\n]+?)\$', r'\1', text)
+
+    # 5. Clean any residual escaped backslashes in front of words
+    text = re.sub(r'\\([a-zA-Z]+)', r'\1', text)
+
+    return text
+
 def sanitize_and_verify_appraisal(markdown_text: str, valid_anchor_set: Dict[str, str]) -> SanitizationResult:
     """Strip disclaimers, conversational pleasantries, and verify coordinate anchors."""
     cleaned = markdown_text
     stripped_disclaimers: List[str] = []
     stripped_fillers: List[str] = []
+    
+    # 1. Clean LaTeX Math & Format Artifacts
+    cleaned = clean_latex_math(cleaned)
     
     # 1. Strip Disclaimers
     for pat in DISCLAIMER_PATTERNS:

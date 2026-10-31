@@ -2348,6 +2348,29 @@ ${escapeHtml(thought)}
                 // Strip raw {R_...} or [R_...] rule tags if emitted by model
                 content = content.replace(/\s*\{R_[A-Z0-9_]+\}/g, '').replace(/\s*\[R_[A-Z0-9_]+\]/g, '');
 
+                // Clean any raw LaTeX math formatting or macros emitted by the model
+                function cleanLatexMath(str) {
+                    if (!str) return '';
+                    let t = str;
+                    t = t.replace(/\\(?:text|mathrm|mathbf|mathit|mathsf)\{([^}]+)\}/g, '$1');
+                    t = t.replace(/\^\+/g, '⁺').replace(/\^\-/g, '⁻').replace(/\^2/g, '²').replace(/\^3/g, '³').replace(/\^0/g, '⁰').replace(/\^1/g, '¹');
+                    const greek = {
+                        '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ', '\\epsilon': 'ε',
+                        '\\theta': 'θ', '\\lambda': 'λ', '\\mu': 'μ', '\\pi': 'π', '\\sigma': 'σ',
+                        '\\tau': 'τ', '\\phi': 'φ', '\\chi': 'χ', '\\omega': 'ω', '\\pm': '±',
+                        '\\times': '×', '\\geq': '≥', '\\ge': '≥', '\\leq': '≤', '\\le': '≤',
+                        '\\neq': '≠', '\\approx': '≈', '\\infty': '∞', '\\rightarrow': '→', '\\to': '→'
+                    };
+                    for (const [k, v] of Object.entries(greek)) {
+                        t = t.replace(new RegExp(k.replace('\\', '\\\\') + '\\b', 'g'), v);
+                    }
+                    t = t.replace(/\$\$([^\$]+?)\$\$/g, '$1');
+                    t = t.replace(/\$([^\$\n]+?)\$/g, '$1');
+                    t = t.replace(/\\([a-zA-Z]+)/g, '$1');
+                    return t;
+                }
+                content = cleanLatexMath(content);
+
                 if (window.marked) {
                     let html = marked.parse(content);
                     // Match coordinate blocks, supporting single, multi-paragraph, and compound citations

@@ -80,6 +80,17 @@ class TestResearchEvalPipeline(unittest.TestCase):
         self.assertIn("[Discussion, Para 18]", res2.verified_anchors)
         self.assertTrue(res2.is_valid)
 
+        # LaTeX math cleaning test
+        latex_text = "Evaluated $\\text{CD8}^+$ T cells with $n = 19$ and statistical power ($1-\\beta$) at $p < 0.05$ [Methods, Para 1]."
+        res3 = sanitize_and_verify_appraisal(latex_text, valid_set)
+        self.assertNotIn("$\\text", res3.cleaned_markdown)
+        self.assertNotIn("$n = 19$", res3.cleaned_markdown)
+        self.assertNotIn("$\\beta$", res3.cleaned_markdown)
+        self.assertIn("CD8⁺", res3.cleaned_markdown)
+        self.assertIn("n = 19", res3.cleaned_markdown)
+        self.assertIn("1-β", res3.cleaned_markdown)
+        self.assertIn("p < 0.05", res3.cleaned_markdown)
+
     def test_05_pubmed_availability_and_retrieval(self):
         """Verify PubMed availability check via elink and JATS XML full-text retrieval."""
         upload_dir = os.path.join(self.data_dir, "uploads")

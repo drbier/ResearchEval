@@ -75,7 +75,8 @@ class SynthesisEngine:
             "6. Ground EVERY factual claim, statistic, and methodological observation with an exact inline source coordinate anchor (e.g., [Doc_Header], [Methods, Para 4], [Results, Table 2], [Discussion, Para 12]). Never invent coordinates.\n"
             "   CRITICAL GROUNDING ACCURACY: Before attaching a coordinate anchor to a statistic, finding, or odds ratio, verify that the cited text block DIRECTLY contains the exact numbers and findings cited. Never cite an adjacent paragraph or preceding anchor. If findings are in a paragraph starting with 'Figure X shows...', cite that exact paragraph anchor.\n"
             "7. In '## Bibliographic Data': Accurately extract Title, Authors, Journal, Year, and DOI / PubMed ID from [Doc_Header]. Ground them with [Doc_Header]. Always format the DOI / PubMed ID as a full live URL (e.g., https://doi.org/10.xxxx/xxxx or https://pubmed.ncbi.nlm.nih.gov/xxxx/). If authors, journal, year, or DOI/PMID are present in [Doc_Header], extract them and never state 'Not specified'.\n"
-            "8. STRICT NEGATIVE CONSTRAINTS: NO medical disclaimers, NO conversational greetings, pleasantries, or closing sign-offs, and NO therapeutic practice mandates beyond what the source study evaluated.\n"
+            "8. FORMATTING & MATHEMATICAL NOTATION: Do NOT use LaTeX math formatting, dollar signs ($...$ or $$...$$), or LaTeX macros like \\text{}, \\beta, \\alpha, \\gamma, \\pm, \\ge. Always write in standard clinical English with standard Unicode symbols when needed (e.g., n = 19, p < 0.05, 1 - β, α = 0.05, CD8⁺, CD4⁺, IFN-γ, ±, ×, ≥, ≤). Never enclose variables, sample sizes, or formulas in dollar signs.\n"
+            "9. STRICT NEGATIVE CONSTRAINTS: NO medical disclaimers, NO conversational greetings, pleasantries, or closing sign-offs, and NO therapeutic practice mandates beyond what the source study evaluated.\n"
         )
         
         # Scoped prompt content
