@@ -991,16 +991,19 @@ def index_page():
                 const tabPdfBtn = document.getElementById('tabPdfBtn');
                 const tabUrlBtn = document.getElementById('tabUrlBtn');
 
+                const activeClass = "px-2.5 py-1 rounded bg-white text-sky-700 shadow-2xs font-semibold transition";
+                const inactiveClass = "px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition";
+
                 if (tab === 'pdf') {
                     tabPdf.classList.remove('hidden');
                     tabUrl.classList.add('hidden');
-                    tabPdfBtn.className = "pb-2.5 font-semibold text-sm border-b-2 border-sky-600 text-sky-700 transition";
-                    tabUrlBtn.className = "pb-2.5 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+                    tabPdfBtn.className = activeClass;
+                    tabUrlBtn.className = inactiveClass;
                 } else {
                     tabPdf.classList.add('hidden');
                     tabUrl.classList.remove('hidden');
-                    tabUrlBtn.className = "pb-2.5 font-semibold text-sm border-b-2 border-sky-600 text-sky-700 transition";
-                    tabPdfBtn.className = "pb-2.5 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition";
+                    tabUrlBtn.className = activeClass;
+                    tabPdfBtn.className = inactiveClass;
                 }
             }
 
