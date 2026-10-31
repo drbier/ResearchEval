@@ -2,7 +2,7 @@ import os
 import json
 import time
 import requests
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from dotenv import load_dotenv
 
 from src.ingestion.indexer import IndexedDocument, parse_and_index_pdf
@@ -109,8 +109,8 @@ Anchors & Text:
             "relevant_lexicon": relevant_lexicon
         }
 
-    def _invoke_gemini_rest(self, prompt: str, system_instruction: str, preferred_model: Optional[str] = None) -> Tuple[str, str]:
-        """Invoke Gemini via direct REST call with automated model fallback."""
+    def _invoke_gemini_rest(self, prompt: str, system_instruction: str, preferred_model: Optional[str] = None) -> Tuple[str, str, str]:
+        """Invoke Gemini via direct REST call with automated model fallback and optional thought capture."""
         models_to_try = [preferred_model] if preferred_model else []
         for m in MODEL_HIERARCHY:
             if m not in models_to_try:
@@ -134,8 +134,9 @@ Anchors & Text:
                     candidates = data.get("candidates", [])
                     if candidates and "content" in candidates[0]:
                         parts = candidates[0]["content"].get("parts", [])
-                        text_parts = [p.get("text", "") for p in parts if "text" in p]
-                        return "".join(text_parts), model
+                        text_parts = [p.get("text", "") for p in parts if "text" in p and not p.get("thought", False)]
+                        thought_parts = [p.get("text", "") for p in parts if p.get("thought", False)]
+                        return "".join(text_parts), "".join(thought_parts), model
                 else:
                     last_error = f"Model {model} returned HTTP {resp.status_code}: {resp.text[:200]}"
             except Exception as e:
@@ -162,12 +163,13 @@ Anchors & Text:
                 "triage": triage.model_dump(),
                 "prompt_length_chars": len(payload["user_prompt"]),
                 "active_rules_count": len(payload["active_rules"]),
+                "active_rules_detail": payload["active_rules"],
                 "lexicon_terms_count": len(payload["relevant_lexicon"]),
                 "payload": payload
             }
             
         # Step 2: Invoke verified Gemini endpoint
-        raw_output, used_model = self._invoke_gemini_rest(
+        raw_output, thought_output, used_model = self._invoke_gemini_rest(
             prompt=payload["user_prompt"],
             system_instruction=payload["system_instruction"],
             preferred_model=model_override
@@ -180,8 +182,10 @@ Anchors & Text:
             "status": "success",
             "selected_model": used_model,
             "triage": triage.model_dump(),
+            "active_rules_detail": payload["active_rules"],
             "sanitization": sanitization.model_dump(),
             "raw_output": raw_output,
+            "thought_output": thought_output,
             "final_markdown": sanitization.cleaned_markdown
         }
 

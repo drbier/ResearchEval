@@ -583,13 +583,23 @@ def index_page():
             <div id="resultBox" class="hidden">
                 <!-- Draggable Split Container: Left Appraisal | Resizer | Right Source Inspector -->
                 <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch rounded-lg border border-slate-200 shadow-sm overflow-hidden bg-white" style="height: calc(100vh - 105px); min-height: 650px;">
-                    <!-- Left: Clinical Appraisal -->
+                    <!-- Left: Clinical Appraisal & Show Thinking Tab Switcher (Behavior 3) -->
                     <div id="leftPane" class="bg-white p-6 border-r border-slate-200 overflow-y-auto select-text flex flex-col h-full" style="width: 55%; min-width: 25%; max-width: 75%;">
-                        <div class="sticky top-0 bg-white z-10 pb-3 border-b border-slate-200 mb-4 flex justify-between items-center">
-                            <h3 class="text-lg font-semibold text-slate-800">Structured Clinical Appraisal</h3>
-                            <span class="text-xs text-slate-400 italic">Click any coordinate pill to inspect source text</span>
+                        <div class="sticky top-0 bg-white z-10 pb-3 border-b border-slate-200 mb-4 flex flex-wrap justify-between items-center gap-2">
+                            <div class="flex items-center gap-2">
+                                <div class="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-medium">
+                                    <button id="leftTabAppraisalBtn" onclick="switchLeftTab('appraisal')" class="px-3 py-1 rounded-md bg-white text-sky-800 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                                        <span>📄</span> <span>Clinical Appraisal</span>
+                                    </button>
+                                    <button id="leftTabThinkingBtn" onclick="switchLeftTab('thinking')" class="px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer">
+                                        <span>🧠</span> <span>Show Thinking / Audit</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <span id="leftPaneHint" class="text-xs text-slate-400 italic">Click any coordinate pill to inspect source text</span>
                         </div>
                         <div id="outputMarkdown" class="prose max-w-none text-slate-800 bg-slate-50 p-6 rounded-lg border border-slate-200 text-sm leading-relaxed flex-1"></div>
+                        <div id="thinkingContainer" class="hidden flex-1 space-y-4"></div>
                     </div>
 
                     <!-- Draggable Divider Bar -->
@@ -627,9 +637,6 @@ def index_page():
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
                 </div>
             </div>
         </div>
@@ -1007,6 +1014,170 @@ def index_page():
                 }
             }
 
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function switchLeftTab(tab) {
+                const appraisalView = document.getElementById('outputMarkdown');
+                const thinkingView = document.getElementById('thinkingContainer');
+                const tabAppraisalBtn = document.getElementById('leftTabAppraisalBtn');
+                const tabThinkingBtn = document.getElementById('leftTabThinkingBtn');
+                const hint = document.getElementById('leftPaneHint');
+
+                const activeClass = "px-3 py-1 rounded-md bg-white text-sky-800 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer";
+                const inactiveClass = "px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer";
+
+                if (tab === 'appraisal') {
+                    appraisalView.classList.remove('hidden');
+                    thinkingView.classList.add('hidden');
+                    tabAppraisalBtn.className = activeClass;
+                    tabThinkingBtn.className = inactiveClass;
+                    if (hint) hint.innerText = "Click any coordinate pill to inspect source text";
+                } else {
+                    appraisalView.classList.add('hidden');
+                    thinkingView.classList.remove('hidden');
+                    tabThinkingBtn.className = activeClass;
+                    tabAppraisalBtn.className = inactiveClass;
+                    if (hint) hint.innerText = "Auditing triage rationale, rules AST & reasoning trace";
+                }
+            }
+
+            function renderThinkingAudit(data) {
+                const container = document.getElementById('thinkingContainer');
+                if (!container) return;
+
+                const triage = data.triage || {};
+                const rulesDetail = data.active_rules_detail || [];
+                const thought = (data.thought_output || '').trim();
+                const selectedModel = data.selected_model || 'Gemini 2.5';
+
+                // 1. Triage Rationale
+                const fwId = triage.primary_framework_id || 'FW';
+                const fwName = triage.framework_name || 'Clinical Study';
+                const confPercent = Math.round((triage.confidence || 0) * 100);
+                const rationaleText = triage.rationale || 'Selected via deterministic trigger scoring against manuscript abstract and methods sections.';
+                
+                const tags = triage.sub_feature_tags || [];
+                const tagsHtml = tags.length > 0
+                    ? tags.map(t => `<span class="px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-mono font-semibold text-[11px] border border-sky-200">${escapeHtml(t)}</span>`).join(' ')
+                    : '<span class="text-slate-400 italic text-[11px]">No specific sub-feature tags detected</span>';
+
+                const triggers = triage.matched_triggers || [];
+                const triggersHtml = triggers.length > 0
+                    ? triggers.map(tr => `<span class="px-2 py-0.5 rounded bg-slate-200/80 text-slate-700 font-mono text-[11px] border border-slate-300">"${escapeHtml(tr)}"</span>`).join(' ')
+                    : '<span class="text-slate-400 italic text-[11px]">Standard design keywords</span>';
+
+                // 2. Methodological Bias Rules
+                let rulesListHtml = '';
+                if (rulesDetail.length > 0) {
+                    rulesListHtml = rulesDetail.map((r, idx) => `
+                        <div class="bg-white border border-slate-200 rounded-md p-3.5 shadow-2xs hover:border-slate-300 transition">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-slate-500 font-mono">${idx + 1}.</span>
+                                    <span class="font-mono text-xs font-bold text-sky-900 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">${escapeHtml(r.rule_id || 'RULE')}</span>
+                                </div>
+                                <span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${escapeHtml(r.target_domain || 'Methodological Domain')}</span>
+                            </div>
+                            <p class="text-xs text-slate-800 font-medium mb-2 leading-relaxed">
+                                ${escapeHtml(r.appraisal_action || '')}
+                            </p>
+                            <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+                                ${r.citation ? `<span><strong class="text-slate-700 font-semibold">Guideline:</strong> ${escapeHtml(r.citation)}</span>` : ''}
+                                ${r.directional_bias ? `<span><strong class="text-rose-700 font-semibold">Directional Risk:</strong> ${escapeHtml(r.directional_bias)}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    rulesListHtml = `
+                        <div class="bg-white border border-slate-200 rounded-md p-4 text-xs text-slate-500 italic">
+                            Standard methodological appraisal framework rules applied.
+                        </div>
+                    `;
+                }
+
+                // 3. Deliberation & Chain of Thought
+                let thoughtBodyHtml = '';
+                if (thought) {
+                    thoughtBodyHtml = `
+                        <div class="font-mono text-xs leading-relaxed max-h-[460px] overflow-y-auto whitespace-pre-wrap text-slate-300 bg-slate-950/80 p-4 rounded border border-slate-800 shadow-inner select-text">
+${escapeHtml(thought)}
+                        </div>
+                    `;
+                } else {
+                    thoughtBodyHtml = `
+                        <div class="text-xs text-slate-400 bg-slate-950/60 p-4 rounded border border-slate-800/80 italic leading-relaxed">
+                            <span class="text-sky-400 font-semibold not-italic">Direct Synthesis Mode:</span> The verified model evaluated the study and grounded bias rules directly against the manuscript coordinates without emitting a separate internal thought buffer.
+                        </div>
+                    `;
+                }
+
+                container.innerHTML = `
+                    <!-- Card 1: Triage Assessment Rationale -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-200 pb-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-slate-800">1. Deterministic Triage Rationale</span>
+                                <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-sky-100 text-sky-800 border border-sky-200">${escapeHtml(fwId)}: ${escapeHtml(fwName)}</span>
+                            </div>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">${confPercent}% Confidence</span>
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed mb-3.5 bg-white p-3 rounded border border-slate-200/80">
+                            ${escapeHtml(rationaleText)}
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-xs">
+                            <div>
+                                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Detected Sub-Feature Tags</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${tagsHtml}
+                                </div>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wide block mb-1.5">Matched Keywords & Design Triggers</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${triggersHtml}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Methodological Bias Rules Audit -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-200 pb-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-slate-800">2. Grounded Methodological Bias Rules</span>
+                                <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-200">${rulesDetail.length} Rules Active</span>
+                            </div>
+                            <span class="text-[11px] text-slate-500 font-mono">AST Rulebase v2.0</span>
+                        </div>
+                        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+                            The following domain-specific methodological bias rules were triggered by AST logic and evaluated against manuscript coordinates:
+                        </p>
+                        <div class="space-y-3">
+                            ${rulesListHtml}
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Model Deliberation & Chain of Thought -->
+                    <div class="bg-slate-900 text-slate-100 border border-slate-800 rounded-lg p-5 shadow-xs">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-800 pb-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-slate-100">3. Synthesis Deliberation & Chain-of-Thought</span>
+                            </div>
+                            <span class="font-mono text-[11px] text-sky-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">${escapeHtml(selectedModel)}</span>
+                        </div>
+                        ${thoughtBodyHtml}
+                    </div>
+                `;
+            }
+
             let pendingResolution = null;
             let checkTimeout = null;
 
@@ -1282,6 +1453,10 @@ def index_page():
                 } else {
                     document.getElementById('outputMarkdown').innerText = content;
                 }
+
+                // Populate Thinking & Audit Trail view (Behavior 3)
+                renderThinkingAudit(data);
+                switchLeftTab('appraisal');
 
                 document.getElementById('resultBox').classList.remove('hidden');
                 document.getElementById('statusBox').classList.add('hidden');
