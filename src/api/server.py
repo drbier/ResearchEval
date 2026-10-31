@@ -51,21 +51,52 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+PUBLIC_DIR = os.path.join(PROJECT_ROOT, "public")
+ICONS_DIR = os.path.join(PUBLIC_DIR, "icons")
+
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+if os.path.exists(PUBLIC_DIR):
+    app.mount("/public", StaticFiles(directory=PUBLIC_DIR), name="public")
+
+if os.path.exists(ICONS_DIR):
+    app.mount("/icons", StaticFiles(directory=ICONS_DIR), name="icons")
+
+@app.get("/manifest.json")
+def get_manifest():
+    manifest_file = os.path.join(PUBLIC_DIR, "manifest.json")
+    if os.path.exists(manifest_file):
+        return FileResponse(manifest_file, media_type="application/manifest+json")
+    raise HTTPException(status_code=404, detail="Manifest not found")
+
+@app.get("/FAST-Elf.jpeg")
+def get_fast_elf_image():
+    elf_file = os.path.join(PUBLIC_DIR, "FAST-Elf.jpeg")
+    if os.path.exists(elf_file):
+        return FileResponse(elf_file, media_type="image/jpeg")
+    raise HTTPException(status_code=404, detail="FAST-Elf image not found")
+
+@app.get("/logo.png")
 @app.get("/elf-thinker.png")
-def get_elf_thinker_logo():
-    logo_file = os.path.join(STATIC_DIR, "elf-thinker.png")
+def get_logo():
+    # Return new FAST icon
+    fast_icon = os.path.join(PUBLIC_DIR, "icons", "icon-512.png")
+    if os.path.exists(fast_icon):
+        return FileResponse(fast_icon, media_type="image/png")
+    logo_file = os.path.join(STATIC_DIR, "fast-elf.png")
     if os.path.exists(logo_file):
         return FileResponse(logo_file, media_type="image/png")
     raise HTTPException(status_code=404, detail="Logo not found")
 
 @app.get("/favicon.ico")
 def get_favicon():
-    logo_file = os.path.join(STATIC_DIR, "elf-thinker.png")
-    if os.path.exists(logo_file):
-        return FileResponse(logo_file, media_type="image/png")
+    favicon_file = os.path.join(PUBLIC_DIR, "favicon.ico")
+    if os.path.exists(favicon_file):
+        return FileResponse(favicon_file, media_type="image/x-icon")
+    alt_file = os.path.join(STATIC_DIR, "favicon.ico")
+    if os.path.exists(alt_file):
+        return FileResponse(alt_file, media_type="image/x-icon")
     raise HTTPException(status_code=404, detail="Favicon not found")
 
 engine = SynthesisEngine(DATA_DIR)
@@ -452,8 +483,22 @@ def index_page():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>F.A.S.T. — Find · Appraise · Summarize Trials</title>
-        <link rel="icon" type="image/png" href="/elf-thinker.png?v=owen" />
+        
+        <!-- PWA Meta Tags & Web Manifest -->
+        <link rel="manifest" href="/manifest.json">
+        <meta name="theme-color" content="#0284c7">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="F.A.S.T.">
+        
+        <!-- Icons -->
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <!-- Marked.js for rich markdown rendering -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -682,9 +727,9 @@ def index_page():
                 <div class="flex items-center gap-3 shrink-0">
                     <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-2xs shrink-0">
                         <img 
-                            src="/elf-thinker.png?v=owen" 
-                            alt="OWEN Elf Thinker Logo" 
-                            class="w-full h-full object-contain p-0.5"
+                            src="/FAST-Elf.jpeg" 
+                            alt="F.A.S.T. Logo" 
+                            class="w-full h-full object-cover"
                         />
                     </div>
                     <div>
