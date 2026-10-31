@@ -31,7 +31,7 @@ from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_D
 from src.summarizer.engine import PaperSummarizer, MODEL_DESIGNATION as SUMMARIZER_MODEL_DESIGNATION
 
 app = FastAPI(
-    title="Research Evaluation App",
+    title="F.A.S.T. - Find. Appraise. Summarize Trials",
     description="Deterministic Clinical Research Appraiser with Inline Coordinate Grounding",
     version="1.0.0"
 )
@@ -452,7 +452,7 @@ def index_page():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Research Evaluation App - Clinical Appraiser</title>
+        <title>F.A.S.T. — Find. Appraise. Summarize Trials</title>
         <link rel="icon" type="image/png" href="/elf-thinker.png?v=owen" />
         <script src="https://cdn.tailwindcss.com"></script>
         <!-- Marked.js for rich markdown rendering -->
@@ -688,22 +688,22 @@ def index_page():
                         />
                     </div>
                     <div>
-                        <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">Study Wonk</h1>
-                        <p class="text-slate-400 text-[11px] mt-0.5">Deterministic Clinical Research Appraiser with Source Grounding</p>
+                        <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">F.A.S.T.</h1>
+                        <p class="text-slate-500 text-[11px] font-medium mt-0.5">Find. Appraise. Summarize Trials</p>
                     </div>
                 </div>
 
-                <!-- Master 3-Mode Navigation Switcher -->
+                <!-- Master 3-Mode Navigation Switcher: F.A.S.T. (Find -> Appraise -> Summarize Trials) -->
                 <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold gap-1 shrink-0">
                     <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
-                        <span>🔍</span> <span>Paper Finder</span>
-                    </button>
-                    <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
-                        <span>📝</span> <span>Summarizer</span>
-                        <span id="summarizerBatchBadge" class="hidden ml-1 px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[10px] font-bold">0</span>
+                        <span>🔍</span> <span>Find</span>
                     </button>
                     <button id="masterTabAppraisal" onclick="switchMasterMode('appraisal')" class="px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs">
-                        <span>🔬</span> <span>Appraisal Workbench</span>
+                        <span>🔬</span> <span>Appraise</span>
+                    </button>
+                    <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
+                        <span>📝</span> <span>Summarize Trials</span>
+                        <span id="summarizerBatchBadge" class="hidden ml-1 px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[10px] font-bold">0</span>
                     </button>
                 </div>
 
