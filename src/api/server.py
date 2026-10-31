@@ -3,6 +3,7 @@ import sys
 import shutil
 import io
 import urllib.parse
+import re
 from typing import Optional, Dict, List
 from pydantic import BaseModel
 
@@ -215,6 +216,70 @@ async def appraise_paper(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def resolve_anchor(indexed: IndexedDocument, anchor_str: str) -> Optional[Any]:
+    """
+    Resolve an anchor identifier to a CoordinateAnchor object.
+    Supports exact match, multi-paragraph citations (e.g. '[Results, Para 2, 8]'),
+    paragraph ranges (e.g. '[Abstract, Para 1-3]'), compound citations (e.g. '[Methods, Para 5, Results, Para 2]'),
+    and fuzzy section matching.
+    """
+    if not indexed or not anchor_str:
+        return None
+
+    anchor_clean = urllib.parse.unquote(anchor_str).strip()
+
+    # 1. Exact match
+    if anchor_clean in indexed.anchor_metadata:
+        return indexed.anchor_metadata[anchor_clean]
+
+    # Also test with/without enclosing brackets
+    if not anchor_clean.startswith("[") and f"[{anchor_clean}]" in indexed.anchor_metadata:
+        return indexed.anchor_metadata[f"[{anchor_clean}]"]
+
+    # 2. Extract first section and first paragraph reference
+    para_match = re.search(r'\[?\s*([A-Za-z\s&]+?)\s*,\s*Para\s+(\d+)', anchor_clean, re.IGNORECASE)
+    if para_match:
+        section = para_match.group(1).strip()
+        p_num = int(para_match.group(2))
+
+        canonical = f"[{section}, Para {p_num}]"
+        if canonical in indexed.anchor_metadata:
+            return indexed.anchor_metadata[canonical]
+
+        for k, meta in indexed.anchor_metadata.items():
+            if meta.item_type == 'para' and meta.index == p_num:
+                if section.lower() in meta.section.lower() or meta.section.lower() in section.lower():
+                    return meta
+
+        for k, meta in indexed.anchor_metadata.items():
+            if meta.item_type == 'para' and meta.index == p_num:
+                return meta
+
+    # 3. Table or Figure matching: '[Results, Table 1]', '[Results, Fig 2]'
+    tbl_fig_match = re.search(r'\[?\s*([A-Za-z\s&]+?)\s*,\s*(Table|Fig)\s*(\d+)', anchor_clean, re.IGNORECASE)
+    if tbl_fig_match:
+        section = tbl_fig_match.group(1).strip()
+        item_type = tbl_fig_match.group(2).capitalize()
+        num = int(tbl_fig_match.group(3))
+
+        canonical = f"[{section}, {item_type} {num}]"
+        if canonical in indexed.anchor_metadata:
+            return indexed.anchor_metadata[canonical]
+
+        for k, meta in indexed.anchor_metadata.items():
+            if meta.item_type.lower() == item_type.lower() and meta.index == num:
+                return meta
+
+    # 4. Fallback: match any single paragraph number in the anchor string
+    any_num = re.search(r'\bPara\s*(\d+)\b', anchor_clean, re.IGNORECASE)
+    if any_num:
+        p_num = int(any_num.group(1))
+        for k, meta in indexed.anchor_metadata.items():
+            if meta.item_type == 'para' and meta.index == p_num:
+                return meta
+
+    return None
+
 @app.get("/view-anchor-image")
 def view_anchor_image(
     filename: str = Query(...),
@@ -231,7 +296,7 @@ def view_anchor_image(
         CACHED_INDEX[filename] = indexed
         
     anchor_clean = urllib.parse.unquote(anchor).strip()
-    meta = indexed.anchor_metadata.get(anchor_clean)
+    meta = resolve_anchor(indexed, anchor_clean)
     if not meta:
         raise HTTPException(status_code=404, detail=f"Anchor {anchor_clean} not found.")
         
@@ -298,7 +363,7 @@ def view_anchor_crop(
         CACHED_INDEX[filename] = indexed
         
     anchor_clean = urllib.parse.unquote(anchor).strip()
-    meta = indexed.anchor_metadata.get(anchor_clean)
+    meta = resolve_anchor(indexed, anchor_clean)
     if not meta:
         raise HTTPException(status_code=404, detail=f"Anchor {anchor_clean} not found.")
         
@@ -2399,12 +2464,21 @@ ${escapeHtml(thought)}
                 });
 
                 let meta = anchorIndex[anchor];
-                // Support multi-paragraph citations like [Results, Para 67, 77]
-                if (!meta && anchor.includes(',')) {
-                    const match = anchor.match(/\[([A-Za-z\s]+),\s*Para\s+(\d+)/i);
+                // Support multi-paragraph citations, ranges (e.g. [Abstract, Para 1-3], [Results, Para 2, 8]), etc.
+                if (!meta) {
+                    const match = anchor.match(/\[?\s*([A-Za-z\s&]+?)\s*,\s*Para\s+(\d+)/i);
                     if (match) {
                         const fallbackId = `[${match[1].trim()}, Para ${match[2]}]`;
                         meta = anchorIndex[fallbackId];
+                        if (!meta) {
+                            const pNum = parseInt(match[2]);
+                            for (const [k, v] of Object.entries(anchorIndex)) {
+                                if (k.toLowerCase().includes(match[1].trim().toLowerCase()) && k.includes(`Para ${pNum}`)) {
+                                    meta = v;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -2430,7 +2504,8 @@ ${escapeHtml(thought)}
                         const popupTitle = document.getElementById('popupTitle');
                         const popupImg = document.getElementById('popupCropImg');
                         if (popupTitle) popupTitle.innerText = anchor;
-                        if (popupImg) popupImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(anchor)}`;
+                        const cropAnchorId = (meta && meta.anchor_id) ? meta.anchor_id : anchor;
+                        if (popupImg) popupImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(cropAnchorId)}`;
                     } else {
                         const popup = document.getElementById('sectionPopup');
                         if (popup) popup.style.display = 'none';
@@ -2446,7 +2521,8 @@ ${escapeHtml(thought)}
                 placeholder.classList.add('hidden');
                 imgContainer.classList.remove('hidden');
 
-                const imgUrl = `/view-anchor-image?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(anchor)}`;
+                const targetAnchorId = (meta && meta.anchor_id) ? meta.anchor_id : anchor;
+                const imgUrl = `/view-anchor-image?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(targetAnchorId)}`;
                 
                 const applyPosition = () => {
                     repositionHitbox(true);
