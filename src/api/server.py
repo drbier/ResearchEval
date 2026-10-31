@@ -445,14 +445,55 @@ def index_page():
                 from { opacity: 0; transform: scale(0.96); }
                 to { opacity: 1; transform: scale(1); }
             }
+
+            /* Sleek tooltip styling for Study Badge */
+            .study-badge-container {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+            }
+            .study-badge-tooltip {
+                visibility: hidden;
+                opacity: 0;
+                position: absolute;
+                top: calc(100% + 8px);
+                right: 0;
+                width: 320px;
+                background-color: #0f172a;
+                color: #f8fafc;
+                border-radius: 8px;
+                padding: 12px 14px;
+                font-size: 12px;
+                line-height: 1.45;
+                box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2);
+                z-index: 100;
+                transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+                transform: translateY(-4px);
+                pointer-events: none;
+            }
+            .study-badge-tooltip::before {
+                content: '';
+                position: absolute;
+                bottom: 100%;
+                right: 20px;
+                border-width: 6px;
+                border-style: solid;
+                border-color: transparent transparent #0f172a transparent;
+            }
+            .study-badge-container:hover .study-badge-tooltip {
+                visibility: visible;
+                opacity: 1;
+                transform: translateY(0);
+            }
         </style>
     </head>
-    <body class="bg-slate-50 text-slate-800 min-h-screen p-6">
-        <div class="max-w-7xl mx-auto space-y-6">
-            <!-- Header -->
-            <header class="border-b border-slate-200 pb-4 flex justify-between items-center bg-white p-6 rounded-lg shadow-sm">
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-xl bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-sm shrink-0">
+    <body class="bg-slate-50 text-slate-800 min-h-screen p-4">
+        <div class="max-w-[1700px] mx-auto space-y-3">
+            <!-- Compact Header & Input Bar (Option 1) -->
+            <header class="bg-white px-5 py-3 rounded-lg border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
+                <!-- Left: Logo & App Title -->
+                <div class="flex items-center gap-3 shrink-0">
+                    <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-2xs shrink-0">
                         <img 
                             src="/elf-thinker.png?v=owen" 
                             alt="OWEN Elf Thinker Logo" 
@@ -460,36 +501,64 @@ def index_page():
                         />
                     </div>
                     <div>
-                        <h1 class="text-3xl font-bold text-sky-700">Research Evaluation App</h1>
-                        <p class="text-slate-500 text-sm mt-0.5">Deterministic Clinical Research Appraiser with Interactive Source Grounding</p>
+                        <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">Study Wonk</h1>
+                        <p class="text-slate-400 text-[11px] mt-0.5">Deterministic Clinical Research Appraiser with Source Grounding</p>
+                    </div>
+                </div>
+
+                <!-- Center: Compact Unified Input (PDF or URL) -->
+                <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 flex-1 max-w-2xl">
+                    <!-- Mode Switch Buttons -->
+                    <div class="flex bg-slate-200/80 p-0.5 rounded text-xs font-medium shrink-0">
+                        <button id="tabPdfBtn" onclick="switchInputTab('pdf')" class="px-2.5 py-1 rounded bg-white text-sky-700 shadow-2xs font-semibold transition">📄 PDF</button>
+                        <button id="tabUrlBtn" onclick="switchInputTab('url')" class="px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition">🔗 Link / PMID</button>
+                    </div>
+
+                    <!-- PDF Input Control -->
+                    <div id="tabPdf" class="flex items-center gap-2 flex-1">
+                        <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-xs text-slate-600 file:mr-2.5 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer bg-white px-2 py-1 rounded border border-slate-200"/>
+                        <button onclick="startAppraisal()" id="runBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Evaluate</button>
+                    </div>
+
+                    <!-- URL / PMID Input Control -->
+                    <div id="tabUrl" class="hidden flex items-center gap-2 flex-1">
+                        <input type="text" id="paperUrl" placeholder="Paste PubMed URL, PMID (e.g. 37726553), PMC ID, or DOI" class="block w-full text-xs text-slate-800 bg-white px-3 py-1.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"/>
+                        <button onclick="startUrlResolution()" id="resolveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Fetch & Evaluate</button>
+                    </div>
+                </div>
+
+                <!-- Right: Study Type Badge with Rich Tooltip (Hidden until appraisal loaded) -->
+                <div class="flex items-center gap-3 shrink-0">
+                    <!-- Live Loading Spinner -->
+                    <div id="statusBox" class="hidden flex items-center gap-2 text-xs font-medium text-sky-700 bg-sky-50 px-3 py-1.5 rounded-md border border-sky-200">
+                        <div id="spinner" class="animate-spin rounded-full h-3.5 w-3.5 border-2 border-sky-600 border-t-transparent"></div>
+                        <span id="statusText">Processing...</span>
+                    </div>
+
+                    <!-- Study Wonk Framework Badge with Hover Tooltip -->
+                    <div id="studyBadgeWrapper" class="hidden study-badge-container cursor-help">
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 text-sky-900 border border-sky-300 text-xs font-semibold shadow-2xs hover:bg-sky-200 transition">
+                            <span class="w-2 h-2 rounded-full bg-sky-600"></span>
+                            <span id="studyBadgeText">Biomarker Study</span>
+                            <span class="text-sky-500 font-normal ml-0.5 text-[10px]">ℹ</span>
+                        </div>
+                        <!-- Tooltip Container -->
+                        <div class="study-badge-tooltip">
+                            <div class="font-bold text-sky-300 mb-1 flex items-center justify-between border-b border-slate-700 pb-1">
+                                <span id="tooltipFwId">Framework ID</span>
+                                <span id="tooltipRulesCount" class="text-amber-300 font-normal text-[11px]">0 Rules</span>
+                            </div>
+                            <p id="tooltipFwDesc" class="text-slate-300 text-[11px] mb-2 leading-relaxed">Framework description</p>
+                            <div class="text-[11px] text-slate-400">
+                                <span class="font-semibold text-slate-200">Applicable Methodological Rules:</span>
+                                <ul id="tooltipRulesList" class="mt-1 list-disc list-inside space-y-0.5 text-[10px] text-slate-300">
+                                    <li>Grounded Appraisal Rules</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
-
-            <!-- Input Tabs Panel: Upload PDF vs Paper URL / PubMed -->
-            <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-4">
-                <div class="flex border-b border-slate-200 gap-6">
-                    <button id="tabPdfBtn" onclick="switchInputTab('pdf')" class="pb-2.5 font-semibold text-sm border-b-2 border-sky-600 text-sky-700 transition">📄 Upload PDF File</button>
-                    <button id="tabUrlBtn" onclick="switchInputTab('url')" class="pb-2.5 font-semibold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition">🔗 Enter Paper URL, PMC, or PubMed ID</button>
-                </div>
-
-                <!-- Tab 1: Local PDF Upload -->
-                <div id="tabPdf" class="flex gap-4 items-center pt-2">
-                    <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-sm text-slate-600 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer bg-slate-50 p-2 rounded-md border border-slate-200"/>
-                    <button onclick="startAppraisal()" id="runBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-6 py-2.5 rounded-md transition shadow">Evaluate</button>
-                </div>
-
-                <!-- Tab 2: URL / PMC / PubMed Resolution -->
-                <div id="tabUrl" class="hidden space-y-3 pt-2">
-                    <div class="flex gap-3 items-center">
-                        <input type="text" id="paperUrl" placeholder="Paste PubMed link, PMID (e.g. 37726553), PMC ID (e.g. PMC10643434), or DOI" class="block w-full text-sm text-slate-800 bg-slate-50 px-4 py-2.5 rounded-md border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500"/>
-                        <button onclick="startUrlResolution()" id="resolveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold px-6 py-2.5 rounded-md transition shadow flex-shrink-0">Fetch & Evaluate</button>
-                    </div>
-                    <!-- Live Availability Banner for PubMed / PMC -->
-                    <div id="availabilityNotice" class="hidden p-3 rounded-lg text-xs flex items-center justify-between border transition-all"></div>
-                    <p class="text-xs text-slate-400">Supports PubMed links, PMIDs, and PubMed Central (PMC). If free full text is found, it will be automatically fetched using the PubMed API; if paywalled, you will be prompted to evaluate the abstract only.</p>
-                </div>
-            </div>
 
             <!-- Abstract-Only Confirmation Dialog Modal -->
             <div id="abstractModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
@@ -510,35 +579,10 @@ def index_page():
                 </div>
             </div>
 
-            <!-- Status Indicator -->
-            <div id="statusBox" class="hidden p-4 rounded-lg bg-white border border-slate-200 shadow-sm space-y-2">
-                <div class="flex items-center gap-2">
-                    <div id="spinner" class="animate-spin rounded-full h-4 w-4 border-2 border-sky-600 border-t-transparent"></div>
-                    <span id="statusIcon" class="hidden text-emerald-600 font-bold">✓</span>
-                    <span id="statusText" class="text-sm font-medium text-slate-700">Processing...</span>
-                </div>
-            </div>
-
             <!-- Results Section: Split Screen -->
-            <div id="resultBox" class="hidden space-y-6">
-                <!-- Triage Metrics Bar -->
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Framework ID</span>
-                        <p id="fwId" class="text-base font-bold text-sky-700 mt-1">-</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Triggered Rules</span>
-                        <p id="rulesCount" class="text-base font-bold text-sky-700 mt-1">0</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                        <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Anchors Indexed</span>
-                        <p id="anchorCount" class="text-base font-bold text-emerald-600 mt-1">0</p>
-                    </div>
-                </div>
-
+            <div id="resultBox" class="hidden">
                 <!-- Draggable Split Container: Left Appraisal | Resizer | Right Source Inspector -->
-                <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch rounded-lg border border-slate-200 shadow-sm overflow-hidden bg-white" style="height: calc(100vh - 180px); min-height: 650px;">
+                <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch rounded-lg border border-slate-200 shadow-sm overflow-hidden bg-white" style="height: calc(100vh - 105px); min-height: 650px;">
                     <!-- Left: Clinical Appraisal -->
                     <div id="leftPane" class="bg-white p-6 border-r border-slate-200 overflow-y-auto select-text flex flex-col h-full" style="width: 55%; min-width: 25%; max-width: 75%;">
                         <div class="sticky top-0 bg-white z-10 pb-3 border-b border-slate-200 mb-4 flex justify-between items-center">
@@ -583,6 +627,9 @@ def index_page():
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
                 </div>
             </div>
         </div>
@@ -1055,13 +1102,11 @@ def index_page():
                 const resolveBtn = document.getElementById('resolveBtn');
 
                 statusBox.classList.remove('hidden');
-                spinner.classList.remove('hidden');
-                statusIcon.classList.add('hidden');
                 resultBox.classList.add('hidden');
                 resolveBtn.disabled = true;
 
                 // Step 1: Pre-check full-text availability via PubMed API
-                statusText.innerHTML = '<span class="font-medium text-sky-700">Checking PubMed API for full-text availability...</span>';
+                statusText.innerHTML = '<span>Checking PubMed API for full-text availability...</span>';
 
                 const formData = new FormData();
                 formData.append('url', rawUrl);
@@ -1114,8 +1159,6 @@ def index_page():
                 const runBtn = document.getElementById('runBtn');
 
                 statusBox.classList.remove('hidden');
-                spinner.classList.remove('hidden');
-                statusIcon.classList.add('hidden');
                 statusText.innerText = isAbstractOnly ? 
                     'Extracting coordinates & appraising Abstract...' : 
                     'Ingesting full text layout, triaging & synthesizing appraisal...';
@@ -1165,9 +1208,31 @@ def index_page():
             function renderAppraisalResults(data) {
                 anchorIndex = data.anchor_index || {};
 
-                document.getElementById('fwId').innerText = data.triage.primary_framework_id + ': ' + data.triage.framework_name;
-                document.getElementById('rulesCount').innerText = data.triage.applicable_rules.length + ' rules';
-                document.getElementById('anchorCount').innerText = data.total_anchors_indexed + ' anchors';
+                // Update Study Wonk Header Badge and Tooltip
+                const badgeWrapper = document.getElementById('studyBadgeWrapper');
+                const badgeText = document.getElementById('studyBadgeText');
+                const tipFw = document.getElementById('tooltipFwId');
+                const tipRules = document.getElementById('tooltipRulesCount');
+                const tipDesc = document.getElementById('tooltipFwDesc');
+                const tipList = document.getElementById('tooltipRulesList');
+
+                if (badgeWrapper && data.triage) {
+                    badgeWrapper.classList.remove('hidden');
+                    const fwName = data.triage.framework_name || 'Clinical Study';
+                    const fwId = data.triage.primary_framework_id || 'FW';
+                    const applicableRules = data.triage.applicable_rules || [];
+
+                    badgeText.innerText = fwName;
+                    if (tipFw) tipFw.innerText = fwId + ': ' + fwName;
+                    if (tipRules) tipRules.innerText = applicableRules.length + ' Rules Triggered';
+                    if (tipDesc) tipDesc.innerText = data.triage.description || 'Deterministic bias auditing rules tailored to this study design.';
+
+                    if (tipList) {
+                        tipList.innerHTML = applicableRules.length > 0 
+                            ? applicableRules.map(r => `<li><span class="font-mono text-sky-300 font-bold">${r}</span></li>`).join('')
+                            : '<li>Standard critical appraisal framework</li>';
+                    }
+                }
 
                 let content = data.final_markdown || data.raw_output;
 
@@ -1216,9 +1281,7 @@ def index_page():
                 }
 
                 document.getElementById('resultBox').classList.remove('hidden');
-                document.getElementById('spinner').classList.add('hidden');
-                document.getElementById('statusIcon').classList.remove('hidden');
-                document.getElementById('statusText').innerText = 'Appraisal complete.';
+                document.getElementById('statusBox').classList.add('hidden');
 
                 // Smoothly scroll down to the split workspace
                 const splitContainer = document.getElementById('splitContainer');
@@ -1250,8 +1313,6 @@ def index_page():
                 const runBtn = document.getElementById('runBtn');
 
                 statusBox.classList.remove('hidden');
-                spinner.classList.remove('hidden');
-                statusIcon.classList.add('hidden');
                 resultBox.classList.add('hidden');
                 runBtn.disabled = true;
                 statusText.innerText = 'Extracting PDF layout & coordinate anchors...';
