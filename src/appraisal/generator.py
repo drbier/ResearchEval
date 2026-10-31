@@ -141,8 +141,10 @@ Anchors & Text:
                         return "".join(text_parts), "".join(thought_parts), model
                 else:
                     last_error = f"Model {model} returned HTTP {resp.status_code}: {resp.text[:200]}"
+                    print(f"[SynthesisEngine] Warning: {last_error}. Falling back to next model...")
             except Exception as e:
                 last_error = f"Model {model} failed: {str(e)}"
+                print(f"[SynthesisEngine] Warning: {last_error}. Falling back to next model...")
                 
         raise RuntimeError(f"All Gemini models in hierarchy failed. Last error: {last_error}")
 
