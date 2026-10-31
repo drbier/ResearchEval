@@ -725,12 +725,14 @@ def index_page():
             <header class="bg-white px-5 py-3 rounded-lg border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
                 <!-- Left: Logo & App Title -->
                 <div class="flex items-center gap-3 shrink-0">
-                    <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-2xs shrink-0">
-                        <img 
-                            src="/FAST-Elf.jpeg" 
-                            alt="F.A.S.T. Logo" 
-                            class="w-full h-full object-cover"
-                        />
+                    <div class="relative z-30 group shrink-0">
+                        <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-2xs transition-all duration-300 ease-out origin-top-left group-hover:scale-[3.5] group-hover:rounded-xl group-hover:shadow-2xl group-hover:border-sky-300 group-hover:ring-4 group-hover:ring-sky-500/15 cursor-pointer">
+                            <img 
+                                src="/FAST-Elf.jpeg" 
+                                alt="F.A.S.T. Logo" 
+                                class="w-full h-full object-cover"
+                            />
+                        </div>
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">F.A.S.T.</h1>
