@@ -32,14 +32,14 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
 # Model Hierarchy (Verified Active GA Endpoints)
-# Primary: gemini-flash-lite-latest (Active GA high-throughput low-latency endpoint)
-# Fallback: gemini-3-flash-preview (Active preview fast resilience fallback)
-# Extended: gemini-3.1-flash-lite-preview (Active preview secondary resilience fallback)
+# Primary: gemini-3.8-flash (Google's flagship flash model for clinical reasoning & entity extraction)
+# Fallback: gemini-3.5-flash-lite (Active low-latency high-throughput resilience fallback)
+# Extended: gemini-3-flash-preview (Active preview fast resilience fallback)
 MODEL_DESIGNATION = "Gemini flash"
 MODEL_HIERARCHY = [
-    "gemini-flash-lite-latest",
-    "gemini-3-flash-preview",
-    "gemini-3.1-flash-lite-preview"
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3-flash-preview"
 ]
 PRIMARY_MODEL = MODEL_HIERARCHY[0]
 FALLBACK_MODEL = MODEL_HIERARCHY[1]
@@ -51,6 +51,15 @@ SEARCH_STOPWORDS = {
     "study", "studies", "reduced", "reduces", "reducing", "reduction",
     "effect", "effects", "effective", "efficacy", "versus", "vs", "and", "or"
 }
+
+# Intermediate surrogate biomarker terms to deprioritize when searching for hard clinical endpoints
+SURROGATE_BIOMARKER_TERMS = [
+    "microrna", "telomere", "fibrosis", "fgf-23", "fibroblast growth factor",
+    "d-dimer", "copeptin", "sirt1", "glutathione", "osteopontin", "selectin",
+    "thyroid", "metabolic profile", "glycation", "renal function", "structural equation modelling",
+    "point of view", "mr-proadm", "igf-1", "insulin-like", "oxidative stress",
+    "redox status", "micro-rna", "fructosamine"
+]
 
 
 def resilient_request(
@@ -577,6 +586,31 @@ class PaperFinder:
 
         return True
 
+    def _score_clinical_priority(self, candidate: Dict[str, Any], entities: Dict[str, Any]) -> int:
+        """
+        Score clinical priority to elevate foundational RCTs and primary hard-endpoint trials
+        over exploratory surrogate biomarker sub-studies.
+        """
+        title = (candidate.get("title") or "").lower()
+        score = 0
+        cond_terms = entities.get("condition", [])
+
+        # Hard clinical endpoint explicitly featured in title
+        if any(c.lower() in title for c in cond_terms):
+            score += 50
+        if any(w in title for w in ["mortality", "survival", "death", "deaths"]):
+            score += 30
+        if any(w in title for w in ["follow-up", "follow up", "long-term", "long term"]):
+            score += 25
+        if any(w in title for w in ["randomised", "randomized", "placebo-controlled", "trial", "clinical trial"]):
+            score += 15
+
+        # Demote secondary exploratory biomarker sub-studies whose main title subject is a surrogate
+        if any(b in title for b in SURROGATE_BIOMARKER_TERMS):
+            score -= 40
+
+        return score
+
     def verify_and_score_candidate(
         self,
         candidate: Dict[str, Any],
@@ -677,10 +711,12 @@ class PaperFinder:
         self,
         candidates: List[Dict[str, Any]],
         entities: Dict[str, Any],
-        user_query: str
+        user_query: str,
+        eval_limit: int = 25
     ) -> List[Dict[str, Any]]:
         """
         Verify candidates in a single high-efficiency batch call to prevent RPM throttling.
+        Prioritizes foundational primary outcome trials over secondary biomarker sub-studies.
         Falls back to individual verification if batch call fails.
         """
         if not candidates:
@@ -691,13 +727,15 @@ class PaperFinder:
         for c in candidates:
             abstract = c.get("abstract")
             if abstract and len(abstract.strip()) >= 40 and self._candidate_prefilter(c, entities):
+                c["priority_score"] = self._score_clinical_priority(c, entities)
                 prefiltered.append(c)
 
         if not prefiltered:
             return []
 
-        # Limit to top 10 candidates for the batch prompt
-        eval_batch = prefiltered[:10]
+        # 2. Sort prefiltered candidates by clinical priority so landmark & primary trials enter eval batch
+        prefiltered.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+        eval_batch = prefiltered[:eval_limit]
 
         is_combo = bool(entities.get("is_combination", False))
         required_agents = [a.get("agent") for a in entities.get("intervention_agents", []) if a.get("agent")]
@@ -713,6 +751,9 @@ class PaperFinder:
             "- matches_condition: Does this study evaluate the Target Condition or clinical outcome? (true/false)\n"
             "- binary_gate_passed: true ONLY if both matches_intervention AND matches_condition are true. Otherwise false.\n"
             "- match_score: 0 if binary_gate_passed is false; 50-100 if true.\n"
+            "  EVIDENCE HIERARCHY DIRECTIVE:\n"
+            "  * Assign highest scores (95-100) to PRIMARY CLINICAL ENDPOINT trials, foundational RCTs, and long-term hard-endpoint survival follow-ups directly measuring the target clinical condition (e.g. mortality / survival).\n"
+            "  * Assign lower scores (65-80) to secondary exploratory biomarker sub-analyses (e.g. studies focusing primarily on intermediate surrogates like microRNA, telomeres, FGF-23, copeptin, or oxidative stress).\n"
             "- grounded_summary: 1-2 concise sentences summarizing findings based strictly on the abstract.\n\n"
             "Respond strictly with a JSON array of evaluation objects matching this schema:\n"
             "[\n"
@@ -816,10 +857,12 @@ class PaperFinder:
         source_db = "PubMed"
         is_fallback = False
 
+        fetch_limit = max(50, max_results * 4)
+
         # Step 2: Execute 4-Tier Programmatic Relaxation Ladder
         # --- TIER 1: Full Strict Query ---
         t1_query = self.build_pubmed_query(entities, tier=1)
-        pmids = self.search_ncbi_esearch(t1_query, retmax=max_results + 5) if t1_query else []
+        pmids = self.search_ncbi_esearch(t1_query, retmax=fetch_limit) if t1_query else []
 
         if pmids:
             tier_used = 1
@@ -828,7 +871,7 @@ class PaperFinder:
             # --- TIER 2: Relax Geography ---
             print("[Finder:Ladder] Tier 1 yielded 0 results. Cascading to Tier 2 (Relax Geography)...")
             t2_query = self.build_pubmed_query(entities, tier=2)
-            pmids = self.search_ncbi_esearch(t2_query, retmax=max_results + 5) if t2_query else []
+            pmids = self.search_ncbi_esearch(t2_query, retmax=fetch_limit) if t2_query else []
             if pmids:
                 tier_used = 2
                 raw_candidates = self.fetch_pubmed_metadata(pmids)
@@ -837,7 +880,7 @@ class PaperFinder:
             # --- TIER 3: Relax Population (Core Clinical Only) ---
             print("[Finder:Ladder] Tier 2 yielded 0 results. Cascading to Tier 3 (Core Clinical Only)...")
             t3_query = self.build_pubmed_query(entities, tier=3)
-            pmids = self.search_ncbi_esearch(t3_query, retmax=max_results + 5) if t3_query else []
+            pmids = self.search_ncbi_esearch(t3_query, retmax=fetch_limit) if t3_query else []
             if pmids:
                 tier_used = 3
                 raw_candidates = self.fetch_pubmed_metadata(pmids)
@@ -848,7 +891,7 @@ class PaperFinder:
             tier_used = 4
             source_db = "Semantic Scholar Fallback"
             is_fallback = True
-            raw_candidates = self.search_semantic_scholar_fallback(entities, retmax=max_results + 5)
+            raw_candidates = self.search_semantic_scholar_fallback(entities, retmax=fetch_limit)
 
         if not raw_candidates:
             return {
@@ -864,13 +907,19 @@ class PaperFinder:
             }
 
         # Step 3: Enforce Binary Clinical Gate via High-Efficiency Batch Verification
-        verified_papers = self.batch_verify_candidates(raw_candidates, entities, query_clean)
+        verified_papers = self.batch_verify_candidates(raw_candidates, entities, query_clean, eval_limit=min(25, max_results * 2 + 5))
         for p in verified_papers:
             p["tier_used"] = tier_used
             p["is_fallback"] = is_fallback
 
-        # Step 4: Rank by Match Score (Descending) & Clamp to Max Results
-        verified_papers.sort(key=lambda x: x.get("match_score", 0), reverse=True)
+        # Step 4: Rank by Match Score & Clinical Priority (Descending) & Clamp to Max Results
+        verified_papers.sort(
+            key=lambda x: (
+                x.get("match_score", 0),
+                x.get("priority_score", 0)
+            ),
+            reverse=True
+        )
         final_papers = verified_papers[:max_results]
 
         if not final_papers:
