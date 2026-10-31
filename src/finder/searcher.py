@@ -25,16 +25,25 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
 # Model Hierarchy (Verified Active GA Endpoints)
-# Primary: gemini-3.8-flash (Google's flagship flash model for fast reasoning & clinical classification)
-# Fallback: gemini-3.5-flash-lite (Active low-latency high-throughput resilience fallback)
+# Primary: gemini-3.5-flash-lite (Active GA low-latency, high-throughput flagship)
+# Fallback: gemini-2.5-flash (Active GA stable resilience fallback)
+# Extended: gemini-3.8-flash (Active preview reasoning model when quota permits)
 MODEL_DESIGNATION = "Gemini flash"
 MODEL_HIERARCHY = [
-    "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
-    "gemini-3-flash-preview"
+    "gemini-2.5-flash",
+    "gemini-3.8-flash"
 ]
 PRIMARY_MODEL = MODEL_HIERARCHY[0]
 FALLBACK_MODEL = MODEL_HIERARCHY[1]
+
+# Stopwords to filter out of clinical intervention terms
+SEARCH_STOPWORDS = {
+    "combo", "combination", "supplementation", "supplement", "supplements",
+    "therapy", "therapies", "treatment", "treatments", "trial", "trials",
+    "study", "studies", "reduced", "reduces", "reducing", "reduction",
+    "effect", "effects", "effective", "efficacy", "versus", "vs", "and", "or"
+}
 
 
 def resilient_request(
@@ -140,6 +149,11 @@ class PaperFinder:
                             text = "".join([p.get("text", "") for p in parts if "text" in p and not p.get("thought", False)])
                             return text, model
                     elif resp.status_code in (429, 503):
+                        err_body = resp.text.lower()
+                        # If daily quota limit is hit, do not waste time retrying this model
+                        if "quota" in err_body or "resource_exhausted" in err_body:
+                            print(f"[Finder:Gemini] Model {model} exceeded daily quota. Failing over to next model in hierarchy...")
+                            break
                         sleep_time = (2 ** attempt) + random.uniform(0.2, 0.6)
                         print(f"[Finder:Gemini] Model {model} received HTTP {resp.status_code}. Backing off {sleep_time:.2f}s...")
                         time.sleep(sleep_time)
@@ -157,21 +171,33 @@ class PaperFinder:
 
     def extract_clinical_entities(self, query: str) -> Dict[str, Any]:
         """
-        Extract clinical entity arrays (Intervention, Condition, Population, Geography).
-        The LLM is strictly constrained to JSON entity extraction; it does NOT generate query strings.
+        Extract clinical search entities (Intervention, Condition, Population, Geography).
+        Supports multi-agent combination therapies (e.g. CoQ10 AND Selenium),
+        filters generic stopwords, and identifies landmark study names / key authors.
         """
         system_prompt = (
             "You are a medical literature search expert. Extract clinical search entities from the user's natural language query.\n"
             "Respond strictly with a JSON object matching this schema:\n"
             "{\n"
-            '  "intervention": ["list", "of", "compounds", "or", "interventions", "synonyms"],\n'
+            '  "is_combination": bool,\n'
+            '  "intervention_agents": [\n'
+            '    {\n'
+            '      "agent": "Primary name of distinct compound/drug/intervention",\n'
+            '      "synonyms": ["list", "of", "biochemical", "and", "medical", "synonyms"]\n'
+            '    }\n'
+            '  ],\n'
+            '  "known_study_names": ["list of recognized clinical trial names or acronyms if implied, e.g. KiSel-10, Q-SYMBIO"],\n'
+            '  "lead_investigators": ["list of key landmark investigators/authors if known for this specific intervention, e.g. Alehagen"],\n'
             '  "condition": ["list", "of", "diseases", "outcomes", "or", "endpoints"],\n'
             '  "population": ["list", "of", "demographics", "or", "gender", "or", "patient", "groups"],\n'
             '  "geography": ["list", "of", "countries", "or", "regions"],\n'
             '  "study_design": ["list", "of", "study", "types"]\n'
             "}\n"
             "Rules:\n"
-            "- Include common medical and biochemical synonyms (e.g. 'CoQ10' -> ['coenzyme Q10', 'CoQ10', 'ubiquinone']).\n"
+            "- If the query asks for a combination of two or more distinct compounds (e.g. 'CoQ10 and selenium'), set is_combination to true and create a SEPARATE object in intervention_agents for EACH distinct compound.\n"
+            "- CRITICAL: DO NOT include generic meta-words like 'combo', 'combination', 'supplementation', 'supplement', 'therapy', 'trial', 'study', 'reduced' as agents or synonyms.\n"
+            "- Include common medical/biochemical synonyms (e.g. 'CoQ10' -> ['coenzyme Q10', 'CoQ10', 'ubiquinone']).\n"
+            "- If the query refers to a known landmark trial or publication (e.g. CoQ10 + selenium for cardiovascular mortality is the famous KiSel-10 trial by Alehagen), include the trial name in known_study_names and the lead investigator in lead_investigators.\n"
             "- Expand geographic adjectives to both noun and demonym (e.g. 'Scandinavian' -> ['Sweden', 'Swedish', 'Denmark', 'Danish', 'Norway', 'Norwegian', 'Scandinavian']).\n"
             "- If an entity category is not mentioned or implied, leave its array empty [].\n"
             "- DO NOT output any narrative text, explanations, or markdown fences outside the JSON."
@@ -186,10 +212,59 @@ class PaperFinder:
             clean_json = re.sub(r"^```(?:json)?|```$", "", raw_json.strip(), flags=re.MULTILINE).strip()
             entities = json.loads(clean_json)
 
-        # Guarantee list types and lowercase normalization
+        # Parse intervention agents
+        raw_agents = entities.get("intervention_agents", [])
+        parsed_agents = []
+        flat_interventions = []
+
+        if isinstance(raw_agents, list):
+            for item in raw_agents:
+                if isinstance(item, dict):
+                    agent_name = str(item.get("agent", "")).strip()
+                    synonyms = [str(s).strip() for s in item.get("synonyms", []) if str(s).strip()]
+                    agent_clean = agent_name if agent_name.lower() not in SEARCH_STOPWORDS else ""
+                    synonyms_clean = [s for s in synonyms if s.lower() not in SEARCH_STOPWORDS]
+                    if agent_clean or synonyms_clean:
+                        parsed_agents.append({
+                            "agent": agent_clean or (synonyms_clean[0] if synonyms_clean else ""),
+                            "synonyms": synonyms_clean
+                        })
+                        if agent_clean:
+                            flat_interventions.append(agent_clean)
+                        flat_interventions.extend(synonyms_clean)
+                elif isinstance(item, str) and item.strip():
+                    val = item.strip()
+                    if val.lower() not in SEARCH_STOPWORDS:
+                        parsed_agents.append({"agent": val, "synonyms": []})
+                        flat_interventions.append(val)
+
+        # Backward compatibility fallback if LLM returned old "intervention" key
+        if not parsed_agents and entities.get("intervention"):
+            for item in entities.get("intervention", []):
+                val = str(item).strip()
+                if val and val.lower() not in SEARCH_STOPWORDS:
+                    flat_interventions.append(val)
+            if flat_interventions:
+                parsed_agents.append({"agent": flat_interventions[0], "synonyms": flat_interventions[1:]})
+
+        # Deduplicate flat interventions preserving order
+        seen = set()
+        dedup_flat = []
+        for term in flat_interventions:
+            low = term.lower()
+            if low not in seen:
+                seen.add(low)
+                dedup_flat.append(term)
+
+        is_combination = bool(entities.get("is_combination", False)) or len(parsed_agents) > 1
+
         return {
-            "intervention": [str(t).strip() for t in entities.get("intervention", []) if str(t).strip()],
-            "condition": [str(t).strip() for t in entities.get("condition", []) if str(t).strip()],
+            "is_combination": is_combination,
+            "intervention_agents": parsed_agents,
+            "intervention": dedup_flat,
+            "known_study_names": [str(t).strip() for t in entities.get("known_study_names", []) if str(t).strip()],
+            "lead_investigators": [str(t).strip() for t in entities.get("lead_investigators", []) if str(t).strip()],
+            "condition": [str(t).strip() for t in entities.get("condition", []) if str(t).strip() and str(t).lower() not in SEARCH_STOPWORDS],
             "population": [str(t).strip() for t in entities.get("population", []) if str(t).strip()],
             "geography": [str(t).strip() for t in entities.get("geography", []) if str(t).strip()],
             "study_design": [str(t).strip() for t in entities.get("study_design", []) if str(t).strip()]
@@ -200,7 +275,7 @@ class PaperFinder:
         cleaned = []
         for term in terms:
             t = term.strip().replace('"', '')
-            if not t:
+            if not t or t.lower() in SEARCH_STOPWORDS:
                 continue
             cleaned.append(f'"{t}"{field_tag}')
         if not cleaned:
@@ -209,12 +284,37 @@ class PaperFinder:
             return cleaned[0]
         return f"({' OR '.join(cleaned)})"
 
+    def _format_intervention_query(self, entities: Dict[str, Any]) -> str:
+        """
+        Format intervention query enforcing conjunction (AND) across distinct co-agents
+        and disjunction (OR) across synonyms within each agent.
+        """
+        agents = entities.get("intervention_agents", [])
+        if agents and len(agents) > 0:
+            agent_clauses = []
+            for a in agents:
+                terms = []
+                if a.get("agent"):
+                    terms.append(a["agent"])
+                if a.get("synonyms"):
+                    terms.extend(a["synonyms"])
+                clause = self._format_term_group(terms)
+                if clause:
+                    agent_clauses.append(clause)
+            if agent_clauses:
+                # If combination, join distinct agents with AND; otherwise single clause
+                return " AND ".join(agent_clauses) if len(agent_clauses) > 1 else agent_clauses[0]
+
+        # Fallback to flat intervention list
+        return self._format_term_group(entities.get("intervention", []))
+
     def build_pubmed_query(self, entities: Dict[str, Any], tier: int) -> Optional[str]:
         """
         Build programmatic Entrez query string adhering to the 4-tier relaxation ladder.
         Invariant: Intervention and Condition are NEVER dropped.
+        For combination therapies, distinct agents are joined with AND.
         """
-        int_group = self._format_term_group(entities.get("intervention", []))
+        int_group = self._format_intervention_query(entities)
         cond_group = self._format_term_group(entities.get("condition", []))
 
         # Core clinical entities are mandatory
@@ -225,6 +325,16 @@ class PaperFinder:
         pop_group = self._format_term_group(entities.get("population", []))
         geo_group = self._format_term_group(entities.get("geography", []))
 
+        # Landmark boosts (e.g. KiSel-10 or Alehagen)
+        landmark_parts = []
+        for name in entities.get("known_study_names", []):
+            if name.strip():
+                landmark_parts.append(f'"{name.strip()}"[tiab]')
+        for auth in entities.get("lead_investigators", []):
+            if auth.strip():
+                landmark_parts.append(f'"{auth.strip()}"[Author]')
+        landmark_clause = f"({' OR '.join(landmark_parts)})" if landmark_parts else None
+
         if tier == 1:
             # Tier 1 (Strict): Intervention AND Condition AND Geography AND Population
             parts = list(core_parts)
@@ -232,18 +342,30 @@ class PaperFinder:
                 parts.append(geo_group)
             if pop_group:
                 parts.append(pop_group)
-            return " AND ".join(parts)
+            base_t1 = " AND ".join(parts)
+            if landmark_clause and cond_group:
+                return f"({landmark_clause} OR ({base_t1}))"
+            return base_t1
 
         elif tier == 2:
             # Tier 2 (Relax Geography): Intervention AND Condition AND Population
             parts = list(core_parts)
             if pop_group:
                 parts.append(pop_group)
-            return " AND ".join(parts)
+            base_t2 = " AND ".join(parts)
+            if landmark_clause and cond_group:
+                return f"({landmark_clause} OR ({base_t2}))"
+            return base_t2
 
         elif tier == 3:
             # Tier 3 (Core Clinical Only): Intervention AND Condition
-            return " AND ".join(core_parts)
+            base_t3 = " AND ".join(core_parts)
+            if landmark_clause and cond_group:
+                return f"({landmark_clause} OR ({base_t3}))"
+            return base_t3
+
+        # Tier 4 is handled via Semantic Scholar API
+        return None
 
         # Tier 4 is handled via Semantic Scholar API
         return None
@@ -361,12 +483,14 @@ class PaperFinder:
         Tier 4 Fallback: Query Semantic Scholar API when PubMed yields zero candidates.
         Enforces STRICT null-handling: any candidate lacking a structured abstract is immediately discarded.
         """
-        int_terms = entities.get("intervention", [])
+        int_agents = [a.get("agent", "") for a in entities.get("intervention_agents", []) if a.get("agent")]
+        if not int_agents:
+            int_agents = entities.get("intervention", [])[:2]
         cond_terms = entities.get("condition", [])
-        if not int_terms or not cond_terms:
+        if not int_agents or not cond_terms:
             return []
 
-        query_str = f"{' '.join(int_terms[:2])} {' '.join(cond_terms[:2])}".strip()
+        query_str = f"{' '.join(int_agents[:3])} {' '.join(cond_terms[:2])}".strip()
         params = {
             "query": query_str,
             "fields": "title,year,authors,abstract,externalIds,url,venue",
@@ -434,7 +558,9 @@ class PaperFinder:
     ) -> Optional[Dict[str, Any]]:
         """
         Enforce the Strict Binary Clinical Gate:
-        1. Does the study evaluate target Intervention?
+        1. Does the study evaluate target Intervention(s)?
+           - For combination queries, ALL required distinct agents MUST be evaluated in combination.
+           - Monotherapy studies evaluating only one agent are rejected with 0%.
         2. Does the study evaluate target Condition/Endpoint?
         If EITHER is false -> Match Score = 0% (Immediately Discarded).
         If BOTH are true -> Base score 50% + secondary criteria weighting (up to 100%).
@@ -444,11 +570,17 @@ class PaperFinder:
         if not abstract or len(abstract.strip()) < 40:
             return None
 
+        is_combo = bool(entities.get("is_combination", False))
+        required_agents = [a.get("agent") for a in entities.get("intervention_agents", []) if a.get("agent")]
+        if not required_agents and entities.get("intervention"):
+            required_agents = entities.get("intervention", [])[:2]
+
         system_instruction = (
             "You are a precision clinical methodology verifier. Evaluate candidate studies against user criteria.\n"
             "MANDATORY CLINICAL DIRECTIVE:\n"
             "You MUST apply a strict BINARY CLINICAL GATE:\n"
-            "Question 1: Does this study explicitly evaluate the Target Intervention (or identical chemical/biochemical entity)? (true/false)\n"
+            "Question 1: Does this study explicitly evaluate the Target Intervention(s)? (true/false)\n"
+            "CRITICAL COMBINATION RULE: If the user query or target intervention specifies a COMBINATION of multiple distinct agents (e.g. CoQ10 AND selenium), ALL required agents must be evaluated in combination in the study. If the study only evaluates one agent alone as monotherapy (e.g. only CoQ10, or only selenium), Question 1 MUST BE FALSE and match_score MUST BE 0.\n"
             "Question 2: Does this study explicitly evaluate the Target Condition or clinical outcome? (true/false)\n\n"
             "If EITHER Question 1 OR Question 2 is false, the study FAILS the clinical gate.\n"
             "The match_score MUST BE 0. Do NOT award points for matching demographic or geography if the medical compound or condition is mismatched.\n\n"
@@ -474,7 +606,9 @@ class PaperFinder:
         prompt = (
             f"USER QUERY: \"{user_query}\"\n"
             f"TARGET ENTITIES:\n"
-            f"- Intervention: {json.dumps(entities.get('intervention', []))}\n"
+            f"- Is Combination: {is_combo}\n"
+            f"- Required Intervention Agents: {json.dumps(required_agents)}\n"
+            f"- Intervention Synonyms: {json.dumps(entities.get('intervention', []))}\n"
             f"- Condition: {json.dumps(entities.get('condition', []))}\n"
             f"- Population: {json.dumps(entities.get('population', []))}\n"
             f"- Geography: {json.dumps(entities.get('geography', []))}\n\n"

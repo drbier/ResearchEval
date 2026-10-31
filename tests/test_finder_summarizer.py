@@ -108,6 +108,62 @@ class TestPaperFinder(unittest.TestCase):
         verified = self.finder.verify_and_score_candidate(null_candidate, entities, "CoQ10 query")
         self.assertIsNone(verified, "Papers lacking abstracts must be strictly discarded.")
 
+    def test_multi_agent_combination_query_generation(self):
+        """Verify multi-agent combination query enforces boolean AND across distinct agents."""
+        entities = {
+            "is_combination": True,
+            "intervention_agents": [
+                {
+                    "agent": "CoQ10",
+                    "synonyms": ["coenzyme Q10", "ubiquinone"]
+                },
+                {
+                    "agent": "selenium",
+                    "synonyms": ["selenite"]
+                }
+            ],
+            "known_study_names": ["KiSel-10"],
+            "lead_investigators": ["Alehagen"],
+            "condition": ["cardiovascular mortality", "cardiac death"],
+            "population": ["elderly"],
+            "geography": ["Sweden"]
+        }
+
+        t3 = self.finder.build_pubmed_query(entities, tier=3)
+        # Verify both agents are joined with AND
+        self.assertIn('"CoQ10"[tiab]', t3)
+        self.assertIn('"selenium"[tiab]', t3)
+        self.assertIn(' AND ', t3)
+        # Verify landmark hint is included in query boost
+        self.assertIn('"KiSel-10"[tiab]', t3)
+        self.assertIn('"Alehagen"[Author]', t3)
+        self.assertIn('"cardiovascular mortality"[tiab]', t3)
+
+    @patch.object(PaperFinder, "_invoke_gemini")
+    def test_binary_clinical_gate_monotherapy_rejection_for_combination(self, mock_gemini):
+        """Verify monotherapy study is rejected (0% score) when user requested combination therapy."""
+        mock_gemini.return_value = (
+            '{"matches_intervention": false, "matches_condition": true, "binary_gate_passed": false, "match_score": 0, "grounded_summary": "Study evaluated CoQ10 alone without required selenium co-intervention."}',
+            "gemini-3.5-flash-lite"
+        )
+
+        candidate = {
+            "title": "Comparison of Coenzyme Q10 and Ubiquinol in Heart Failure",
+            "year": "2023",
+            "abstract": "We evaluated CoQ10 monotherapy for cardiovascular mortality."
+        }
+        entities = {
+            "is_combination": True,
+            "intervention_agents": [
+                {"agent": "CoQ10", "synonyms": ["coenzyme Q10"]},
+                {"agent": "selenium", "synonyms": []}
+            ],
+            "condition": ["cardiovascular mortality"]
+        }
+
+        verified = self.finder.verify_and_score_candidate(candidate, entities, "a combo of CoQ10 and selenium reduces cardiac deaths")
+        self.assertIsNone(verified, "Monotherapy candidate failing combination requirement must be rejected.")
+
 
 class TestPaperSummarizer(unittest.TestCase):
     """Verify PaperSummarizer strict abstract restriction, null-handling, and layout."""
