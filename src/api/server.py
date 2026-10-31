@@ -414,10 +414,13 @@ def index_page():
             #sectionPopup {
                 position: fixed;
                 display: none;
+                flex-direction: column;
                 z-index: 9999;
                 width: 740px;
-                max-width: calc(100vw - 32px);
-                max-height: calc(100vh - 40px);
+                min-width: 320px;
+                min-height: 180px;
+                max-width: calc(100vw - 20px);
+                max-height: calc(100vh - 20px);
                 background: #ffffff;
                 border: 2px solid #0284c7;
                 border-radius: 12px;
@@ -429,9 +432,78 @@ def index_page():
             #popupHeader {
                 cursor: grab;
                 user-select: none;
+                flex-shrink: 0;
             }
             #popupHeader:active {
                 cursor: grabbing;
+            }
+            .popup-resizer {
+                position: absolute;
+                z-index: 40;
+                user-select: none;
+            }
+            .popup-resizer.edge-r {
+                top: 0;
+                right: 0;
+                width: 8px;
+                height: 100%;
+                cursor: ew-resize;
+            }
+            .popup-resizer.edge-b {
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 8px;
+                cursor: ns-resize;
+            }
+            .popup-resizer.edge-l {
+                top: 0;
+                left: 0;
+                width: 8px;
+                height: 100%;
+                cursor: ew-resize;
+            }
+            .popup-resizer.edge-t {
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 6px;
+                cursor: ns-resize;
+            }
+            .popup-resizer.corner-br {
+                bottom: 0;
+                right: 0;
+                width: 20px;
+                height: 20px;
+                cursor: nwse-resize;
+                display: flex;
+                align-items: flex-end;
+                justify-content: flex-end;
+                padding: 2px;
+            }
+            .popup-resizer.corner-bl {
+                bottom: 0;
+                left: 0;
+                width: 14px;
+                height: 14px;
+                cursor: nesw-resize;
+            }
+            .popup-resizer.corner-tr {
+                top: 0;
+                right: 0;
+                width: 14px;
+                height: 14px;
+                cursor: nesw-resize;
+            }
+            .popup-resizer.corner-tl {
+                top: 0;
+                left: 0;
+                width: 14px;
+                height: 14px;
+                cursor: nwse-resize;
+            }
+            .popup-resizer.corner-br:hover svg {
+                color: #0284c7;
             }
             #popupScrollContainer::-webkit-scrollbar {
                 width: 8px;
@@ -670,9 +742,23 @@ def index_page():
                     <button onclick="closeSectionPopup()" class="text-white/80 hover:text-white px-2 py-0.5 rounded hover:bg-rose-600 transition text-sm font-bold ml-1" title="Close (or press Esc)">✕</button>
                 </div>
             </div>
-            <div id="popupScrollContainer" class="p-4 bg-slate-100/70 overflow-y-auto overflow-x-auto flex items-start justify-center" style="max-height: calc(85vh - 55px);">
+            <div id="popupScrollContainer" class="p-4 bg-slate-100/70 overflow-y-auto overflow-x-auto flex items-start justify-center flex-1 min-h-0 w-full" style="max-height: calc(100vh - 90px);">
                 <img id="popupCropImg" class="rounded border border-slate-200 shadow-sm bg-white" style="max-width: 100%; height: auto; object-fit: contain; transition: width 0.12s ease;" alt="Manuscript Section Crop"/>
             </div>
+
+            <!-- Modal Resize Handles -->
+            <div class="popup-resizer edge-r" data-resize="r" title="Drag to resize width"></div>
+            <div class="popup-resizer edge-b" data-resize="b" title="Drag to resize height"></div>
+            <div class="popup-resizer edge-l" data-resize="l" title="Drag to resize width"></div>
+            <div class="popup-resizer edge-t" data-resize="t" title="Drag to resize height"></div>
+            <div class="popup-resizer corner-br group" data-resize="br" title="Click and drag to resize pop-up">
+                <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 transition pointer-events-none" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M14 14H12V12H14V14ZM14 10H12V8H14V10ZM10 14H8V12H10V14ZM14 6H12V4H14V6ZM6 14H4V12H6V14ZM10 10H8V8H10V10Z"/>
+                </svg>
+            </div>
+            <div class="popup-resizer corner-bl" data-resize="bl" title="Drag to resize"></div>
+            <div class="popup-resizer corner-tr" data-resize="tr" title="Drag to resize"></div>
+            <div class="popup-resizer corner-tl" data-resize="tl" title="Drag to resize"></div>
         </div>
 
         <script>
@@ -726,9 +812,11 @@ def index_page():
             let popupHideTimer = null;
             let isPinned = false;
             let currentZoom = 1.0;
+            let userCustomWidth = null;
+            let userCustomHeight = null;
 
             function adjustPopupZoom(delta) {
-                currentZoom = Math.max(0.6, Math.min(2.0, Math.round((currentZoom + delta) * 100) / 100));
+                currentZoom = Math.max(0.6, Math.min(2.5, Math.round((currentZoom + delta) * 100) / 100));
                 applyZoom();
             }
 
@@ -740,8 +828,10 @@ def index_page():
             function applyZoom() {
                 const img = document.getElementById('popupCropImg');
                 const label = document.getElementById('popupZoomLevel');
+                const popup = document.getElementById('sectionPopup');
                 if (!img) return;
-                const baseW = 680;
+                const popW = (popup && popup.clientWidth > 0) ? popup.clientWidth : 740;
+                const baseW = Math.max(300, popW - 32);
                 const targetW = Math.round(baseW * currentZoom);
                 img.style.width = targetW + 'px';
                 img.style.maxWidth = currentZoom <= 1.0 ? '100%' : 'none';
@@ -808,8 +898,8 @@ def index_page():
                     applyZoom();
 
                     // Only compute position if popup is currently hidden to avoid jumping/chasing
-                    if (popup.style.display !== 'block') {
-                        popup.style.display = 'block';
+                    if (popup.style.display !== 'flex') {
+                        popup.style.display = 'flex';
                         positionPopup(e);
                     }
                 }
@@ -836,8 +926,14 @@ def index_page():
                 });
 
                 function positionPopup(e) {
-                    const popW = Math.min(740, window.innerWidth - 32);
-                    popup.style.width = popW + 'px';
+                    let popW = userCustomWidth || Math.min(740, window.innerWidth - 32);
+                    popW = Math.min(popW, window.innerWidth - 32);
+                    popup.style.width = Math.round(popW) + 'px';
+
+                    if (userCustomHeight) {
+                        let popH = Math.min(userCustomHeight, window.innerHeight - 32);
+                        popup.style.height = Math.round(popH) + 'px';
+                    }
 
                     const margin = 20;
                     // Determine if cursor is on the right or left half of screen
@@ -853,7 +949,7 @@ def index_page():
                         }
                     }
 
-                    const popH = popup.offsetHeight || 480;
+                    const popH = popup.offsetHeight || userCustomHeight || 480;
                     let top = e.clientY - (popH / 2);
                     if (top < 16) top = 16;
                     if (top + popH > window.innerHeight - 16) {
@@ -920,6 +1016,137 @@ def index_page():
                             isDragging = false;
                             header.style.cursor = 'grab';
                             document.body.style.userSelect = '';
+                            window.removeEventListener('mousemove', onMouseMove);
+                            window.removeEventListener('mouseup', onMouseUp);
+                        }
+                    }
+
+                    window.addEventListener('mousemove', onMouseMove);
+                    window.addEventListener('mouseup', onMouseUp);
+                });
+            })();
+
+            // Section Popup Drag-and-Resize Implementation
+            (function initPopupResizable() {
+                const popup = document.getElementById('sectionPopup');
+                if (!popup) return;
+
+                let isResizing = false;
+                let currentHandle = null;
+                let startX = 0, startY = 0;
+                let startW = 0, startH = 0;
+                let startLeft = 0, startTop = 0;
+
+                popup.addEventListener('mousedown', function(e) {
+                    const handle = e.target.closest('.popup-resizer');
+                    if (!handle) return;
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    isResizing = true;
+                    currentHandle = handle.dataset.resize;
+                    startX = e.clientX;
+                    startY = e.clientY;
+
+                    const rect = popup.getBoundingClientRect();
+                    startW = rect.width;
+                    startH = rect.height;
+                    startLeft = rect.left;
+                    startTop = rect.top;
+
+                    // Auto-pin so the popup does not dismiss during or after resizing
+                    if (!isPinned) {
+                        isPinned = true;
+                        updatePinUI();
+                    }
+
+                    document.body.style.userSelect = 'none';
+
+                    const cursorMap = {
+                        'r': 'ew-resize',
+                        'l': 'ew-resize',
+                        'b': 'ns-resize',
+                        't': 'ns-resize',
+                        'br': 'nwse-resize',
+                        'tl': 'nwse-resize',
+                        'bl': 'nesw-resize',
+                        'tr': 'nesw-resize'
+                    };
+                    document.body.style.cursor = cursorMap[currentHandle] || 'nwse-resize';
+
+                    function onMouseMove(moveEvent) {
+                        if (!isResizing) return;
+                        const dx = moveEvent.clientX - startX;
+                        const dy = moveEvent.clientY - startY;
+
+                        let newW = startW;
+                        let newH = startH;
+                        let newLeft = startLeft;
+                        let newTop = startTop;
+
+                        const minW = 320;
+                        const minH = 180;
+                        const maxW = window.innerWidth - 20;
+                        const maxH = window.innerHeight - 20;
+
+                        if (currentHandle.includes('r')) {
+                            newW = Math.min(maxW, Math.max(minW, startW + dx));
+                            if (newLeft + newW > window.innerWidth - 10) {
+                                newW = window.innerWidth - 10 - newLeft;
+                            }
+                        }
+                        if (currentHandle.includes('b')) {
+                            newH = Math.min(maxH, Math.max(minH, startH + dy));
+                            if (newTop + newH > window.innerHeight - 10) {
+                                newH = window.innerHeight - 10 - newTop;
+                            }
+                        }
+                        if (currentHandle.includes('l')) {
+                            let proposedW = startW - dx;
+                            if (proposedW < minW) {
+                                newW = minW;
+                                newLeft = startLeft + (startW - minW);
+                            } else if (startLeft + dx < 10) {
+                                newLeft = 10;
+                                newW = startLeft + startW - 10;
+                            } else {
+                                newW = proposedW;
+                                newLeft = startLeft + dx;
+                            }
+                        }
+                        if (currentHandle.includes('t')) {
+                            let proposedH = startH - dy;
+                            if (proposedH < minH) {
+                                newH = minH;
+                                newTop = startTop + (startH - minH);
+                            } else if (startTop + dy < 10) {
+                                newTop = 10;
+                                newH = startTop + startH - 10;
+                            } else {
+                                newH = proposedH;
+                                newTop = startTop + dy;
+                            }
+                        }
+
+                        userCustomWidth = newW;
+                        userCustomHeight = newH;
+
+                        popup.style.width = Math.round(newW) + 'px';
+                        popup.style.height = Math.round(newH) + 'px';
+                        popup.style.left = Math.round(newLeft) + 'px';
+                        popup.style.top = Math.round(newTop) + 'px';
+
+                        // Dynamically update image width to match the new container dimensions
+                        applyZoom();
+                    }
+
+                    function onMouseUp() {
+                        if (isResizing) {
+                            isResizing = false;
+                            currentHandle = null;
+                            document.body.style.userSelect = '';
+                            document.body.style.cursor = '';
                             window.removeEventListener('mousemove', onMouseMove);
                             window.removeEventListener('mouseup', onMouseUp);
                         }
