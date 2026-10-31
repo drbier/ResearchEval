@@ -15,9 +15,16 @@ import json
 import time
 import random
 import urllib.parse
+import concurrent.futures
 from typing import Dict, List, Optional, Tuple, Any
 import requests
 import xml.etree.ElementTree as ET
+
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ImportError:
+    pass
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -25,14 +32,14 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
 # Model Hierarchy (Verified Active GA Endpoints)
-# Primary: gemini-3.5-flash-lite (Active GA low-latency, high-throughput flagship)
-# Fallback: gemini-2.5-flash (Active GA stable resilience fallback)
-# Extended: gemini-3.8-flash (Active preview reasoning model when quota permits)
+# Primary: gemini-flash-lite-latest (Active GA high-throughput low-latency endpoint)
+# Fallback: gemini-3-flash-preview (Active preview fast resilience fallback)
+# Extended: gemini-3.1-flash-lite-preview (Active preview secondary resilience fallback)
 MODEL_DESIGNATION = "Gemini flash"
 MODEL_HIERARCHY = [
-    "gemini-3.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-3.8-flash"
+    "gemini-flash-lite-latest",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview"
 ]
 PRIMARY_MODEL = MODEL_HIERARCHY[0]
 FALLBACK_MODEL = MODEL_HIERARCHY[1]
@@ -140,7 +147,7 @@ class PaperFinder:
 
             for attempt in range(3):
                 try:
-                    resp = requests.post(url, json=payload, timeout=45)
+                    resp = requests.post(url, json=payload, timeout=15)
                     if resp.status_code == 200:
                         data = resp.json()
                         candidates = data.get("candidates", [])
@@ -550,6 +557,26 @@ class PaperFinder:
             print(f"[Finder:S2] Semantic Scholar fallback search error: {str(e)}")
             return []
 
+    def _candidate_prefilter(self, candidate: Dict[str, Any], entities: Dict[str, Any]) -> bool:
+        """
+        Deterministic zero-token pre-filter: rapidly reject candidates that do not mention
+        required combination agents before invoking LLM verification.
+        """
+        text = f"{candidate.get('title', '')} {candidate.get('abstract', '')}".lower()
+        if not text.strip():
+            return False
+
+        if entities.get("is_combination") and entities.get("intervention_agents"):
+            for agent_obj in entities["intervention_agents"]:
+                terms = [agent_obj.get("agent", "")] + agent_obj.get("synonyms", [])
+                clean_terms = [t.lower() for t in terms if t and t.lower() not in SEARCH_STOPWORDS]
+                if clean_terms:
+                    # At least one synonym for this required agent must be mentioned in text
+                    if not any(t in text for t in clean_terms):
+                        return False
+
+        return True
+
     def verify_and_score_candidate(
         self,
         candidate: Dict[str, Any],
@@ -568,6 +595,10 @@ class PaperFinder:
         abstract = candidate.get("abstract")
         # Strict null handling: Discard immediately if no abstract text
         if not abstract or len(abstract.strip()) < 40:
+            return None
+
+        # Zero-token deterministic pre-filter for combination co-interventions
+        if not self._candidate_prefilter(candidate, entities):
             return None
 
         is_combo = bool(entities.get("is_combination", False))
@@ -642,6 +673,125 @@ class PaperFinder:
             print(f"[Finder:Verify] Verification error for '{candidate.get('title')[:40]}': {str(e)}")
             return None
 
+    def batch_verify_candidates(
+        self,
+        candidates: List[Dict[str, Any]],
+        entities: Dict[str, Any],
+        user_query: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Verify candidates in a single high-efficiency batch call to prevent RPM throttling.
+        Falls back to individual verification if batch call fails.
+        """
+        if not candidates:
+            return []
+
+        # 1. Deterministic zero-token pre-filter: discard papers missing required co-interventions
+        prefiltered = []
+        for c in candidates:
+            abstract = c.get("abstract")
+            if abstract and len(abstract.strip()) >= 40 and self._candidate_prefilter(c, entities):
+                prefiltered.append(c)
+
+        if not prefiltered:
+            return []
+
+        # Limit to top 10 candidates for the batch prompt
+        eval_batch = prefiltered[:10]
+
+        is_combo = bool(entities.get("is_combination", False))
+        required_agents = [a.get("agent") for a in entities.get("intervention_agents", []) if a.get("agent")]
+        if not required_agents and entities.get("intervention"):
+            required_agents = entities.get("intervention", [])[:2]
+
+        system_instruction = (
+            "You are a precision clinical methodology verifier. Evaluate candidate studies against user criteria.\n"
+            "MANDATORY CLINICAL DIRECTIVE:\n"
+            "You MUST apply a strict BINARY CLINICAL GATE for EACH candidate study:\n"
+            "- matches_intervention: Does this study explicitly evaluate the Target Intervention(s)? (true/false)\n"
+            "  CRITICAL: If the query specifies a combination of multiple distinct agents (e.g. CoQ10 AND selenium), ALL required agents must be evaluated in combination. Monotherapy studies evaluate false.\n"
+            "- matches_condition: Does this study evaluate the Target Condition or clinical outcome? (true/false)\n"
+            "- binary_gate_passed: true ONLY if both matches_intervention AND matches_condition are true. Otherwise false.\n"
+            "- match_score: 0 if binary_gate_passed is false; 50-100 if true.\n"
+            "- grounded_summary: 1-2 concise sentences summarizing findings based strictly on the abstract.\n\n"
+            "Respond strictly with a JSON array of evaluation objects matching this schema:\n"
+            "[\n"
+            "  {\n"
+            '    "candidate_index": int,\n'
+            '    "matches_intervention": bool,\n'
+            '    "matches_condition": bool,\n'
+            '    "binary_gate_passed": bool,\n'
+            '    "population_match": bool,\n'
+            '    "geography_match": bool,\n'
+            '    "study_design_match": bool,\n'
+            '    "match_score": int,\n'
+            '    "grounded_summary": "1-2 concise sentences"\n'
+            "  }\n"
+            "]"
+        )
+
+        prompt_candidates = []
+        for i, c in enumerate(eval_batch):
+            prompt_candidates.append({
+                "candidate_index": i,
+                "title": c.get("title"),
+                "year": c.get("year"),
+                "abstract": c.get("abstract")
+            })
+
+        user_prompt = (
+            f"USER QUERY: \"{user_query}\"\n"
+            f"TARGET ENTITIES:\n"
+            f"- Is Combination: {is_combo}\n"
+            f"- Required Intervention Agents: {json.dumps(required_agents)}\n"
+            f"- Condition: {json.dumps(entities.get('condition', []))}\n"
+            f"- Population: {json.dumps(entities.get('population', []))}\n"
+            f"- Geography: {json.dumps(entities.get('geography', []))}\n\n"
+            f"CANDIDATES TO EVALUATE:\n"
+            f"{json.dumps(prompt_candidates)}"
+        )
+
+        try:
+            raw_json, _ = self._invoke_gemini(user_prompt, system_instruction, json_mode=True)
+            evals = json.loads(raw_json)
+            if not isinstance(evals, list):
+                if isinstance(evals, dict) and "evaluations" in evals:
+                    evals = evals["evaluations"]
+                else:
+                    evals = []
+
+            eval_map = {e.get("candidate_index"): e for e in evals if isinstance(e, dict)}
+            verified_papers = []
+
+            for i, cand in enumerate(eval_batch):
+                ev = eval_map.get(i)
+                if not ev:
+                    continue
+                score = int(ev.get("match_score", 0))
+                gate_passed = bool(ev.get("binary_gate_passed", False))
+                if gate_passed and score >= 50:
+                    cand["match_score"] = score
+                    cand["matches_intervention"] = bool(ev.get("matches_intervention", False))
+                    cand["matches_condition"] = bool(ev.get("matches_condition", False))
+                    cand["population_match"] = bool(ev.get("population_match", False))
+                    cand["geography_match"] = bool(ev.get("geography_match", False))
+                    cand["study_design_match"] = bool(ev.get("study_design_match", False))
+                    cand["grounded_summary"] = (ev.get("grounded_summary") or "").strip()
+                    verified_papers.append(cand)
+
+            if verified_papers:
+                return verified_papers
+        except Exception as e:
+            print(f"[Finder:BatchVerify] Batch verification failed, falling back to individual verification: {e}")
+
+        # Fallback to individual evaluation if batch fails
+        verified_papers = []
+        for cand in prefiltered:
+            res = self.verify_and_score_candidate(cand, entities, user_query)
+            if res:
+                verified_papers.append(res)
+        return verified_papers
+
     def find_papers(self, query: str, max_results: int = 10) -> Dict[str, Any]:
         """
         Execute the 4-tier programmatic relaxation search workflow and return verified papers.
@@ -713,14 +863,11 @@ class PaperFinder:
                 "formatted_output": "Search Failed"
             }
 
-        # Step 3: Enforce Binary Clinical Gate on All Retrieved Candidates
-        verified_papers = []
-        for cand in raw_candidates:
-            cand["tier_used"] = tier_used
-            cand["is_fallback"] = is_fallback
-            verified = self.verify_and_score_candidate(cand, entities, query_clean)
-            if verified:
-                verified_papers.append(verified)
+        # Step 3: Enforce Binary Clinical Gate via High-Efficiency Batch Verification
+        verified_papers = self.batch_verify_candidates(raw_candidates, entities, query_clean)
+        for p in verified_papers:
+            p["tier_used"] = tier_used
+            p["is_fallback"] = is_fallback
 
         # Step 4: Rank by Match Score (Descending) & Clamp to Max Results
         verified_papers.sort(key=lambda x: x.get("match_score", 0), reverse=True)
