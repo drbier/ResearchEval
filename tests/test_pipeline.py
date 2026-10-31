@@ -72,6 +72,14 @@ class TestResearchEvalPipeline(unittest.TestCase):
         self.assertIn("[Invalid, Para 99]", res.invalid_anchors)
         self.assertFalse(res.is_valid)
 
+        # Compound coordinate parsing test
+        compound_text = "Safety profile aligns with prior data [Results, Para 17; Discussion, Para 18]."
+        valid_compound_set = {"[Results, Para 17]": "Res", "[Discussion, Para 18]": "Disc"}
+        res2 = sanitize_and_verify_appraisal(compound_text, valid_compound_set)
+        self.assertIn("[Results, Para 17]", res2.verified_anchors)
+        self.assertIn("[Discussion, Para 18]", res2.verified_anchors)
+        self.assertTrue(res2.is_valid)
+
     def test_05_pubmed_availability_and_retrieval(self):
         """Verify PubMed availability check via elink and JATS XML full-text retrieval."""
         upload_dir = os.path.join(self.data_dir, "uploads")

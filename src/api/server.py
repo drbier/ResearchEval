@@ -152,6 +152,7 @@ def appraise_fetched_paper(
         anchor_data = {}
         for aid, meta in indexed.anchor_metadata.items():
             anchor_data[aid] = {
+                "anchor_id": aid,
                 "page": meta.page_number,
                 "page_width": meta.page_width,
                 "page_height": meta.page_height,
@@ -197,6 +198,7 @@ async def appraise_paper(
         anchor_data = {}
         for aid, meta in indexed.anchor_metadata.items():
             anchor_data[aid] = {
+                "anchor_id": aid,
                 "page": meta.page_number,
                 "page_width": meta.page_width,
                 "page_height": meta.page_height,
@@ -2348,10 +2350,35 @@ ${escapeHtml(thought)}
 
                 if (window.marked) {
                     let html = marked.parse(content);
-                    const anchorRegex = /(\[(?:Doc_Header|Supp_[^,\]]+|[A-Za-z\s]+),\s*(?:Para\s+[\d,\s]+|Table\s+\d+|Fig\s+\d+)\]|\[Doc_Header\])/g;
-                    html = html.replace(anchorRegex, function(match) {
-                        const enc = encodeURIComponent(match);
-                        return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">${match}</button>`;
+                    // Match coordinate blocks, supporting single, multi-paragraph, and compound citations
+                    // e.g. [Results, Para 17; Discussion, Para 18], [Methods, Para 26; Results, Para 19], [Abstract, Para 2, 3; Methods, Para 3, 27]
+                    const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?)\]/gi;
+                    html = html.replace(bracketCoordRegex, function(fullMatch, inner) {
+                        const trimmed = inner.trim();
+                        if (trimmed.toLowerCase() === 'doc_header') {
+                            const enc = encodeURIComponent('[Doc_Header]');
+                            return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">[Doc_Header]</button>`;
+                        }
+
+                        // Split compound coordinates by semicolon first, or by section-boundary comma
+                        let parts = [];
+                        if (trimmed.includes(';')) {
+                            parts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
+                        } else {
+                            parts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))/i).map(p => p.trim()).filter(Boolean);
+                        }
+
+                        if (!parts || parts.length === 0) {
+                            parts = [trimmed];
+                        }
+
+                        const buttons = parts.map(part => {
+                            const anchorLabel = `[${part}]`;
+                            const enc = encodeURIComponent(anchorLabel);
+                            return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">${anchorLabel}</button>`;
+                        });
+
+                        return buttons.join(' ');
                     });
                     
                     const container = document.getElementById('outputMarkdown');
@@ -2464,22 +2491,52 @@ ${escapeHtml(thought)}
                 });
 
                 let meta = anchorIndex[anchor];
+                let resolvedAnchorId = (meta && meta.anchor_id) ? meta.anchor_id : anchor;
+
                 // Support multi-paragraph citations, ranges (e.g. [Abstract, Para 1-3], [Results, Para 2, 8]), etc.
                 if (!meta) {
                     const match = anchor.match(/\[?\s*([A-Za-z\s&]+?)\s*,\s*Para\s+(\d+)/i);
                     if (match) {
                         const fallbackId = `[${match[1].trim()}, Para ${match[2]}]`;
                         meta = anchorIndex[fallbackId];
-                        if (!meta) {
+                        if (meta) {
+                            resolvedAnchorId = fallbackId;
+                        } else {
                             const pNum = parseInt(match[2]);
                             for (const [k, v] of Object.entries(anchorIndex)) {
                                 if (k.toLowerCase().includes(match[1].trim().toLowerCase()) && k.includes(`Para ${pNum}`)) {
                                     meta = v;
+                                    resolvedAnchorId = k;
                                     break;
                                 }
                             }
                         }
                     }
+                }
+
+                // Support Table or Figure citations (e.g. [Results, Table 1], [Discussion, Fig 2])
+                if (!meta) {
+                    const tblFigMatch = anchor.match(/\[?\s*([A-Za-z\s&]+?)\s*,\s*(Table|Fig)\s*(\d+)/i);
+                    if (tblFigMatch) {
+                        const itemType = tblFigMatch[2].charAt(0).toUpperCase() + tblFigMatch[2].slice(1).toLowerCase();
+                        const fallbackId = `[${tblFigMatch[1].trim()}, ${itemType} ${tblFigMatch[3]}]`;
+                        meta = anchorIndex[fallbackId];
+                        if (meta) {
+                            resolvedAnchorId = fallbackId;
+                        } else {
+                            for (const [k, v] of Object.entries(anchorIndex)) {
+                                if (k.toLowerCase().includes(tblFigMatch[1].trim().toLowerCase()) && k.toLowerCase().includes(`${itemType.toLowerCase()} ${tblFigMatch[3]}`)) {
+                                    meta = v;
+                                    resolvedAnchorId = k;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (meta && !meta.anchor_id) {
+                    meta.anchor_id = resolvedAnchorId;
                 }
 
                 const subtitle = document.getElementById('inspectSubtitle');

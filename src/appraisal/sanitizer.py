@@ -50,9 +50,22 @@ def sanitize_and_verify_appraisal(markdown_text: str, valid_anchor_set: Dict[str
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     
     # 3. Coordinate Anchor Audit
-    # Match tags formatted as [Section, Para X] or [Doc_Header] or [Section, Table Y]
-    anchor_pattern = r'(\[(?:Doc_Header|Supp_[^,\]]+|[A-Za-z\s]+),\s*(?:Para\s+\d+|Table\s+\d+|Fig\s+\d+)\]|\[Doc_Header\])'
-    extracted_anchors = re.findall(anchor_pattern, cleaned)
+    # Match coordinate blocks, supporting compound and multi-paragraph citations
+    bracket_pattern = r'\[([^\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?)\]'
+    extracted_blocks = re.findall(bracket_pattern, cleaned, re.IGNORECASE)
+    
+    extracted_anchors: List[str] = []
+    for block in extracted_blocks:
+        trimmed = block.strip()
+        if trimmed.lower() == 'doc_header':
+            extracted_anchors.append('[Doc_Header]')
+            continue
+        if ';' in trimmed:
+            parts = [p.strip() for p in trimmed.split(';') if p.strip()]
+        else:
+            parts = [p.strip() for p in re.split(r',\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))', trimmed) if p.strip()]
+        for p in parts:
+            extracted_anchors.append(f"[{p}]")
     
     verified: List[str] = []
     invalid: List[str] = []
@@ -61,9 +74,29 @@ def sanitize_and_verify_appraisal(markdown_text: str, valid_anchor_set: Dict[str
         if anc in valid_anchor_set:
             if anc not in verified:
                 verified.append(anc)
-        else:
-            if anc not in invalid:
-                invalid.append(anc)
+            continue
+            
+        # Fallback for multi-para or ranges: [Section, Para X, Y] -> test [Section, Para X]
+        m = re.match(r'\[\s*([A-Za-z\s&]+?)\s*,\s*Para\s+(\d+)', anc, re.IGNORECASE)
+        if m:
+            fallback = f"[{m.group(1).strip()}, Para {m.group(2)}]"
+            if fallback in valid_anchor_set:
+                if anc not in verified:
+                    verified.append(anc)
+                continue
+                
+        # Table or Fig fallback
+        tf = re.match(r'\[\s*([A-Za-z\s&]+?)\s*,\s*(Table|Fig)\s*(\d+)', anc, re.IGNORECASE)
+        if tf:
+            item_type = tf.group(2).capitalize()
+            fallback = f"[{tf.group(1).strip()}, {item_type} {tf.group(3)}]"
+            if fallback in valid_anchor_set:
+                if anc not in verified:
+                    verified.append(anc)
+                continue
+
+        if anc not in invalid:
+            invalid.append(anc)
                 
     return SanitizationResult(
         cleaned_markdown=cleaned,
