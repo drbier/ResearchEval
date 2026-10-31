@@ -1190,14 +1190,48 @@ def index_page():
                         '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Semantic Scholar Fallback</span>' :
                         '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">PubMed Verified</span>';
 
+                    const hasFullText = Boolean(p.has_full_text || p.pmcid);
+                    const fullTextBadge = hasFullText ?
+                        `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-300 flex items-center gap-1" title="Free full text available on PubMed Central (${p.pmcid || 'PMC'})">
+                            <span>🟢</span> <span>Free Full Text ${p.pmcid ? '(' + p.pmcid + ')' : ''}</span>
+                        </span>` :
+                        `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-200/80 text-slate-700 border border-slate-300 flex items-center gap-1" title="Paywalled: Only the published abstract is freely accessible. Full text requires institutional subscription or manual PDF upload.">
+                            <span>🔒</span> <span>Paywalled (Abstract Only)</span>
+                        </span>`;
+
                     const safeTitle = (p.title || 'Untitled Study').replace(/"/g, '&quot;');
                     const safeUrl = p.url || '';
                     const authorsStr = (p.authors && p.authors.length > 0) ? p.authors.slice(0, 3).join(', ') + (p.authors.length > 3 ? ' et al.' : '') : '';
 
+                    const pmcLinkHtml = (hasFullText && p.pmcid) ? `
+                        <a href="${p.pmc_url || ('https://pmc.ncbi.nlm.nih.gov/articles/' + p.pmcid + '/')}" target="_blank" rel="noopener noreferrer" class="text-xs text-teal-700 hover:text-teal-900 underline flex items-center gap-1 font-mono font-medium" title="View Open Access Full Text on PubMed Central">
+                            <span>📄</span> <span>PMC: ${p.pmcid}</span>
+                        </a>
+                    ` : '';
+
+                    const appraiseTargetUrl = (hasFullText && p.pmc_url) ? p.pmc_url : safeUrl;
+                    const appraiseBtn = hasFullText ? `
+                        <button 
+                            onclick="appraisePaperFromExternal('${appraiseTargetUrl}')" 
+                            class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                            title="Open full interactive appraisal in Workbench (Full manuscript retrieved via PMC)"
+                        >
+                            <span>🔬</span> <span>Appraise Full Text</span>
+                        </button>
+                    ` : `
+                        <button 
+                            onclick="appraisePaperFromExternal('${safeUrl}')" 
+                            class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                            title="Paywalled paper: Appraise published abstract or upload full-text PDF in Workbench"
+                        >
+                            <span>📄</span> <span>Appraise Abstract</span>
+                        </button>
+                    `;
+
                     return `
                         <div class="bg-slate-50 hover:bg-white rounded-xl border border-slate-200 p-5 shadow-2xs hover:shadow-xs transition space-y-3">
                             <div class="flex flex-wrap items-center justify-between gap-2">
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${scoreColor}">
                                         ${matchScore}% Match
                                     </span>
@@ -1205,6 +1239,7 @@ def index_page():
                                         Year: ${p.year || 'N/A'}
                                     </span>
                                     ${sourceBadge}
+                                    ${fullTextBadge}
                                 </div>
                                 <span class="text-[11px] text-slate-400 font-mono">
                                     ${p.pmid ? 'PMID: ' + p.pmid : ''}
@@ -1224,9 +1259,12 @@ def index_page():
                             </div>
 
                             <div class="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
-                                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-600 hover:text-sky-800 underline flex items-center gap-1 font-mono">
-                                    <span>🔗</span> <span>${safeUrl}</span>
-                                </a>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-600 hover:text-sky-800 underline flex items-center gap-1 font-mono">
+                                        <span>🔗</span> <span>${safeUrl}</span>
+                                    </a>
+                                    ${pmcLinkHtml}
+                                </div>
                                 <div class="flex items-center gap-2">
                                     <button 
                                         onclick="addToSummarizerBatch('${safeUrl}', '${safeTitle}')" 
@@ -1235,13 +1273,7 @@ def index_page():
                                     >
                                         <span>➕</span> <span>Add to Summarizer</span>
                                     </button>
-                                    <button 
-                                        onclick="appraisePaperFromExternal('${safeUrl}')" 
-                                        class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                                        title="Open full interactive appraisal in Workbench"
-                                    >
-                                        <span>🔬</span> <span>Appraise Paper</span>
-                                    </button>
+                                    ${appraiseBtn}
                                 </div>
                             </div>
                         </div>

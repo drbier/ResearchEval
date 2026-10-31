@@ -478,6 +478,22 @@ class PaperFinder:
                 journal_el = article.find(".//Journal/Title") or article.find(".//Journal/ISOAbbreviation")
                 journal = journal_el.text.strip() if journal_el is not None and journal_el.text else "PubMed Indexed Journal"
 
+                # 7. Identifier & Full-Text PMC Linkage (Article's own primary IDs)
+                pmcid = None
+                doi = None
+                for aid in article.findall(".//PubmedData/ArticleIdList/ArticleId"):
+                    id_type = aid.attrib.get("IdType")
+                    val = aid.text.strip() if aid.text else ""
+                    if not val:
+                        continue
+                    if id_type == "pmc":
+                        pmcid = val if val.upper().startswith("PMC") else f"PMC{val}"
+                    elif id_type == "doi" and not doi:
+                        doi = val
+
+                has_full_text = bool(pmcid)
+                pmc_url = f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/" if pmcid else None
+
                 candidates.append({
                     "pmid": pmid,
                     "title": title,
@@ -486,6 +502,10 @@ class PaperFinder:
                     "journal": journal,
                     "abstract": abstract_text,
                     "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+                    "pmcid": pmcid,
+                    "doi": doi,
+                    "has_full_text": has_full_text,
+                    "pmc_url": pmc_url,
                     "source": "PubMed",
                     "is_fallback": False
                 })
@@ -509,7 +529,7 @@ class PaperFinder:
         query_str = f"{' '.join(int_agents[:3])} {' '.join(cond_terms[:2])}".strip()
         params = {
             "query": query_str,
-            "fields": "title,year,authors,abstract,externalIds,url,venue",
+            "fields": "title,year,authors,abstract,externalIds,url,venue,isOpenAccess,openAccessPdf",
             "limit": retmax
         }
 
@@ -537,6 +557,15 @@ class PaperFinder:
                 pmid = ext_ids.get("PubMed")
                 doi = ext_ids.get("DOI")
 
+                pmcid = None
+                if ext_ids.get("PubMedCentral"):
+                    raw_pmc = str(ext_ids["PubMedCentral"]).strip()
+                    pmcid = raw_pmc if raw_pmc.upper().startswith("PMC") else f"PMC{raw_pmc}"
+
+                is_oa = bool(p.get("isOpenAccess") or p.get("openAccessPdf"))
+                has_full_text = bool(pmcid or is_oa)
+                pmc_url = f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/" if pmcid else None
+
                 if pmid:
                     verified_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
                 elif doi:
@@ -557,6 +586,10 @@ class PaperFinder:
                     "journal": venue,
                     "abstract": abstract.strip(),
                     "url": verified_url,
+                    "pmcid": pmcid,
+                    "doi": doi,
+                    "has_full_text": has_full_text,
+                    "pmc_url": pmc_url,
                     "source": "Semantic Scholar Fallback",
                     "is_fallback": True
                 })
@@ -938,10 +971,12 @@ class PaperFinder:
         # Step 5: Construct Strict Output Layout (Exact Gem Protocol)
         formatted_blocks = []
         for p in final_papers:
+            # Prefer canonical PMC URL when free full text is indexed, otherwise PubMed URL
+            source_url = p.get("pmc_url") if (p.get("has_full_text") and p.get("pmc_url")) else p.get("url")
             block = (
-                f"Title: {p.get('title')} Year:{p.get('year')}\n"
+                f"Title: {p.get('title')} Year: {p.get('year')}\n"
                 f"Summary: {p.get('grounded_summary')}\n"
-                f"Source: {p.get('url')}"
+                f"Source: {source_url}"
             )
             formatted_blocks.append(block)
 
