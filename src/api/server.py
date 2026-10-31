@@ -3,7 +3,8 @@ import sys
 import shutil
 import io
 import urllib.parse
-from typing import Optional, Dict
+from typing import Optional, Dict, List
+from pydantic import BaseModel
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -19,6 +20,8 @@ from PIL import Image
 from src.ingestion.indexer import parse_and_index_pdf, IndexedDocument
 from src.ingestion.fetcher import PaperFetcher
 from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL
+from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_DESIGNATION
+from src.summarizer.engine import PaperSummarizer, MODEL_DESIGNATION as SUMMARIZER_MODEL_DESIGNATION
 
 app = FastAPI(
     title="Research Evaluation App",
@@ -63,6 +66,39 @@ fetcher = PaperFetcher(UPLOAD_DIR)
 
 # In-memory session cache of the most recently indexed document
 CACHED_INDEX: Dict[str, IndexedDocument] = {}
+
+finder = PaperFinder()
+summarizer = PaperSummarizer()
+
+
+class FinderSearchRequest(BaseModel):
+    query: str
+    max_results: Optional[int] = 10
+
+
+class SummarizerGenerateRequest(BaseModel):
+    urls: List[str]
+    max_batch_size: Optional[int] = 10
+
+
+@app.post("/api/finder/search")
+def api_finder_search(req: FinderSearchRequest):
+    """Execute Zero-Trust 4-tier relaxation search and binary clinical gate verification."""
+    try:
+        res = finder.find_papers(query=req.query, max_results=req.max_results or 10)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/summarizer/generate")
+def api_summarizer_generate(req: SummarizerGenerateRequest):
+    """Execute sequential structured multi-paper lay science communicator briefing."""
+    try:
+        res = summarizer.summarize_batch(raw_inputs=req.urls, max_batch_size=req.max_batch_size or 10)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 def health_check():
@@ -584,6 +620,20 @@ def index_page():
                     </div>
                 </div>
 
+                <!-- Master 3-Mode Navigation Switcher -->
+                <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold gap-1 shrink-0">
+                    <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
+                        <span>🔍</span> <span>Paper Finder</span>
+                    </button>
+                    <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
+                        <span>📝</span> <span>Summarizer</span>
+                        <span id="summarizerBatchBadge" class="hidden ml-1 px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[10px] font-bold">0</span>
+                    </button>
+                    <button id="masterTabAppraisal" onclick="switchMasterMode('appraisal')" class="px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs">
+                        <span>🔬</span> <span>Appraisal Workbench</span>
+                    </button>
+                </div>
+
                 <!-- Center: Compact Unified Input (PDF or URL) -->
                 <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 flex-1 max-w-2xl">
                     <!-- Mode Switch Buttons -->
@@ -653,6 +703,146 @@ def index_page():
                     <div class="flex justify-end gap-3 pt-2">
                         <button onclick="closeAbstractModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-md transition">Cancel</button>
                         <button onclick="proceedWithAbstractOnly()" class="px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-md transition shadow">Evaluate Abstract Only</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sibling Container 1: Paper Finder Mode -->
+            <div id="finderContainer" class="hidden w-full overflow-y-auto space-y-4" style="height: calc(100vh - 105px);">
+                <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-5xl mx-auto space-y-5">
+                    <!-- Header & Directive -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <span>🔍</span> Precision Zero-Trust Paper Finder
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Search medical literature using fuzzy recollection or clinical criteria. Powered by a 4-tier query relaxation ladder and strict binary clinical gate.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                                Model: Gemini flash
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="space-y-2">
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <input 
+                                    type="text" 
+                                    id="finderSearchInput" 
+                                    placeholder="e.g. Paper showing CoQ10 reduced heart attacks in women, done in a Scandinavian country..." 
+                                    class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-2xs"
+                                    onkeydown="if(event.key === 'Enter') executeFinderSearch();"
+                                />
+                                <button onclick="clearFinderSearch()" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs font-bold" title="Clear search">✕</button>
+                            </div>
+                            <button 
+                                id="finderSubmitBtn" 
+                                onclick="executeFinderSearch()" 
+                                class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-5 py-3 rounded-lg transition shadow-xs flex items-center gap-2 shrink-0"
+                            >
+                                <span id="finderBtnIcon">🔍</span>
+                                <span id="finderBtnText">Find Verified Papers</span>
+                            </button>
+                        </div>
+                        <!-- Quick Example Chips -->
+                        <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500">
+                            <span class="font-medium">Try example query:</span>
+                            <button onclick="setFinderQuery('CoQ10 reduced cardiovascular mortality in elderly Swedish cohort, 5 year follow up')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-100 hover:text-sky-700 border border-slate-200 transition">
+                                CoQ10 cardiovascular mortality in Swedish cohort
+                            </button>
+                            <button onclick="setFinderQuery('Curcumin osteoarthritis randomized trial knee pain and inflammatory biomarkers')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-100 hover:text-sky-700 border border-slate-200 transition">
+                                Curcumin knee osteoarthritis RCT
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Status / Metadata Banner -->
+                    <div id="finderStatusBanner" class="hidden rounded-lg p-3 text-xs flex items-center justify-between border"></div>
+
+                    <!-- Verified Study Results List -->
+                    <div id="finderResultsList" class="space-y-4 pt-1">
+                        <div class="text-center py-12 text-slate-400 text-xs">
+                            Enter your clinical inquiry or paper recollection above to find real, verified studies with zero URL hallucination.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sibling Container 2: Multi-Paper Summarizer Mode -->
+            <div id="summarizerContainer" class="hidden w-full overflow-y-auto space-y-4" style="height: calc(100vh - 105px);">
+                <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-5xl mx-auto space-y-5">
+                    <!-- Header & Directive -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <span>📝</span> Multi-Paper Science Communicator Summarizer
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-1">
+                                Paste a batch of 3–10 PubMed URLs, PMIDs, or DOIs. Reads structured abstracts sequentially to create an accessible, grounded overview.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Model: Gemini flash
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Batch URLs Input -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between text-xs text-slate-600 font-medium">
+                            <span>Enter PubMed URLs, PMIDs, or DOIs (one per line):</span>
+                            <div class="flex items-center gap-3">
+                                <button onclick="loadSampleSummarizerBatch()" class="text-sky-600 hover:text-sky-700 font-semibold text-[11px]">Load Sample CoQ10 Papers</button>
+                                <span class="text-slate-300">|</span>
+                                <button onclick="clearSummarizerInput()" class="text-rose-600 hover:text-rose-700 font-semibold text-[11px]">Clear All</button>
+                            </div>
+                        </div>
+                        <textarea 
+                            id="summarizerUrlsInput" 
+                            rows="5" 
+                            placeholder="https://pubmed.ncbi.nlm.nih.gov/23843810/&#10;https://pubmed.ncbi.nlm.nih.gov/30302302/&#10;29188837"
+                            class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-2xs leading-relaxed"
+                            oninput="updateSummarizerBatchCount()"
+                        ></textarea>
+                        <div class="flex items-center justify-between pt-1">
+                            <span id="summarizerBatchCounter" class="text-[11px] text-slate-400">Batch size: 0 / 10 papers</span>
+                            <button 
+                                id="summarizerSubmitBtn" 
+                                onclick="executeSummarizerBatch()" 
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition shadow-xs flex items-center gap-2"
+                            >
+                                <span id="summarizerBtnIcon">🚀</span>
+                                <span id="summarizerBtnText">Generate Science Briefing</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summarizer Status Banner -->
+                    <div id="summarizerStatusBanner" class="hidden rounded-lg p-3 text-xs flex items-center justify-between border"></div>
+
+                    <!-- Generated Science Summary Output -->
+                    <div id="summarizerOutputContainer" class="hidden space-y-4 pt-1">
+                        <div class="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-4">
+                            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-slate-800">📄 Synthesized Briefing Document</span>
+                                    <span id="summarizerMetaBadge" class="text-[11px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-mono"></span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="copySummarizerMarkdown()" id="copySummaryBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 text-xs font-medium transition shadow-2xs">
+                                        <span>📋</span> <span id="copySummaryBtnText">Copy to Clipboard</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Rendered Markdown Content -->
+                            <div id="summarizerRenderedContent" class="text-xs leading-relaxed space-y-4 text-slate-800"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -762,6 +952,424 @@ def index_page():
         </div>
 
         <script>
+            // Global Encapsulated Cross-Tab State
+            window.ResearchAppState = {
+                currentMasterMode: 'appraisal', // 'finder' | 'summarizer' | 'appraisal'
+                finderResults: [],
+                summarizerBatch: [],
+                lastSearchQuery: '',
+                isSearching: false,
+                isSummarizing: false,
+                lastSummarizerMarkdown: ''
+            };
+
+            function switchMasterMode(mode) {
+                window.ResearchAppState.currentMasterMode = mode;
+                const finderCont = document.getElementById('finderContainer');
+                const summarizerCont = document.getElementById('summarizerContainer');
+                const resultBox = document.getElementById('resultBox');
+                const splitCont = document.getElementById('splitContainer');
+                const tabFinderBtn = document.getElementById('masterTabFinder');
+                const tabSummarizerBtn = document.getElementById('masterTabSummarizer');
+                const tabAppraisalBtn = document.getElementById('masterTabAppraisal');
+
+                // Reset tab styles
+                if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium";
+                if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium";
+                if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium";
+
+                // Toggle visibility between sibling DOM containers
+                if (finderCont) finderCont.classList.add('hidden');
+                if (summarizerCont) summarizerCont.classList.add('hidden');
+                if (resultBox) resultBox.classList.add('hidden');
+
+                if (mode === 'finder') {
+                    if (finderCont) finderCont.classList.remove('hidden');
+                    if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                } else if (mode === 'summarizer') {
+                    if (summarizerCont) summarizerCont.classList.remove('hidden');
+                    if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    syncSummarizerInputFromBatch();
+                } else {
+                    // Mode 'appraisal'
+                    if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    // Only unhide resultBox if appraisal content has already been generated
+                    if (currentFilename) {
+                        if (resultBox) resultBox.classList.remove('hidden');
+                        if (typeof centerHighlightInViewer === 'function') {
+                            requestAnimationFrame(() => centerHighlightInViewer(false));
+                        }
+                    }
+                }
+            }
+
+            // Paper Finder Handlers
+            function setFinderQuery(q) {
+                const input = document.getElementById('finderSearchInput');
+                if (input) {
+                    input.value = q;
+                    input.focus();
+                }
+            }
+
+            function clearFinderSearch() {
+                const input = document.getElementById('finderSearchInput');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+            }
+
+            async function executeFinderSearch() {
+                const input = document.getElementById('finderSearchInput');
+                const query = input ? input.value.trim() : '';
+                if (!query) {
+                    alert('Please enter a clinical research query or recollection.');
+                    return;
+                }
+
+                const btn = document.getElementById('finderSubmitBtn');
+                const btnIcon = document.getElementById('finderBtnIcon');
+                const btnText = document.getElementById('finderBtnText');
+                const banner = document.getElementById('finderStatusBanner');
+                const resultsList = document.getElementById('finderResultsList');
+
+                window.ResearchAppState.isSearching = true;
+                if (btn) btn.disabled = true;
+                if (btnIcon) btnIcon.innerHTML = '<span class="inline-block animate-spin">⏳</span>';
+                if (btnText) btnText.innerText = 'Searching Databases...';
+
+                if (banner) {
+                    banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-sky-50 text-sky-800 border-sky-200";
+                    banner.innerHTML = '<span>⚡ Running 4-tier query relaxation ladder across PubMed & Semantic Scholar...</span>';
+                    banner.classList.remove('hidden');
+                }
+
+                try {
+                    const resp = await fetch('/api/finder/search', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: query, max_results: 10 })
+                    });
+                    const data = await resp.json();
+
+                    window.ResearchAppState.finderResults = data.qualifying_papers || [];
+                    window.ResearchAppState.lastSearchQuery = query;
+
+                    if (data.status === 'success' && data.qualifying_papers && data.qualifying_papers.length > 0) {
+                        const tierName = data.tier_used === 1 ? 'Tier 1 (Strict All Criteria)' : 
+                                         data.tier_used === 2 ? 'Tier 2 (Relaxed Geography)' : 
+                                         data.tier_used === 3 ? 'Tier 3 (Core Clinical Only)' : 'Tier 4 (Semantic Scholar Fallback)';
+                        
+                        banner.className = data.is_fallback ? 
+                            "rounded-lg p-3 text-xs flex items-center justify-between border bg-amber-50 text-amber-900 border-amber-200" :
+                            "rounded-lg p-3 text-xs flex items-center justify-between border bg-emerald-50 text-emerald-900 border-emerald-200";
+                        
+                        banner.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold">${data.qualifying_count} Verified Studies Found</span>
+                                <span class="text-slate-400">•</span>
+                                <span>Source: ${data.source_database} (${tierName})</span>
+                                ${data.is_fallback ? '<span class="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-bold text-[10px]">FALLBACK</span>' : ''}
+                            </div>
+                            <span class="font-mono text-[11px] text-slate-500">Evaluated ${data.total_evaluated} candidates</span>
+                        `;
+                        renderFinderResults(data.qualifying_papers);
+                    } else {
+                        banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-rose-50 text-rose-800 border-rose-200";
+                        banner.innerHTML = `<span>⚠️ ${data.message || 'Search Failed: No literature candidates matching clinical criteria located.'}</span>`;
+                        resultsList.innerHTML = `
+                            <div class="text-center py-12 text-slate-500 text-xs space-y-2">
+                                <p class="font-semibold text-slate-700">No qualifying studies found</p>
+                                <p class="text-slate-400">All evaluated candidates failed the binary clinical gate (Intervention and Condition mismatch).</p>
+                            </div>
+                        `;
+                    }
+                } catch (err) {
+                    if (banner) {
+                        banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-rose-50 text-rose-800 border-rose-200";
+                        banner.innerHTML = `<span>❌ Search request failed: ${err.message}</span>`;
+                    }
+                } finally {
+                    window.ResearchAppState.isSearching = false;
+                    if (btn) btn.disabled = false;
+                    if (btnIcon) btnIcon.innerText = '🔍';
+                    if (btnText) btnText.innerText = 'Find Verified Papers';
+                }
+            }
+
+            function renderFinderResults(papers) {
+                const resultsList = document.getElementById('finderResultsList');
+                if (!resultsList) return;
+
+                if (!papers || papers.length === 0) {
+                    resultsList.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs">No papers to display.</div>';
+                    return;
+                }
+
+                resultsList.innerHTML = papers.map((p, idx) => {
+                    const matchScore = p.match_score || 50;
+                    const scoreColor = matchScore >= 80 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                                       matchScore >= 65 ? 'bg-sky-100 text-sky-800 border-sky-300' :
+                                       'bg-amber-100 text-amber-800 border-amber-300';
+                    
+                    const sourceBadge = p.is_fallback ?
+                        '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Semantic Scholar Fallback</span>' :
+                        '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">PubMed Verified</span>';
+
+                    const safeTitle = (p.title || 'Untitled Study').replace(/"/g, '&quot;');
+                    const safeUrl = p.url || '';
+                    const authorsStr = (p.authors && p.authors.length > 0) ? p.authors.slice(0, 3).join(', ') + (p.authors.length > 3 ? ' et al.' : '') : '';
+
+                    return `
+                        <div class="bg-slate-50 hover:bg-white rounded-xl border border-slate-200 p-5 shadow-2xs hover:shadow-xs transition space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${scoreColor}">
+                                        ${matchScore}% Match
+                                    </span>
+                                    <span class="text-xs font-semibold text-slate-700 bg-slate-200/80 px-2 py-0.5 rounded">
+                                        Year: ${p.year || 'N/A'}
+                                    </span>
+                                    ${sourceBadge}
+                                </div>
+                                <span class="text-[11px] text-slate-400 font-mono">
+                                    ${p.pmid ? 'PMID: ' + p.pmid : ''}
+                                </span>
+                            </div>
+
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900 leading-snug">
+                                    ${p.title}
+                                </h3>
+                                ${authorsStr ? `<p class="text-[11px] text-slate-500 mt-0.5">${authorsStr} • <span class="italic">${p.journal || ''}</span></p>` : ''}
+                            </div>
+
+                            <div class="bg-white rounded-lg p-3 border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                                <span class="font-bold text-sky-800 block text-[11px] uppercase tracking-wide mb-1">Grounded Clinical Findings:</span>
+                                ${p.grounded_summary || 'Summary unavailable.'}
+                            </div>
+
+                            <div class="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
+                                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-600 hover:text-sky-800 underline flex items-center gap-1 font-mono">
+                                    <span>🔗</span> <span>${safeUrl}</span>
+                                </a>
+                                <div class="flex items-center gap-2">
+                                    <button 
+                                        onclick="addToSummarizerBatch('${safeUrl}', '${safeTitle}')" 
+                                        class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-300 flex items-center gap-1 cursor-pointer"
+                                        title="Add to multi-paper summarizer batch"
+                                    >
+                                        <span>➕</span> <span>Add to Summarizer</span>
+                                    </button>
+                                    <button 
+                                        onclick="appraisePaperFromExternal('${safeUrl}')" 
+                                        class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                                        title="Open full interactive appraisal in Workbench"
+                                    >
+                                        <span>🔬</span> <span>Appraise Paper</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Summarizer Handlers
+            function updateSummarizerBatchCount() {
+                const textarea = document.getElementById('summarizerUrlsInput');
+                const counter = document.getElementById('summarizerBatchCounter');
+                if (!textarea || !counter) return;
+                const lines = textarea.value.trim().split(/\n+/).filter(l => l.trim().length > 0);
+                counter.innerText = `Batch size: ${lines.length} / 10 papers`;
+                if (lines.length > 10) {
+                    counter.className = "text-[11px] text-rose-600 font-bold";
+                } else {
+                    counter.className = "text-[11px] text-slate-400";
+                }
+            }
+
+            function addToSummarizerBatch(url, title) {
+                if (!url) return;
+                if (!window.ResearchAppState.summarizerBatch.includes(url)) {
+                    window.ResearchAppState.summarizerBatch.push(url);
+                }
+                updateSummarizerBadge();
+                alert(`Added to Summarizer queue:
+${title || url}`);
+            }
+
+            function updateSummarizerBadge() {
+                const badge = document.getElementById('summarizerBatchBadge');
+                const count = window.ResearchAppState.summarizerBatch.length;
+                if (badge) {
+                    if (count > 0) {
+                        badge.innerText = count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            }
+
+            function syncSummarizerInputFromBatch() {
+                const textarea = document.getElementById('summarizerUrlsInput');
+                if (textarea && window.ResearchAppState.summarizerBatch.length > 0) {
+                    const currentVal = textarea.value.trim();
+                    const existingList = currentVal ? currentVal.split(/\n+/).map(s => s.trim()) : [];
+                    const combined = Array.from(new Set([...existingList, ...window.ResearchAppState.summarizerBatch])).filter(Boolean);
+                    textarea.value = combined.join('\n');
+                    updateSummarizerBatchCount();
+                }
+            }
+
+            function clearSummarizerInput() {
+                const textarea = document.getElementById('summarizerUrlsInput');
+                if (textarea) {
+                    textarea.value = '';
+                    updateSummarizerBatchCount();
+                }
+                window.ResearchAppState.summarizerBatch = [];
+                updateSummarizerBadge();
+            }
+
+            function loadSampleSummarizerBatch() {
+                const textarea = document.getElementById('summarizerUrlsInput');
+                if (textarea) {
+                    textarea.value = [
+                        'https://pubmed.ncbi.nlm.nih.gov/23843810/',
+                        'https://pubmed.ncbi.nlm.nih.gov/30302302/',
+                        'https://pubmed.ncbi.nlm.nih.gov/29188837/'
+                    ].join('\n');
+                    updateSummarizerBatchCount();
+                }
+            }
+
+            async function executeSummarizerBatch() {
+                const textarea = document.getElementById('summarizerUrlsInput');
+                const rawVal = textarea ? textarea.value.trim() : '';
+                const lines = rawVal.split(/\n+/).map(l => l.trim()).filter(Boolean);
+
+                if (lines.length === 0) {
+                    alert('Please enter at least 1 PubMed URL, PMID, or DOI.');
+                    return;
+                }
+
+                if (lines.length > 10) {
+                    alert('Maximum recommended batch size is 10 papers. Please reduce the number of entries.');
+                    return;
+                }
+
+                const btn = document.getElementById('summarizerSubmitBtn');
+                const btnIcon = document.getElementById('summarizerBtnIcon');
+                const btnText = document.getElementById('summarizerBtnText');
+                const banner = document.getElementById('summarizerStatusBanner');
+                const outContainer = document.getElementById('summarizerOutputContainer');
+                const renderedDiv = document.getElementById('summarizerRenderedContent');
+                const metaBadge = document.getElementById('summarizerMetaBadge');
+
+                window.ResearchAppState.isSummarizing = true;
+                if (btn) btn.disabled = true;
+                if (btnIcon) btnIcon.innerHTML = '<span class="inline-block animate-spin">⏳</span>';
+                if (btnText) btnText.innerText = 'Synthesizing Briefing...';
+
+                if (banner) {
+                    banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-sky-50 text-sky-800 border-sky-200";
+                    banner.innerHTML = `<span>⚡ Ingesting structured abstracts sequentially for ${lines.length} papers & synthesizing lay briefing...</span>`;
+                    banner.classList.remove('hidden');
+                }
+
+                try {
+                    const resp = await fetch('/api/summarizer/generate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ urls: lines, max_batch_size: 10 })
+                    });
+                    const data = await resp.json();
+
+                    if (data.status === 'success') {
+                        window.ResearchAppState.lastSummarizerMarkdown = data.formatted_markdown || '';
+                        
+                        banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-emerald-50 text-emerald-900 border-emerald-200";
+                        banner.innerHTML = `
+                            <span class="font-bold">✅ Briefing generated successfully (${data.accessible_count} accessible, ${data.inaccessible_count} unavailable).</span>
+                            <span class="text-slate-500 font-mono text-[11px]">Model: ${data.model_designation || 'Gemini flash'}</span>
+                        `;
+
+                        if (metaBadge) {
+                            metaBadge.innerText = `${data.accessible_count} of ${data.total_processed} Studies Analyzed`;
+                        }
+
+                        if (renderedDiv) {
+                            renderedDiv.innerHTML = marked.parse(data.formatted_markdown || '');
+                        }
+
+                        if (outContainer) outContainer.classList.remove('hidden');
+                    } else {
+                        banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-rose-50 text-rose-800 border-rose-200";
+                        banner.innerHTML = `<span>⚠️ ${data.message || 'Summarization failed.'}</span>`;
+                    }
+                } catch (err) {
+                    if (banner) {
+                        banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-rose-50 text-rose-800 border-rose-200";
+                        banner.innerHTML = `<span>❌ Error generating summary: ${err.message}</span>`;
+                    }
+                } finally {
+                    window.ResearchAppState.isSummarizing = false;
+                    if (btn) btn.disabled = false;
+                    if (btnIcon) btnIcon.innerText = '🚀';
+                    if (btnText) btnText.innerText = 'Generate Science Briefing';
+                }
+            }
+
+            function copySummarizerMarkdown() {
+                const text = window.ResearchAppState.lastSummarizerMarkdown;
+                if (!text) {
+                    alert('No generated briefing to copy.');
+                    return;
+                }
+                navigator.clipboard.writeText(text).then(() => {
+                    const btnText = document.getElementById('copySummaryBtnText');
+                    if (btnText) {
+                        const original = btnText.innerText;
+                        btnText.innerText = 'Copied to Clipboard!';
+                        setTimeout(() => { btnText.innerText = original; }, 2000);
+                    }
+                }).catch(err => {
+                    alert('Could not copy to clipboard: ' + err);
+                });
+            }
+
+            // Cross-Tab Trigger: Deep link to Appraisal Workbench from Finder or Summarizer
+            function appraisePaperFromExternal(url) {
+                if (!url) return;
+
+                // Step 1: Explicitly switch mode to appraisal and render splitContainer
+                switchMasterMode('appraisal');
+
+                // Ensure resultBox is unhidden so splitContainer DOM is actively rendered in layout
+                const resultBox = document.getElementById('resultBox');
+                if (resultBox) {
+                    resultBox.classList.remove('hidden');
+                }
+
+                // Switch input tab to URL
+                switchInputTab('url');
+
+                const urlInput = document.getElementById('paperUrl');
+                if (urlInput) {
+                    urlInput.value = url;
+                }
+
+                // Step 2: Strict visibility toggling: wait for layout reflow before startUrlResolution()
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        startUrlResolution();
+                    });
+                });
+            }
+
             let currentFilename = '';
             let anchorIndex = {};
             let currentMeta = null;
