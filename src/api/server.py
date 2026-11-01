@@ -1022,7 +1022,15 @@ def index_page():
                                     </button>
                                 </div>
                             </div>
-                            <span id="leftPaneHint" class="text-xs text-slate-400 italic">Click any coordinate pill to inspect source text</span>
+                            <div class="flex items-center gap-2">
+                                <span id="leftPaneHint" class="text-xs text-slate-400 italic hidden lg:inline">Click any pill to inspect</span>
+                                <button onclick="copyExportedAnalysis()" id="copyAnalysisBtn" title="Copy clinical analysis to clipboard with pills converted to text (e.g. Abs, p1)" class="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 text-xs font-medium transition shadow-2xs cursor-pointer">
+                                    <span>📋</span> <span id="copyAnalysisBtnText">Copy</span>
+                                </button>
+                                <button onclick="downloadExportedAnalysis()" id="downloadAnalysisBtn" title="Export / download clinical analysis with pills converted to text (e.g. Abs, p1)" class="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 text-xs font-medium transition shadow-2xs cursor-pointer">
+                                    <span>⬇️</span> <span>Export</span>
+                                </button>
+                            </div>
                         </div>
                         <div id="outputMarkdown" class="prose max-w-none text-slate-800 bg-slate-50 p-6 rounded-lg border border-slate-200 text-sm leading-relaxed flex-1"></div>
                         <div id="thinkingContainer" class="hidden flex-1 space-y-4"></div>
@@ -2458,6 +2466,96 @@ ${escapeHtml(thought)}
                 return text;
             }
 
+            function getExportableAnalysisText() {
+                let text = (window.ResearchAppState && window.ResearchAppState.lastAppraisalMarkdown) 
+                    ? window.ResearchAppState.lastAppraisalMarkdown 
+                    : '';
+                if (!text) {
+                    const out = document.getElementById('outputMarkdown');
+                    if (out) text = out.innerText.trim();
+                }
+                if (!text) return '';
+
+                const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?)\]/gi;
+                text = text.replace(bracketCoordRegex, function(fullMatch, inner) {
+                    const trimmed = inner.trim();
+                    if (trimmed.toLowerCase() === 'doc_header') {
+                        return 'Header';
+                    }
+
+                    let rawParts = [];
+                    if (trimmed.includes(';')) {
+                        rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
+                    } else {
+                        rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))/i).map(p => p.trim()).filter(Boolean);
+                    }
+
+                    if (!rawParts || rawParts.length === 0) {
+                        rawParts = [trimmed];
+                    }
+
+                    let parts = [];
+                    for (const p of rawParts) {
+                        const multiParaMatch = p.match(/^([A-Za-z\s&]+?),\s*Para\s+(\d+(?:,\s*\d+)+)$/i);
+                        if (multiParaMatch) {
+                            const sec = multiParaMatch[1].trim();
+                            const nums = multiParaMatch[2].split(',').map(n => n.trim()).filter(Boolean);
+                            for (const num of nums) {
+                                parts.push(`${sec}, Para ${num}`);
+                            }
+                        } else {
+                            parts.push(p);
+                        }
+                    }
+
+                    const formatted = parts.map(part => formatAnchorDisplay(part));
+                    return formatted.join(', ');
+                });
+
+                return text.replace(/[ \t]{2,}/g, ' ').trim();
+            }
+
+            function copyExportedAnalysis() {
+                const text = getExportableAnalysisText();
+                if (!text) {
+                    alert('No clinical analysis available to copy.');
+                    return;
+                }
+                navigator.clipboard.writeText(text).then(() => {
+                    const btnText = document.getElementById('copyAnalysisBtnText');
+                    if (btnText) {
+                        const original = btnText.innerText;
+                        btnText.innerText = 'Copied!';
+                        setTimeout(() => { btnText.innerText = original; }, 2000);
+                    }
+                }).catch(err => {
+                    alert('Could not copy to clipboard: ' + err);
+                });
+            }
+
+            function downloadExportedAnalysis() {
+                const text = getExportableAnalysisText();
+                if (!text) {
+                    alert('No clinical analysis available to export.');
+                    return;
+                }
+                let baseName = (window.ResearchAppState && window.ResearchAppState.lastAppraisalFilename)
+                    ? window.ResearchAppState.lastAppraisalFilename
+                    : 'clinical_analysis';
+                baseName = baseName.replace(/\.pdf$/i, '').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_');
+                const filename = `${baseName}_analysis.md`;
+                
+                const blob = new Blob([text], { type: 'text/markdown;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
             function renderAppraisalResults(data) {
                 anchorIndex = data.anchor_index || {};
 
@@ -2539,6 +2637,12 @@ ${escapeHtml(thought)}
                         }
                     }
                     content = contentLines.join('\n');
+                }
+
+                // Cache normalized appraisal markdown and filename for clean export
+                if (window.ResearchAppState) {
+                    window.ResearchAppState.lastAppraisalMarkdown = content;
+                    window.ResearchAppState.lastAppraisalFilename = currentFilename || 'clinical_analysis';
                 }
 
                 if (window.marked) {
