@@ -3,7 +3,7 @@
     "framework_id": "FW_A",
     "name": "Randomized Controlled Trial (RCT)",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -34,7 +34,7 @@
     "framework_id": "FW_B",
     "name": "Systematic Review & Meta-Analysis",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -63,7 +63,7 @@
     "framework_id": "FW_C",
     "name": "Observational Study / Real-World Evidence",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -92,7 +92,7 @@
     "framework_id": "FW_D",
     "name": "Diagnostic Accuracy Study",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -121,7 +121,7 @@
     "framework_id": "FW_E",
     "name": "Clinical Trial Protocol & Statistical Analysis Plan",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -150,7 +150,7 @@
     "framework_id": "FW_F",
     "name": "Non-Inferiority Randomized Controlled Trial",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -179,7 +179,7 @@
     "framework_id": "FW_G",
     "name": "Health Economic Evaluation",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -208,7 +208,7 @@
     "framework_id": "FW_H",
     "name": "Narrative Review",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -237,7 +237,7 @@
     "framework_id": "FW_I",
     "name": "Biomarker & Genomic Medicine Study",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",
@@ -251,7 +251,7 @@
       "Results in Context: Point estimates, Hazard Ratios (HR), Odds Ratios (OR), or AUC with 95% CIs across biomarker strata; assay Limit of Detection (LOD), Variant Allele Fraction (VAF%), or biomarker concentration ranges",
       "Assertive Critical Appraisal: REMARK guideline adherence; pre-analytical biospecimen handling and assay reproducibility; cut-point pre-specification audit (flagging data-driven optimal cutpoints without holdout validation); multivariable survival models demonstrating independent prognostic value beyond standard clinical staging; distinction between prognostic vs predictive biomarker roles (requiring interaction tests); for ctDNA, exclusion of CHIP mutations",
       "Research Objective: Biomarker biological rationale, prospective vs retrospective validation question",
-      "Study Design: Cohort or embedded trial design, biospecimen sampling timeline, analytical platform (NGS, PCR, IHC), and ctDNA assay classification: explicitly specify whether the assay is tumor-informed (patient-specific, personalized variant tracking) or tumor-naïve (fixed panel hotspot tracking), noting implications for analytical sensitivity and MRD false-negative rates",
+      "Study Design: Cohort or embedded trial design, biospecimen sampling timeline, analytical platform (NGS, PCR, IHC), and ctDNA assay classification: explicitly specify whether the assay is tumor-informed (patient-specific, personalized variant tracking) or tumor-na\u00efve (fixed panel hotspot tracking), noting implications for analytical sensitivity and MRD false-negative rates",
       "Setting and Participants: Patient cohort size, specimen repository source, clinical stages, inclusion and exclusion criteria",
       "Bibliographic Data: Title, Authors, Journal, Year, DOI"
     ],
@@ -266,7 +266,7 @@
     "framework_id": "FW_J",
     "name": "Survey Research",
     "headings": [
-      "# [Article Title]",
+      "# Article Title",
       "## Clinical Bottom Line",
       "## Results in Context",
       "## Assertive Critical Appraisal",

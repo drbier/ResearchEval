@@ -1696,7 +1696,7 @@ ${title || url}`);
                 function openPopup(e) {
                     if (!currentMeta) return;
                     cancelHidePopup();
-                    popupTitle.innerText = currentMeta.anchor_id || 'Highlighted Section';
+                    popupTitle.innerText = (typeof formatAnchorDisplay === 'function') ? (formatAnchorDisplay(currentMeta.anchor_id) || 'Highlighted Section') : (currentMeta.anchor_id || 'Highlighted Section');
                     const cropUrl = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(currentMeta.anchor_id)}`;
                     if (popupImg.src !== cropUrl && !popupImg.src.endsWith(cropUrl)) {
                         popupImg.src = cropUrl;
@@ -2443,6 +2443,21 @@ ${escapeHtml(thought)}
                 }
             }
 
+            function formatAnchorDisplay(str) {
+                if (!str) return '';
+                let text = str.replace(/^\[|\]$/g, '').trim();
+                if (text.toLowerCase() === 'doc_header') return 'Header';
+                text = text.replace(/^Introduction\b/i, 'Intro');
+                text = text.replace(/^Abstract\b/i, 'Abs');
+                text = text.replace(/^(?:Materials?\s+and\s+Methods?|Patients?\s+and\s+Methods?|Study\s+Design|Statistical\s+Analysis|Methods?)\b/i, 'Meth');
+                text = text.replace(/^(?:Results?|Findings?|Efficacy|Safety)\b/i, 'Res');
+                text = text.replace(/^Discussion\b/i, 'Disc');
+                text = text.replace(/^(?:Conclusions?|Conclusion\s+and\s+Relevance)\b/i, 'Concl');
+                text = text.replace(/^(?:Supplementary(?:\s+Material|\s+Appendix)?|Appendix)\b/i, 'Supp');
+                text = text.replace(/\bPara\s*(\d+)/gi, 'p$1');
+                return text;
+            }
+
             function renderAppraisalResults(data) {
                 anchorIndex = data.anchor_index || {};
 
@@ -2503,18 +2518,18 @@ ${escapeHtml(thought)}
                 content = cleanLatexMath(content);
 
                 // Ensure study title and 'Clinical Bottom Line' have proper bold/header markdown
-                // If content starts with raw title without '#', promote first line to '# Title'
+                // Strip square brackets from title: e.g. '# [Title]' or '[Title]' -> '# Title'
                 const contentLines = content.trim().split('\n');
                 if (contentLines.length > 0) {
                     let firstNonEmptyIdx = contentLines.findIndex(l => l.trim().length > 0);
                     if (firstNonEmptyIdx !== -1) {
                         let firstLine = contentLines[firstNonEmptyIdx].trim();
-                        // If first line is not already a markdown heading (# Title)
-                        if (!firstLine.startsWith('#')) {
-                            // Strip any leading bolding if present
-                            let rawTitle = firstLine.replace(/^\*\*|\*\*$/g, '').trim();
-                            contentLines[firstNonEmptyIdx] = '# ' + rawTitle;
+                        // Strip leading '#', '**', and enclosing '[' ']' from title
+                        let rawTitle = firstLine.replace(/^#+\s*/, '').replace(/^\*\*|\*\*$/g, '').trim();
+                        if (rawTitle.startsWith('[') && rawTitle.endsWith(']')) {
+                            rawTitle = rawTitle.slice(1, -1).trim();
                         }
+                        contentLines[firstNonEmptyIdx] = '# ' + rawTitle;
                     }
                     // Ensure 'Clinical Bottom Line' line is formatted as ## Clinical Bottom Line
                     for (let i = 0; i < contentLines.length; i++) {
@@ -2535,7 +2550,7 @@ ${escapeHtml(thought)}
                         const trimmed = inner.trim();
                         if (trimmed.toLowerCase() === 'doc_header') {
                             const enc = encodeURIComponent('[Doc_Header]');
-                            return `<button onclick="inspectAnchor('${enc}')" data-anchor="[Doc_Header]" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">Doc_Header</button>`;
+                            return `<button onclick="inspectAnchor('${enc}')" data-anchor="[Doc_Header]" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">Header</button>`;
                         }
 
                         // Split compound coordinates by semicolon first, or by section-boundary comma
@@ -2553,8 +2568,10 @@ ${escapeHtml(thought)}
                         const buttons = parts.map(part => {
                             const rawAnchorId = `[${part}]`;
                             const enc = encodeURIComponent(rawAnchorId);
-                            // Clean display: remove brackets, change 'Para 1' -> 'p1'
-                            let displayText = part.replace(/\bPara\s*(\d+)\b/gi, 'p$1');
+                            
+                            // Standard section contraction dictionary
+                            const displayText = formatAnchorDisplay(part);
+
                             return `<button onclick="inspectAnchor('${enc}')" data-anchor="${rawAnchorId}" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">${displayText}</button>`;
                         });
 
@@ -2729,7 +2746,7 @@ ${escapeHtml(thought)}
                 const img = document.getElementById('highlightedImage');
                 const placeholder = document.getElementById('viewerPlaceholder');
 
-                subtitle.innerText = anchor;
+                subtitle.innerText = formatAnchorDisplay(anchor);
 
                 if (meta) {
                     currentMeta = Object.assign({ anchor_id: anchor }, meta);
@@ -2742,7 +2759,7 @@ ${escapeHtml(thought)}
                     if (isPinned) {
                         const popupTitle = document.getElementById('popupTitle');
                         const popupImg = document.getElementById('popupCropImg');
-                        if (popupTitle) popupTitle.innerText = anchor;
+                        if (popupTitle) popupTitle.innerText = formatAnchorDisplay(anchor);
                         const cropAnchorId = (meta && meta.anchor_id) ? meta.anchor_id : anchor;
                         if (popupImg) popupImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(cropAnchorId)}`;
                     } else {

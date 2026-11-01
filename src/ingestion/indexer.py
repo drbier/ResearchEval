@@ -50,12 +50,14 @@ STRUCTURED_ABSTRACT_MAP = {
 }
 
 def clean_ocr_text(text: str) -> str:
-    """Standardize ligatures, special whitespace, and OCR hyphens."""
+    """Standardize ligatures, special whitespace, OCR hyphens, and bullet glyph artifacts."""
     if not text:
         return ""
     text = text.replace('\xa0', ' ')
     text = re.sub(r'[ \t]+', ' ', text)
     text = re.sub(r'(\w+)-\n(\w+)', r'\1\2', text)
+    # Clean OCR pseudo-bullet glyph artifacts (e.g. 'e Dietary uptake...' -> '• Dietary uptake...')
+    text = re.sub(r'(?m)^[eo•·\-]\s+(?=[A-Z])', '• ', text)
     return text.strip()
 
 def detect_section_header(line: str) -> Optional[str]:
@@ -478,6 +480,9 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             
             if not block_text:
                 continue
+            
+            # Clean OCR bullet glyph artifacts within block text
+            block_text = clean_ocr_text(block_text)
             
             is_narrative = bool(re.search(
                 r'^(?:Fig(?:ure)?|Table)\s*\d+\s+(?:shows?|presents?|displays?|depicts?|illustrates?|demonstrates?|compares?|indicates?|reveals?|summarizes?|lists?|reports?|provides?|plots?|evaluates?)\b',
