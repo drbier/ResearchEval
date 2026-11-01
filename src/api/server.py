@@ -210,6 +210,12 @@ def analyze_fetched_paper(
         result["sections_detected"] = list(indexed.sections.keys())
         result["document_header"] = indexed.doc_header
         result["anchor_index"] = anchor_data
+        try:
+            _d = pymupdf.open(file_path)
+            result["total_pages"] = len(_d)
+            _d.close()
+        except Exception:
+            result["total_pages"] = max((m["page"] for m in anchor_data.values()), default=1)
         
         return result
     except Exception as e:
@@ -257,6 +263,12 @@ async def analyze_paper(
         result["sections_detected"] = list(indexed.sections.keys())
         result["document_header"] = indexed.doc_header
         result["anchor_index"] = anchor_data
+        try:
+            _d = pymupdf.open(file_path)
+            result["total_pages"] = len(_d)
+            _d.close()
+        except Exception:
+            result["total_pages"] = max((m["page"] for m in anchor_data.values()), default=1)
         
         return result
     except Exception as e:
@@ -392,6 +404,57 @@ def view_anchor_image(
         img1.save(buf, format="PNG")
         doc.close()
         return Response(content=buf.getvalue(), media_type="image/png")
+
+
+@app.get("/view-pdf-page")
+def view_pdf_page(filename: str = Query(...), page: int = Query(1, ge=1)):
+    """Render an individual page of a PDF as PNG at 150 DPI for continuous document scrolling."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Source PDF file not found.")
+    doc = pymupdf.open(file_path)
+    if page < 1 or page > len(doc):
+        doc.close()
+        raise HTTPException(status_code=400, detail=f"Page {page} out of bounds (1..{len(doc)})")
+    pix = doc[page - 1].get_pixmap(dpi=150)
+    buf = io.BytesIO(pix.tobytes("png"))
+    doc.close()
+    return Response(content=buf.getvalue(), media_type="image/png")
+
+
+@app.get("/api/pdf-manifest")
+def get_pdf_manifest(filename: str = Query(...)):
+    """Return total page count and page dimensions for continuous document scrolling."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Source PDF file not found.")
+    doc = pymupdf.open(file_path)
+    pages = []
+    for i, p in enumerate(doc):
+        pages.append({
+            "page": i + 1,
+            "width": float(p.rect.width),
+            "height": float(p.rect.height)
+        })
+    total = len(doc)
+    doc.close()
+    return {"filename": filename, "total_pages": total, "pages": pages}
+
+
+@app.post("/api/init-pdf-viewer")
+async def init_pdf_viewer(file: UploadFile = File(...)):
+    """Save uploaded PDF and immediately return page manifest so the user can scroll through the entire paper while analysis executes."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    doc = pymupdf.open(file_path)
+    pages = [{"page": i + 1, "width": float(p.rect.width), "height": float(p.rect.height)} for i, p in enumerate(doc)]
+    total = len(doc)
+    doc.close()
+    return {"filename": file.filename, "total_pages": total, "pages": pages}
+
 
 @app.get("/view-anchor-crop")
 def view_anchor_crop(
@@ -1059,16 +1122,14 @@ def index_page():
                             <p id="snippetText" class="font-serif italic text-[14px] leading-relaxed"></p>
                         </div>
 
-                        <!-- Full Page Image Viewer with Hover Expand Hitbox -->
-                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 flex-1 min-h-0 overflow-y-auto flex items-start justify-center p-3">
-                            <div id="viewerPlaceholder" class="text-center p-8 text-slate-400">
+                        <!-- Full Paper Continuous Scroll Viewer -->
+                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 flex-1 min-h-0 overflow-y-auto p-3">
+                            <div id="viewerPlaceholder" class="text-center p-8 text-slate-400 my-auto">
                                 <svg class="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                <p class="text-sm">Click any inline coordinate pill to inspect the source page</p>
+                                <p class="text-sm">Manuscript pages will appear here for continuous full-paper reading.</p>
                             </div>
-                            <div id="imageContainer" class="hidden relative inline-block">
-                                <img id="highlightedImage" class="max-w-full h-auto rounded shadow select-none" alt="Source Page Preview"/>
-                                <div id="highlightHitbox" title="Hover over the highlighted section to pop it up in large print!"></div>
-                            </div>
+                            <div id="pagesStack" class="hidden flex flex-col items-center gap-4 w-full"></div>
+                            <div id="highlightHitbox" style="display: none;" title="Hover over the highlighted section to pop it up in large print!"></div>
                         </div>
                     </div>
                 </div>
@@ -1999,25 +2060,80 @@ ${title || url}`);
                 });
             }
 
+            function renderFullDocumentPages(filename, totalPages, pagesList) {
+                if (!filename || !totalPages || totalPages < 1) return;
+                currentFilename = filename;
+                const pagesStack = document.getElementById('pagesStack');
+                const placeholder = document.getElementById('viewerPlaceholder');
+                if (!pagesStack) return;
+
+                if (pagesStack.getAttribute('data-loaded-file') === filename && pagesStack.children.length === totalPages) {
+                    return;
+                }
+
+                pagesStack.innerHTML = '';
+                pagesStack.setAttribute('data-loaded-file', filename);
+                if (placeholder) placeholder.classList.add('hidden');
+                pagesStack.classList.remove('hidden');
+
+                for (let p = 1; p <= totalPages; p++) {
+                    const pageWrapper = document.createElement('div');
+                    pageWrapper.id = `page-wrapper-${p}`;
+                    pageWrapper.className = 'relative bg-white shadow rounded border border-slate-300 max-w-full inline-block transition';
+                    pageWrapper.setAttribute('data-page', p);
+
+                    const badge = document.createElement('div');
+                    badge.className = 'absolute top-2 left-2 px-2 py-0.5 bg-slate-800/70 text-white rounded text-[10px] font-mono pointer-events-none select-none z-10';
+                    badge.innerText = `Page ${p} / ${totalPages}`;
+                    pageWrapper.appendChild(badge);
+
+                    const img = document.createElement('img');
+                    img.id = `pdf-page-img-${p}`;
+                    img.className = 'block max-w-full h-auto select-none rounded';
+                    img.alt = `Page ${p}`;
+                    img.loading = (p <= 2) ? 'eager' : 'lazy';
+                    img.src = `/view-pdf-page?filename=${encodeURIComponent(filename)}&page=${p}`;
+
+                    img.onload = function() {
+                        if (currentMeta && currentMeta.page === p) {
+                            repositionHitbox(false);
+                        }
+                    };
+
+                    pageWrapper.appendChild(img);
+                    pagesStack.appendChild(pageWrapper);
+                }
+            }
+
             function repositionHitbox(shouldScroll = false) {
                 if (!currentMeta || !currentMeta.bbox) {
                     const hitbox = document.getElementById('highlightHitbox');
                     if (hitbox) hitbox.style.display = 'none';
                     return;
                 }
-                const img = document.getElementById('highlightedImage');
+                const targetPage = currentMeta.page || 1;
+                const pageWrapper = document.getElementById('page-wrapper-' + targetPage);
+                const img = document.getElementById('pdf-page-img-' + targetPage);
                 const hitbox = document.getElementById('highlightHitbox');
-                if (!img || img.naturalWidth === 0) return;
+                if (!hitbox) return;
+
+                if (!pageWrapper || !img || img.naturalWidth === 0) {
+                    if (img && !img.complete) {
+                        img.onload = () => repositionHitbox(shouldScroll);
+                    }
+                    return;
+                }
 
                 if (img.clientWidth === 0) {
-                    // Layout pending reflow; retry on next frame
                     requestAnimationFrame(() => repositionHitbox(shouldScroll));
                     return;
                 }
 
-                const pWidth = currentMeta.page_width || 581.0;
-                
-                // CSS scaling from natural PDF point coordinates to rendered client display width
+                if (hitbox.parentElement !== pageWrapper) {
+                    pageWrapper.appendChild(hitbox);
+                }
+
+                const pWidth = currentMeta.page_width || 595.0;
                 const scale = img.clientWidth / pWidth;
 
                 const bbox = currentMeta.bbox;
@@ -2026,10 +2142,11 @@ ${title || url}`);
                 const width = (bbox[2] - bbox[0]) * scale;
                 const height = (bbox[3] - bbox[1]) * scale;
 
-                hitbox.style.left = Math.max(0, left - 6) + 'px';
-                hitbox.style.top = Math.max(0, top - 4) + 'px';
-                hitbox.style.width = (width + 12) + 'px';
-                hitbox.style.height = (height + 8) + 'px';
+                hitbox.style.position = 'absolute';
+                hitbox.style.left = Math.max(0, left - 4) + 'px';
+                hitbox.style.top = Math.max(0, top - 2) + 'px';
+                hitbox.style.width = (width + 8) + 'px';
+                hitbox.style.height = (height + 4) + 'px';
                 hitbox.style.display = 'block';
 
                 if (shouldScroll) {
@@ -2396,6 +2513,16 @@ ${escapeHtml(thought)}
 
             async function executeAppraisalForFilename(filename, isAbstractOnly) {
                 currentFilename = filename;
+
+                // Immediately fetch PDF manifest and render all document pages so the user can read the paper while appraisal executes
+                fetch(`/api/pdf-manifest?filename=${encodeURIComponent(filename)}`)
+                    .then(r => r.json())
+                    .then(manifest => {
+                        if (manifest && manifest.total_pages) {
+                            renderFullDocumentPages(manifest.filename, manifest.total_pages, manifest.pages);
+                        }
+                    }).catch(e => console.warn('Pre-viewer manifest note:', e));
+
                 const statusBox = document.getElementById('statusBox');
                 const statusText = document.getElementById('statusText');
                 const spinner = document.getElementById('spinner');
@@ -2463,7 +2590,21 @@ ${escapeHtml(thought)}
                 text = text.replace(/^(?:Conclusions?|Conclusion\s+and\s+Relevance)\b/i, 'Concl');
                 text = text.replace(/^(?:Supplementary(?:\s+Material|\s+Appendix)?|Appendix)\b/i, 'Supp');
                 text = text.replace(/\bPara\s*(\d+)/gi, 'p$1');
-                return text;
+                return '[' + text + ']';
+            }
+
+            function expandAnchorShortName(anc) {
+                if (!anc) return '';
+                let s = anc.replace(/^\[|\]$/g, '').trim();
+                s = s.replace(/^Abs\b/i, 'Abstract');
+                s = s.replace(/^Intro\b/i, 'Introduction');
+                s = s.replace(/^Meth\b/i, 'Methods');
+                s = s.replace(/^Res\b/i, 'Results');
+                s = s.replace(/^Disc\b/i, 'Discussion');
+                s = s.replace(/^Concl\b/i, 'Conclusions');
+                s = s.replace(/^Supp\b/i, 'Appendix');
+                s = s.replace(/\bp(\d+)\b/gi, 'Para $1');
+                return '[' + s + ']';
             }
 
             function getExportableAnalysisText() {
@@ -2477,9 +2618,9 @@ ${escapeHtml(thought)}
                 if (!text) return '';
 
                 // Group consecutive coordinate anchor brackets so they export neatly demarcated as [Abs, p38; Abs, p39; Abs, p41]
-                const consecutiveCoordGroupRegex = /(\[\s*[^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig)\b[^\]]*?\](?:\s*\[\s*[^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig)\b[^\]]*?\])*)/gi;
+                const consecutiveCoordGroupRegex = /(\[\s*[^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig|p\d+)\b[^\]]*?\](?:\s*\[\s*[^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig|p\d+)\b[^\]]*?\])*)/gi;
                 text = text.replace(consecutiveCoordGroupRegex, function(fullMatch) {
-                    const singleBracketRe = /\[\s*([^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig)\b[^\]]*?)\s*\]/gi;
+                    const singleBracketRe = /\[\s*([^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig|p\d+)\b[^\]]*?)\s*\]/gi;
                     const items = [];
                     let match;
                     while ((match = singleBracketRe.exec(fullMatch)) !== null) {
@@ -2492,7 +2633,7 @@ ${escapeHtml(thought)}
                         if (trimmed.includes(';')) {
                             rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
                         } else {
-                            rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))/i).map(p => p.trim()).filter(Boolean);
+                            rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig|p\d+))/i).map(p => p.trim()).filter(Boolean);
                         }
                         if (!rawParts || rawParts.length === 0) {
                             rawParts = [trimmed];
@@ -2503,15 +2644,15 @@ ${escapeHtml(thought)}
                                 const sec = multiParaMatch[1].trim();
                                 const nums = multiParaMatch[2].split(',').map(n => n.trim()).filter(Boolean);
                                 for (const num of nums) {
-                                    items.push(formatAnchorDisplay(sec + ", Para " + num));
+                                    items.push(formatAnchorDisplay(sec + ", Para " + num).replace(/^\[|\]$/g, ''));
                                 }
                             } else {
-                                items.push(formatAnchorDisplay(p));
+                                items.push(formatAnchorDisplay(p).replace(/^\[|\]$/g, ''));
                             }
                         }
                     }
                     if (items.length === 0) return fullMatch;
-                    return [];
+                    return '[' + items.join('; ') + ']';
                 });
 
                 return text.replace(/[ \t]{2,}/g, ' ').trim();
@@ -2744,6 +2885,10 @@ ${escapeHtml(thought)}
                 document.getElementById('resultBox').classList.remove('hidden');
                 document.getElementById('statusBox').classList.add('hidden');
 
+                if (data.total_pages) {
+                    renderFullDocumentPages(currentFilename, data.total_pages);
+                }
+
                 // Smoothly scroll down to the split workspace
                 const splitContainer = document.getElementById('splitContainer');
                 if (splitContainer) {
@@ -2765,6 +2910,17 @@ ${escapeHtml(thought)}
                 }
 
                 currentFilename = fileInput.files[0].name;
+
+                // Immediately initialize full paper viewer so the user can read the entire manuscript while appraisal runs
+                const initForm = new FormData();
+                initForm.append('file', fileInput.files[0]);
+                fetch('/api/init-pdf-viewer', { method: 'POST', body: initForm })
+                    .then(r => r.json())
+                    .then(initData => {
+                        if (initData && initData.total_pages) {
+                            renderFullDocumentPages(initData.filename, initData.total_pages, initData.pages);
+                        }
+                    }).catch(e => console.warn('Pre-viewer init note:', e));
 
                 const statusBox = document.getElementById('statusBox');
                 const statusText = document.getElementById('statusText');
@@ -2813,20 +2969,25 @@ ${escapeHtml(thought)}
                 });
 
                 let meta = anchorIndex[anchor];
+                if (!meta) {
+                    const expanded = expandAnchorShortName(anchor);
+                    meta = anchorIndex[expanded];
+                }
                 let resolvedAnchorId = (meta && meta.anchor_id) ? meta.anchor_id : anchor;
 
                 // Support multi-paragraph citations, ranges (e.g. [Abstract, Para 1-3], [Results, Para 2, 8]), etc.
                 if (!meta) {
-                    const match = anchor.match(/\[?\s*([A-Za-z\s&]+?)\s*,\s*Para\s+(\d+)/i);
+                    const match = anchor.match(/\[?\s*([A-Za-z\s&]+?)\s*,\s*(?:Para|p)\s*(\d+)/i);
                     if (match) {
-                        const fallbackId = `[${match[1].trim()}, Para ${match[2]}]`;
+                        const expandedSec = expandAnchorShortName(match[1].trim()).replace(/^\[|\]$/g, '');
+                        const fallbackId = `[${expandedSec}, Para ${match[2]}]`;
                         meta = anchorIndex[fallbackId];
                         if (meta) {
                             resolvedAnchorId = fallbackId;
                         } else {
                             const pNum = parseInt(match[2]);
                             for (const [k, v] of Object.entries(anchorIndex)) {
-                                if (k.toLowerCase().includes(match[1].trim().toLowerCase()) && k.includes(`Para ${pNum}`)) {
+                                if (k.toLowerCase().includes(expandedSec.toLowerCase()) && k.includes(`Para ${pNum}`)) {
                                     meta = v;
                                     resolvedAnchorId = k;
                                     break;
@@ -2841,13 +3002,14 @@ ${escapeHtml(thought)}
                     const tblFigMatch = anchor.match(/\[?\s*([A-Za-z\s&]+?)\s*,\s*(Table|Fig)\s*(\d+)/i);
                     if (tblFigMatch) {
                         const itemType = tblFigMatch[2].charAt(0).toUpperCase() + tblFigMatch[2].slice(1).toLowerCase();
-                        const fallbackId = `[${tblFigMatch[1].trim()}, ${itemType} ${tblFigMatch[3]}]`;
+                        const expandedSec = expandAnchorShortName(tblFigMatch[1].trim()).replace(/^\[|\]$/g, '');
+                        const fallbackId = `[${expandedSec}, ${itemType} ${tblFigMatch[3]}]`;
                         meta = anchorIndex[fallbackId];
                         if (meta) {
                             resolvedAnchorId = fallbackId;
                         } else {
                             for (const [k, v] of Object.entries(anchorIndex)) {
-                                if (k.toLowerCase().includes(tblFigMatch[1].trim().toLowerCase()) && k.toLowerCase().includes(`${itemType.toLowerCase()} ${tblFigMatch[3]}`)) {
+                                if (k.toLowerCase().includes(expandedSec.toLowerCase()) && k.toLowerCase().includes(`${itemType.toLowerCase()} ${tblFigMatch[3]}`)) {
                                     meta = v;
                                     resolvedAnchorId = k;
                                     break;
@@ -2865,8 +3027,6 @@ ${escapeHtml(thought)}
                 const pageBadge = document.getElementById('pageBadge');
                 const snippetBox = document.getElementById('snippetBox');
                 const snippetText = document.getElementById('snippetText');
-                const imgContainer = document.getElementById('imageContainer');
-                const img = document.getElementById('highlightedImage');
                 const placeholder = document.getElementById('viewerPlaceholder');
 
                 subtitle.innerText = formatAnchorDisplay(anchor);
@@ -2897,35 +3057,11 @@ ${escapeHtml(thought)}
                     if (popup) popup.style.display = 'none';
                 }
 
-                placeholder.classList.add('hidden');
-                imgContainer.classList.remove('hidden');
+                if (placeholder) placeholder.classList.add('hidden');
 
-                const targetAnchorId = (meta && meta.anchor_id) ? meta.anchor_id : anchor;
-                const imgUrl = `/view-anchor-image?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(targetAnchorId)}`;
-                
-                const applyPosition = () => {
-                    repositionHitbox(true);
-                    setTimeout(() => repositionHitbox(true), 80);
-                    setTimeout(() => repositionHitbox(true), 250);
-                };
-
-                // If image URL is already loaded and ready, immediately reposition and center
-                if (img.src && (img.src === imgUrl || img.src.endsWith(imgUrl)) && img.complete && img.naturalWidth > 0) {
-                    applyPosition();
-                } else {
-                    img.onload = function() {
-                        applyPosition();
-                    };
-                    img.onerror = function() {
-                        placeholder.innerHTML = '<p class="text-sm text-red-500">Failed to render page image for this coordinate.</p>';
-                        placeholder.classList.remove('hidden');
-                        imgContainer.classList.add('hidden');
-                    };
-                    img.src = imgUrl;
-                    if (img.complete && img.naturalWidth > 0) {
-                        applyPosition();
-                    }
-                }
+                repositionHitbox(true);
+                setTimeout(() => repositionHitbox(true), 80);
+                setTimeout(() => repositionHitbox(true), 250);
             }
         </script>
     </body>

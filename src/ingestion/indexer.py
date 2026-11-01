@@ -88,7 +88,7 @@ def clean_ocr_text(text: str) -> str:
     text = re.sub(r'(?m)^[eo•·\-]\s+(?=[A-Z])', '• ', text)
     return text.strip()
 
-def detect_section_header(line: str, current_section: Optional[str] = None) -> Optional[str]:
+def detect_section_header(line: str, current_section: Optional[str] = None, page_num: int = 1) -> Optional[str]:
     """Identify common medical manuscript section headers, supporting numbered prefixes and subsections."""
     clean_line = line.strip().strip(':').strip('.').strip('#').strip()
     if not clean_line or len(clean_line) > 55:
@@ -139,10 +139,20 @@ def detect_section_header(line: str, current_section: Optional[str] = None) -> O
     }
     
     if current_section == 'Abstract':
-        if upper in ('INTRODUCTION', 'BACKGROUND', 'METHODS', 'PATIENTS AND METHODS', 'MATERIALS AND METHODS', 'RESULTS', 'FINDINGS', 'DISCUSSION', 'CONCLUSIONS', 'CONCLUSION'):
+        is_numbered = bool(re.match(r'^(?:[0-9]+|[IVXLCDM]+)[\.\s\-:\)]+', clean_line))
+        has_colon_content = bool(re.search(r'^(?:Methods|Results|Conclusion|Background|Objective|Context)\s*:\s*\S', clean_line, re.IGNORECASE))
+        
+        if is_numbered:
+            for k in section_map:
+                if upper == k or upper.startswith(k + ' '):
+                    return section_map[k]
+            return None
+        elif upper in ('INTRODUCTION', 'BACKGROUND') and not has_colon_content:
             return section_map[upper]
-        elif re.match(r'^(?:[0-9]+|[IVXLCDM]+)[\.\s\-:\)]+', clean_line):
-            pass
+        elif page_num >= 2 and upper in section_map and not has_colon_content:
+            return section_map[upper]
+        elif upper in ('PATIENTS AND METHODS', 'MATERIALS AND METHODS', 'MATERIALS & METHODS', 'STUDY DESIGN'):
+            return 'Methods'
         else:
             return None
         
@@ -374,8 +384,8 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
         for x in range(x0, x1):
             coverage[x] += 1
             
-    start_x = int(w * 0.35)
-    end_x = int(w * 0.75)
+    start_x = int(w * 0.40)
+    end_x = int(w * 0.60)
     band = coverage[start_x:end_x]
     if not band:
         return width * 0.5, False
@@ -409,10 +419,12 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
         
     if best_start is not None and best_len >= 8 and min_cov <= 3:
         split_x = best_start + (best_len / 2.0)
-        left_count = sum(1 for l in body_lines if l["bbox"][2] < split_x)
-        right_count = sum(1 for l in body_lines if l["bbox"][0] > split_x)
-        if left_count >= 5 and right_count >= 5:
-            return split_x, True
+        if 0.40 * width <= split_x <= 0.60 * width:
+            left_count = sum(1 for l in body_lines if l["bbox"][2] < split_x)
+            right_count = sum(1 for l in body_lines if l["bbox"][0] > split_x)
+            straddle_count = sum(1 for l in body_lines if l["bbox"][0] < split_x - 20 and l["bbox"][2] > split_x + 20)
+            if left_count >= 8 and right_count >= 8 and straddle_count <= 3:
+                return split_x, True
 
     # 2. Valley detector for pages with wide cross-column tables or minor OCR bleed
     best_x = None
@@ -427,10 +439,12 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
                 best_ratio = ratio
                 best_x = x
     if best_x is not None:
-        left_count = sum(1 for l in body_lines if l["bbox"][2] < best_x)
-        right_count = sum(1 for l in body_lines if l["bbox"][0] > best_x)
-        if left_count >= 5 and right_count >= 5:
-            return float(best_x), True
+        if 0.40 * width <= best_x <= 0.60 * width:
+            left_count = sum(1 for l in body_lines if l["bbox"][2] < best_x)
+            right_count = sum(1 for l in body_lines if l["bbox"][0] > best_x)
+            straddle_count = sum(1 for l in body_lines if l["bbox"][0] < best_x - 20 and l["bbox"][2] > best_x + 20)
+            if left_count >= 8 and right_count >= 8 and straddle_count <= 3:
+                return float(best_x), True
             
     return width * 0.5, False
 
@@ -450,9 +464,9 @@ def extract_clean_page_lines(page, textpage=None, page_num: int = 1) -> List[Dic
     for l in raw_lines:
         x0, y0, x1, y1 = l["bbox"]
         line_w = x1 - x0
-        if page_num <= 2 and x0 >= (0.77 * width) and line_w <= (0.24 * width):
+        if page_num <= 2 and x0 >= (0.77 * width) and line_w <= (0.24 * width) and METADATA_CONTENT_REGEX.search(l["text"]):
             sidebar_lines.append({"text": l["text"], "bbox": l["bbox"], "col": 3, "spans": l.get("spans", [])})
-        elif page_num <= 2 and has_left_sidebar_layout and x1 <= (0.24 * width) and line_w <= (0.22 * width):
+        elif page_num <= 2 and has_left_sidebar_layout and x1 <= (0.24 * width) and line_w <= (0.22 * width) and METADATA_CONTENT_REGEX.search(l["text"]) and not is_structured_header_line(l["text"]):
             sidebar_lines.append({"text": l["text"], "bbox": l["bbox"], "col": 4, "spans": l.get("spans", [])})
         else:
             non_sidebar_lines.append(l)
@@ -724,6 +738,9 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         bbox=[30.0, 30.0, float(doc[0].rect.width) - 30.0 if len(doc) > 0 else 560.0, 240.0]
     )
     
+    active_table_anchor = None
+    active_table_page = 0
+    
     for page_idx, page in enumerate(doc):
         page_num = page_idx + 1
         
@@ -746,13 +763,14 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         for b, block_text in blocks:
             lines = [l.strip() for l in block_text.split('\n') if l.strip()]
             for l_idx, line in enumerate(lines[:5]):
-                detected = detect_section_header(line, current_section)
+                detected = detect_section_header(line, current_section, page_num=page_num)
                 if not detected and current_section == "Header":
                     clean_u = line.strip().strip(':').strip('.').strip('#').strip().upper()
                     if clean_u == 'ABSTRACT' or clean_u == 'SUMMARY' or is_structured_header_line(line):
                         detected = 'Abstract'
                 if detected:
                     current_section = detected
+                    active_table_anchor = None
                     if len(lines) == 1:
                         block_text = ""
                     elif l_idx == 0:
@@ -799,6 +817,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             table_match = re.match(r'^(?:Table)\s*(\d+[A-Za-z]?)', block_text, re.IGNORECASE)
             
             if fig_match and not is_narrative:
+                active_table_anchor = None
                 item_type = "fig"
                 num_str = fig_match.group(1)
                 digits = re.findall(r'\d+', num_str)
@@ -810,7 +829,40 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                 digits = re.findall(r'\d+', num_str)
                 idx_num = int(digits[0]) if digits else 1
                 anchor_id = f"[{current_section}, Table {num_str}]"
+                active_table_anchor = anchor_id
+                active_table_page = page_num
             else:
+                def is_table_content_block(text: str) -> bool:
+                    t = text.strip()
+                    if not t:
+                        return False
+                    # 1. Abbreviation glossary (e.g. 'Hcy, homocysteine; BMI, body mass index;')
+                    if re.search(r'\b[A-Z0-9]{2,}\s*,\s*[^;]+;\s*[A-Z0-9]{2,}\s*,', t):
+                        return True
+                    # 2. Footnote or statistical note header
+                    if re.match(r'^(?:(?:\*{1,3}|†|‡|§)?\s*p\s*[<>=]|Note:|Abbreviations?:|Footnotes?:)', t, re.IGNORECASE):
+                        return True
+                    # 3. Dense tabular layout (short lines, high numeric/symbol content)
+                    lines_in_block = [l.strip() for l in t.splitlines() if l.strip()]
+                    if len(lines_in_block) >= 3:
+                        wpl = len(t.split()) / len(lines_in_block)
+                        if wpl <= 4.5:
+                            return True
+                    return False
+
+                if active_table_anchor and (page_num <= active_table_page + 1) and is_table_content_block(block_text):
+                    t_meta = indexed_doc.anchor_metadata.get(active_table_anchor)
+                    if t_meta:
+                        t_meta.bbox[0] = min(t_meta.bbox[0], float(b[0]))
+                        t_meta.bbox[1] = min(t_meta.bbox[1], float(b[1]))
+                        t_meta.bbox[2] = max(t_meta.bbox[2], float(b[2]))
+                        t_meta.bbox[3] = max(t_meta.bbox[3], float(b[3]))
+                        indexed_doc.all_anchors[active_table_anchor] = (
+                            indexed_doc.all_anchors.get(active_table_anchor, "") + "\n" + block_text
+                        ).strip()
+                    continue
+
+                active_table_anchor = None
                 item_type = "para"
                 if current_section not in section_para_counters:
                     section_para_counters[current_section] = 0
