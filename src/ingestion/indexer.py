@@ -60,18 +60,31 @@ def clean_ocr_text(text: str) -> str:
     text = re.sub(r'(?m)^[eo•·\-]\s+(?=[A-Z])', '• ', text)
     return text.strip()
 
-def detect_section_header(line: str) -> Optional[str]:
-    """Identify common medical manuscript section headers."""
+def detect_section_header(line: str, current_section: Optional[str] = None) -> Optional[str]:
+    """Identify common medical manuscript section headers, supporting numbered prefixes and subsections."""
     clean_line = line.strip().strip(':').strip('.').strip('#').strip()
-    upper = clean_line.upper()
+    if not clean_line or len(clean_line) > 55:
+        return None
+    
+    # Strip markdown formatting
+    clean_line = re.sub(r'^[#*_\s]+', '', clean_line).strip()
+    clean_line = re.sub(r'[:#*_\s\.]+$', '', clean_line).strip()
+    
+    # Strip leading numbers/roman numerals and section prefixes: e.g. "1.", "1 ", "1.1", "3 ", "Section 3:"
+    stripped = re.sub(r'^(?:(?:section|part|sec)\.?\s*)?(?:[0-9]+(?:\.[0-9]+)*|[IVXLCDM]+)[\.\s\-:\)]+\s*', '', clean_line, flags=re.IGNORECASE).strip()
+    upper = stripped.upper()
     
     section_map = {
         'ABSTRACT': 'Abstract',
+        'SUMMARY': 'Abstract',
+        'HIGHLIGHTS': 'Abstract',
         'INTRODUCTION': 'Introduction',
         'BACKGROUND': 'Introduction',
         'METHODS': 'Methods',
         'PATIENTS AND METHODS': 'Methods',
         'MATERIALS AND METHODS': 'Methods',
+        'MATERIALS & METHODS': 'Methods',
+        'PATIENTS & METHODS': 'Methods',
         'STUDY DESIGN': 'Methods',
         'PATIENT POPULATION': 'Methods',
         'TREATMENT PLAN': 'Methods',
@@ -82,9 +95,13 @@ def detect_section_header(line: str) -> Optional[str]:
         'EFFICACY': 'Results',
         'SAFETY': 'Results',
         'TREATMENT EXPOSURE': 'Results',
+        'RESULTS AND DISCUSSION': 'Results',
+        'RESULTS & DISCUSSION': 'Results',
         'DISCUSSION': 'Discussion',
-        'CONCLUSIONS': 'Discussion',
-        'CONCLUSION': 'Discussion',
+        'CONCLUSIONS': 'Conclusions',
+        'CONCLUSION': 'Conclusions',
+        'CONCLUSIONS AND RELEVANCE': 'Conclusions',
+        'CONCLUSION AND RELEVANCE': 'Conclusions',
         'LIMITATIONS': 'Discussion',
         'LIMITATIONS OF THE STUDY': 'Discussion',
         'LIMITATIONS OF OUR WORK': 'Discussion',
@@ -97,12 +114,21 @@ def detect_section_header(line: str) -> Optional[str]:
         'REFERENCES': 'References'
     }
     
-    if len(clean_line) < 45:
-        if upper in section_map:
-            return section_map[upper]
-        for key in section_map:
-            if clean_line.upper().startswith(key + ' ') or clean_line.upper() == key:
-                return section_map[key]
+    # If currently in Abstract, subheadings like "Methods:", "Results:", "Conclusion:" within a structured abstract
+    # do NOT end the abstract unless an explicit "Introduction" or numbered "1 Introduction" is reached
+    if current_section == 'Abstract':
+        if re.match(r'^(?:[0-9]+|[IVXLCDM]+)[\.\s\-:\)]+', clean_line):
+            pass
+        elif upper == 'INTRODUCTION' or upper == 'BACKGROUND':
+            return 'Introduction'
+        else:
+            return None
+        
+    if upper in section_map:
+        return section_map[upper]
+    for key in section_map:
+        if upper.startswith(key + ' ') or upper == key:
+            return section_map[key]
     return None
 
 def is_structured_header_line(text: str) -> bool:
@@ -405,7 +431,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     doc = pymupdf.open(pdf_path)
     filename = os.path.basename(pdf_path)
     
-    current_section = "Introduction"
+    current_section = "Abstract"
     section_para_counters: Dict[str, int] = {}
     
     indexed_doc = IndexedDocument(filename=filename, doc_header="")
@@ -469,7 +495,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         for b, block_text in blocks:
             lines = [l.strip() for l in block_text.split('\n') if l.strip()]
             for l_idx, line in enumerate(lines[:5]):
-                detected = detect_section_header(line)
+                detected = detect_section_header(line, current_section)
                 if detected:
                     current_section = detected
                     if len(lines) == 1:
