@@ -772,13 +772,13 @@ def index_page():
                     <!-- PDF Input Control -->
                     <div id="tabPdf" class="flex items-center gap-2 flex-1">
                         <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-xs text-slate-600 file:mr-2.5 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer bg-white px-2 py-1 rounded border border-slate-200"/>
-                        <button onclick="startAppraisal()" id="runBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Evaluate</button>
+                        <button onclick="startAppraisal()" id="runBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Analyze</button>
                     </div>
 
                     <!-- URL / PMID Input Control -->
                     <div id="tabUrl" class="hidden flex items-center gap-2 flex-1">
                         <input type="text" id="paperUrl" placeholder="Paste PubMed URL, PMID (e.g. 37726553), PMC ID, or DOI" class="block w-full text-xs text-slate-800 bg-white px-3 py-1.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"/>
-                        <button onclick="startUrlResolution()" id="resolveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Fetch & Evaluate</button>
+                        <button onclick="startUrlResolution()" id="resolveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Fetch & Analyze</button>
                     </div>
                 </div>
 
@@ -826,10 +826,10 @@ def index_page():
                         The requested URL or identifier does not have a free full-text manuscript available (likely behind a journal paywall). We retrieved the official published abstract.
                     </p>
                     <div class="p-3 bg-amber-50 rounded-md border border-amber-200 text-xs text-amber-900 max-h-36 overflow-y-auto font-serif italic" id="modalAbstractSnippet"></div>
-                    <p class="text-xs font-semibold text-slate-700">Would you like to evaluate the abstract only?</p>
+                    <p class="text-xs font-semibold text-slate-700">Would you like to analyze the abstract only?</p>
                     <div class="flex justify-end gap-3 pt-2">
                         <button onclick="closeAbstractModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-md transition">Cancel</button>
-                        <button onclick="proceedWithAbstractOnly()" class="px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-md transition shadow">Evaluate Abstract Only</button>
+                        <button onclick="proceedWithAbstractOnly()" class="px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-md transition shadow">Analyze Abstract Only</button>
                     </div>
                 </div>
             </div>
@@ -2346,7 +2346,7 @@ ${escapeHtml(thought)}
                         pendingResolution = data;
                         document.getElementById('modalAbstractSnippet').innerText = data.abstract_text || '(Abstract text extracted from publication registry)';
                         document.getElementById('abstractModal').classList.remove('hidden');
-                        statusText.innerHTML = '<span class="text-amber-700 font-medium">⚠️ Abstract only available.</span> Awaiting user confirmation to evaluate abstract...';
+                        statusText.innerHTML = '<span class="text-amber-700 font-medium">⚠️ Abstract only available.</span> Awaiting user confirmation to analyze abstract...';
                         return;
                     }
 
