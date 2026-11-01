@@ -523,6 +523,31 @@ def index_page():
                 color: #ffffff !important;
                 border-color: #0369a1 !important;
             }
+            /* Rich Typography for Clinical Analysis Markdown */
+            #outputMarkdown h1 {
+                font-size: 1.35rem !important;
+                font-weight: 800 !important;
+                color: #0f172a !important; /* slate-900 */
+                line-height: 1.3 !important;
+                margin-top: 0 !important;
+                margin-bottom: 0.85rem !important;
+                letter-spacing: -0.015em !important;
+            }
+            #outputMarkdown h2 {
+                font-size: 1.125rem !important;
+                font-weight: 700 !important;
+                color: #0369a1 !important; /* sky-700 */
+                margin-top: 1.25rem !important;
+                margin-bottom: 0.5rem !important;
+                letter-spacing: -0.01em !important;
+            }
+            #outputMarkdown h3 {
+                font-size: 1.0rem !important;
+                font-weight: 700 !important;
+                color: #1e293b !important; /* slate-800 */
+                margin-top: 1rem !important;
+                margin-bottom: 0.35rem !important;
+            }
             /* Classic Live Hyperlink Style for DOI & External Links */
             #outputMarkdown a, .doi-link {
                 color: #0000ee !important;
@@ -2477,6 +2502,30 @@ ${escapeHtml(thought)}
                 }
                 content = cleanLatexMath(content);
 
+                // Ensure study title and 'Clinical Bottom Line' have proper bold/header markdown
+                // If content starts with raw title without '#', promote first line to '# Title'
+                const contentLines = content.trim().split('\n');
+                if (contentLines.length > 0) {
+                    let firstNonEmptyIdx = contentLines.findIndex(l => l.trim().length > 0);
+                    if (firstNonEmptyIdx !== -1) {
+                        let firstLine = contentLines[firstNonEmptyIdx].trim();
+                        // If first line is not already a markdown heading (# Title)
+                        if (!firstLine.startsWith('#')) {
+                            // Strip any leading bolding if present
+                            let rawTitle = firstLine.replace(/^\*\*|\*\*$/g, '').trim();
+                            contentLines[firstNonEmptyIdx] = '# ' + rawTitle;
+                        }
+                    }
+                    // Ensure 'Clinical Bottom Line' line is formatted as ## Clinical Bottom Line
+                    for (let i = 0; i < contentLines.length; i++) {
+                        let trimmedLine = contentLines[i].trim();
+                        if (/^(?:#*\s*)?\*\*?Clinical Bottom Line\*\*?:?$/i.test(trimmedLine) || trimmedLine.toLowerCase() === 'clinical bottom line') {
+                            contentLines[i] = '## Clinical Bottom Line';
+                        }
+                    }
+                    content = contentLines.join('\n');
+                }
+
                 if (window.marked) {
                     let html = marked.parse(content);
                     // Match coordinate blocks, supporting single, multi-paragraph, and compound citations
@@ -2486,7 +2535,7 @@ ${escapeHtml(thought)}
                         const trimmed = inner.trim();
                         if (trimmed.toLowerCase() === 'doc_header') {
                             const enc = encodeURIComponent('[Doc_Header]');
-                            return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">[Doc_Header]</button>`;
+                            return `<button onclick="inspectAnchor('${enc}')" data-anchor="[Doc_Header]" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">Doc_Header</button>`;
                         }
 
                         // Split compound coordinates by semicolon first, or by section-boundary comma
@@ -2502,9 +2551,11 @@ ${escapeHtml(thought)}
                         }
 
                         const buttons = parts.map(part => {
-                            const anchorLabel = `[${part}]`;
-                            const enc = encodeURIComponent(anchorLabel);
-                            return `<button onclick="inspectAnchor('${enc}')" class="anchor-pill inline-block px-2 py-0.5 mx-0.5 text-xs font-mono font-semibold bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300 rounded shadow-xs" title="Click to view source page and highlight">${anchorLabel}</button>`;
+                            const rawAnchorId = `[${part}]`;
+                            const enc = encodeURIComponent(rawAnchorId);
+                            // Clean display: remove brackets, change 'Para 1' -> 'p1'
+                            let displayText = part.replace(/\bPara\s*(\d+)\b/gi, 'p$1');
+                            return `<button onclick="inspectAnchor('${enc}')" data-anchor="${rawAnchorId}" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">${displayText}</button>`;
                         });
 
                         return buttons.join(' ');
@@ -2612,7 +2663,9 @@ ${escapeHtml(thought)}
                 
                 // Highlight active pill
                 document.querySelectorAll('.anchor-pill').forEach(el => {
-                    if (el.innerText.trim() === anchor) {
+                    const dataAnc = el.getAttribute('data-anchor');
+                    const text = el.innerText.trim();
+                    if (dataAnc === anchor || text === anchor || ('[' + text + ']') === anchor) {
                         el.classList.add('active');
                     } else {
                         el.classList.remove('active');
