@@ -107,6 +107,13 @@ def sanitize_and_verify_appraisal(markdown_text: str, valid_anchor_set: Dict[str
     cleaned = re.sub(r'\s*\{R_[A-Z0-9_]+\}', '', cleaned)
     cleaned = re.sub(r'\s*\[R_[A-Z0-9_]+\]', '', cleaned)
 
+    # 4. Expand combined multi-paragraph citations: [Methods, Para 1, 13] -> [Methods, Para 1] [Methods, Para 13]
+    def expand_combined_paras(match):
+        sec = match.group(1).strip()
+        nums = [n.strip() for n in match.group(2).split(',') if n.strip()]
+        return " ".join(f"[{sec}, Para {n}]" for n in nums)
+    cleaned = re.sub(r'\[([A-Za-z\s&]+?),\s*Para\s+(\d+(?:\s*,\s*\d+)+)\]', expand_combined_paras, cleaned, flags=re.IGNORECASE)
+
     # Clean up empty lines created by removals
     cleaned = re.sub(r'\n{3,}', '\n\n', cleaned).strip()
     

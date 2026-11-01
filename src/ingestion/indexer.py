@@ -144,9 +144,9 @@ def is_junk_block(b, page, text: str) -> bool:
     clean_t = text.strip()
     
     # 1. Top/bottom running headers and footers
-    if b[1] < 45 and (re.search(r'GeroScience|\d{4}|Vol[:\.]|https?://|[©\u00a9]', clean_t) or len(clean_t) < 40):
+    if b[1] < 55 and (re.search(r'JAMA|Lancet|BMJ|Frontiers|Nature|Science|Springer|Elsevier|GeroScience|\d{4}|Vol[:\.]|https?://|doi:|doi\.org|[©\u00a9]', clean_t, re.IGNORECASE) or len(clean_t) < 40):
         return True
-    if b[3] > h - 45 and (re.search(r'Vol[:\.]|1\s+3|\d{1,4}', clean_t) or len(clean_t) < 30):
+    if b[3] > h - 55 and (re.search(r'JAMA|Lancet|BMJ|Frontiers|Nature|Science|Springer|Elsevier|Vol[:\.]|1\s+3|\d{1,4}|doi:|https?://', clean_t, re.IGNORECASE) or len(clean_t) < 30):
         return True
     # 2. Publisher volume tags, barcodes, pagination marks
     if re.search(r'^(?:Vol[:\.]+\s*\(?\d+\)?|1\s+3|\d{1,5}|[0-9\s\.\(\)\-\u2013/:]+)$', clean_t, re.IGNORECASE):

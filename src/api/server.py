@@ -2554,15 +2554,30 @@ ${escapeHtml(thought)}
                         }
 
                         // Split compound coordinates by semicolon first, or by section-boundary comma
-                        let parts = [];
+                        let rawParts = [];
                         if (trimmed.includes(';')) {
-                            parts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
+                            rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
                         } else {
-                            parts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))/i).map(p => p.trim()).filter(Boolean);
+                            rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))/i).map(p => p.trim()).filter(Boolean);
                         }
 
-                        if (!parts || parts.length === 0) {
-                            parts = [trimmed];
+                        if (!rawParts || rawParts.length === 0) {
+                            rawParts = [trimmed];
+                        }
+
+                        let parts = [];
+                        for (const p of rawParts) {
+                            // Expand multi-paragraph list: e.g. "Methods, Para 1, 13" -> "Methods, Para 1", "Methods, Para 13"
+                            const multiParaMatch = p.match(/^([A-Za-z\s&]+?)\s*,\s*Para\s+(\d+(?:\s*,\s*\d+)+)$/i);
+                            if (multiParaMatch) {
+                                const sec = multiParaMatch[1].trim();
+                                const nums = multiParaMatch[2].split(',').map(n => n.trim()).filter(Boolean);
+                                for (const num of nums) {
+                                    parts.push(`${sec}, Para ${num}`);
+                                }
+                            } else {
+                                parts.push(p);
+                            }
                         }
 
                         const buttons = parts.map(part => {
