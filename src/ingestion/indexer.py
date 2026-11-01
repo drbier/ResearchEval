@@ -23,6 +23,7 @@ class IndexedDocument(BaseModel):
     sections: Dict[str, List[CoordinateAnchor]] = {}
     all_anchors: Dict[str, str] = {}  # Map anchor_id to text
     anchor_metadata: Dict[str, CoordinateAnchor] = {}
+    raw_text: str = ""
 
 STRUCTURED_ABSTRACT_MAP = {
     'IMPORTANCE': 'Importance',
@@ -547,5 +548,6 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                 last_para.text = f"{last_para.text} {first_next.text}"
                 indexed_doc.all_anchors[last_para.anchor_id] = last_para.text
                 
+    indexed_doc.raw_text = clean_ocr_text("\n\n".join(full_text_accumulator))
     doc.close()
     return indexed_doc
