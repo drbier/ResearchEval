@@ -148,13 +148,24 @@ def is_junk_block(b, page, text: str) -> bool:
         return True
     if b[3] > h - 55 and (re.search(r'JAMA|Lancet|BMJ|Frontiers|Nature|Science|Springer|Elsevier|Vol[:\.]|1\s+3|\d{1,4}|doi:|https?://', clean_t, re.IGNORECASE) or len(clean_t) < 30):
         return True
-    # 2. Publisher volume tags, barcodes, pagination marks
+    # 2. Publisher license, repository downloads, watermarks anywhere on page
+    if re.search(r'Open Access\.\s+This is an open access article', clean_t, re.IGNORECASE):
+        return True
+    if re.search(r'Downloaded from\s+[a-z0-9\.\-]+', clean_t, re.IGNORECASE):
+        return True
+    if re.search(r'^(?:[0-9\s\.\(\)\-\u2013/:]*doi:10\.\d{4,9}/[^\n]*)$', clean_t, re.IGNORECASE):
+        return True
+    if re.search(r'^(?:JAMA Network Open\.\s*\d{4}[^\n]*doi:[^\n]*)$', clean_t, re.IGNORECASE):
+        return True
+    # 3. Publisher volume tags, barcodes, pagination marks
     if re.search(r'^(?:Vol[:\.]+\s*\(?\d+\)?|1\s+3|\d{1,5}|[0-9\s\.\(\)\-\u2013/:]+)$', clean_t, re.IGNORECASE):
         return True
-    # 3. Disconnected plot/axis labels without word structure
+    # 4. Disconnected plot/axis labels without word structure, or single isolated punctuation
+    if len(clean_t) <= 2 and not clean_t.isalnum():
+        return True
     if len(clean_t) < 25 and not re.search(r'[a-zA-Z]{3,}', clean_t):
         return True
-    # 4. Standalone copyright notice
+    # 5. Standalone copyright notice
     if re.match(r'^[©\u00a9]\s*The\s+Author', clean_t, re.IGNORECASE):
         return True
     return False
@@ -317,8 +328,27 @@ def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
                 curr_row.append(item)
             else:
                 curr_row.sort(key=lambda r: r["bbox"][0])
+                r_text = clean_ocr_text(" ".join(r["text"] for r in curr_row))
+                r_text = re.sub(r'[\s\|\.\-]{3,}$', '', r_text).strip()
+                if r_text:
+                    merged_lines.append({
+                        "text": r_text,
+                        "bbox": [
+                            min(r["bbox"][0] for r in curr_row),
+                            min(r["bbox"][1] for r in curr_row),
+                            max(r["bbox"][2] for r in curr_row),
+                            max(r["bbox"][3] for r in curr_row)
+                        ],
+                        "col": target_col
+                    })
+                curr_row = [item]
+        if curr_row:
+            curr_row.sort(key=lambda r: r["bbox"][0])
+            r_text = clean_ocr_text(" ".join(r["text"] for r in curr_row))
+            r_text = re.sub(r'[\s\|\.\-]{3,}$', '', r_text).strip()
+            if r_text:
                 merged_lines.append({
-                    "text": " ".join(r["text"] for r in curr_row),
+                    "text": r_text,
                     "bbox": [
                         min(r["bbox"][0] for r in curr_row),
                         min(r["bbox"][1] for r in curr_row),
@@ -327,19 +357,6 @@ def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
                     ],
                     "col": target_col
                 })
-                curr_row = [item]
-        if curr_row:
-            curr_row.sort(key=lambda r: r["bbox"][0])
-            merged_lines.append({
-                "text": " ".join(r["text"] for r in curr_row),
-                "bbox": [
-                    min(r["bbox"][0] for r in curr_row),
-                    min(r["bbox"][1] for r in curr_row),
-                    max(r["bbox"][2] for r in curr_row),
-                    max(r["bbox"][3] for r in curr_row)
-                ],
-                "col": target_col
-            })
             
     return merged_lines
 
@@ -431,7 +448,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     doc = pymupdf.open(pdf_path)
     filename = os.path.basename(pdf_path)
     
-    current_section = "Abstract"
+    current_section = "Header"
     section_para_counters: Dict[str, int] = {}
     
     indexed_doc = IndexedDocument(filename=filename, doc_header="")
@@ -496,6 +513,10 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             lines = [l.strip() for l in block_text.split('\n') if l.strip()]
             for l_idx, line in enumerate(lines[:5]):
                 detected = detect_section_header(line, current_section)
+                if not detected and current_section == "Header":
+                    clean_u = line.strip().strip(':').strip('.').strip('#').strip().upper()
+                    if clean_u == 'ABSTRACT' or clean_u == 'SUMMARY' or is_structured_header_line(line):
+                        detected = 'Abstract'
                 if detected:
                     current_section = detected
                     if len(lines) == 1:
@@ -509,6 +530,13 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             
             # Clean OCR bullet glyph artifacts within block text
             block_text = clean_ocr_text(block_text)
+            block_text = re.sub(r'[\s\|\.\-]{3,}$', '', block_text).strip()
+            if not block_text:
+                continue
+
+            if current_section == "Header":
+                # Front matter preceding abstract/intro belongs to [Doc_Header]
+                continue
             
             is_narrative = bool(re.search(
                 r'^(?:Fig(?:ure)?|Table)\s*\d+\s+(?:shows?|presents?|displays?|depicts?|illustrates?|demonstrates?|compares?|indicates?|reveals?|summarizes?|lists?|reports?|provides?|plots?|evaluates?)\b',
