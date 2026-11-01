@@ -2476,40 +2476,42 @@ ${escapeHtml(thought)}
                 }
                 if (!text) return '';
 
-                const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?)\]/gi;
-                text = text.replace(bracketCoordRegex, function(fullMatch, inner) {
-                    const trimmed = inner.trim();
-                    if (trimmed.toLowerCase() === 'doc_header') {
-                        return 'Header';
-                    }
-
-                    let rawParts = [];
-                    if (trimmed.includes(';')) {
-                        rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
-                    } else {
-                        rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))/i).map(p => p.trim()).filter(Boolean);
-                    }
-
-                    if (!rawParts || rawParts.length === 0) {
-                        rawParts = [trimmed];
-                    }
-
-                    let parts = [];
-                    for (const p of rawParts) {
-                        const multiParaMatch = p.match(/^([A-Za-z\s&]+?),\s*Para\s+(\d+(?:,\s*\d+)+)$/i);
-                        if (multiParaMatch) {
-                            const sec = multiParaMatch[1].trim();
-                            const nums = multiParaMatch[2].split(',').map(n => n.trim()).filter(Boolean);
-                            for (const num of nums) {
-                                parts.push(`${sec}, Para ${num}`);
-                            }
+                // Group consecutive coordinate anchor brackets so they export neatly demarcated as [Abs, p38; Abs, p39; Abs, p41]
+                const consecutiveCoordGroupRegex = /(\[\s*[^[\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?\](?:\s*\[\s*[^[\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?\])*)/gi;
+                text = text.replace(consecutiveCoordGroupRegex, function(fullMatch) {
+                    const singleBracketRe = /\[\s*([^[\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?)\s*\]/gi;
+                    const items = [];
+                    let match;
+                    while ((match = singleBracketRe.exec(fullMatch)) !== null) {
+                        const trimmed = match[1].trim();
+                        if (trimmed.toLowerCase() === 'doc_header') {
+                            items.push('Header');
+                            continue;
+                        }
+                        let rawParts = [];
+                        if (trimmed.includes(';')) {
+                            rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
                         } else {
-                            parts.push(p);
+                            rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))/i).map(p => p.trim()).filter(Boolean);
+                        }
+                        if (!rawParts || rawParts.length === 0) {
+                            rawParts = [trimmed];
+                        }
+                        for (const p of rawParts) {
+                            const multiParaMatch = p.match(/^([A-Za-z\s&]+?),\s*Para\s+(\d+(?:,\s*\d+)+)$/i);
+                            if (multiParaMatch) {
+                                const sec = multiParaMatch[1].trim();
+                                const nums = multiParaMatch[2].split(',').map(n => n.trim()).filter(Boolean);
+                                for (const num of nums) {
+                                    items.push(formatAnchorDisplay(${sec}, Para ));
+                                }
+                            } else {
+                                items.push(formatAnchorDisplay(p));
+                            }
                         }
                     }
-
-                    const formatted = parts.map(part => formatAnchorDisplay(part));
-                    return formatted.join(', ');
+                    if (items.length === 0) return fullMatch;
+                    return [];
                 });
 
                 return text.replace(/[ \t]{2,}/g, ' ').trim();

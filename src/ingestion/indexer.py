@@ -115,19 +115,28 @@ def detect_section_header(line: str, current_section: Optional[str] = None) -> O
     }
     
     # If currently in Abstract, subheadings like "Methods:", "Results:", "Conclusion:" within a structured abstract
-    # do NOT end the abstract unless an explicit "Introduction" or numbered "1 Introduction" is reached
+    # do NOT end the abstract unless an explicit "Introduction", "Methods", "Results", etc. is reached.
+    # However, if we encounter a true manuscript section header (Introduction, Background, Methods, Results, Discussion, Conclusions)
+    # we MUST allow transitioning out of Abstract!
     if current_section == 'Abstract':
-        if re.match(r'^(?:[0-9]+|[IVXLCDM]+)[\.\s\-:\)]+', clean_line):
+        if upper in ('INTRODUCTION', 'BACKGROUND', 'METHODS', 'PATIENTS AND METHODS', 'MATERIALS AND METHODS', 'RESULTS', 'FINDINGS', 'DISCUSSION', 'CONCLUSIONS', 'CONCLUSION'):
+            return section_map[upper]
+        elif re.match(r'^(?:[0-9]+|[IVXLCDM]+)[\.\s\-:\)]+', clean_line):
             pass
-        elif upper == 'INTRODUCTION' or upper == 'BACKGROUND':
-            return 'Introduction'
         else:
             return None
         
     if upper in section_map:
         return section_map[upper]
     for key in section_map:
-        if upper.startswith(key + ' ') or upper == key:
+        if upper == key:
+            return section_map[key]
+        if upper.startswith(key + ' '):
+            # Guard: do not match inline citations or sentence fragments like "appendix p 18", "appendix (pp 7-10)", "methods see online"
+            if key in ('APPENDIX', 'SUPPLEMENTARY', 'SUPPLEMENTARY APPENDIX', 'SUPPLEMENTARY MATERIAL'):
+                if re.match(r'^(?:APPENDIX|SUPPLEMENTARY(?:\s+(?:APPENDIX|MATERIAL))?)\s*(?:[0-9A-Z]+|TABLE|FIGURE)?$', upper):
+                    return section_map[key]
+                continue
             return section_map[key]
     return None
 
@@ -143,10 +152,10 @@ def is_junk_block(b, page, text: str) -> bool:
     h = page.rect.height
     clean_t = text.strip()
     
-    # 1. Top/bottom running headers and footers
-    if b[1] < 55 and (re.search(r'JAMA|Lancet|BMJ|Frontiers|Nature|Science|Springer|Elsevier|GeroScience|\d{4}|Vol[:\.]|https?://|doi:|doi\.org|[©\u00a9]', clean_t, re.IGNORECASE) or len(clean_t) < 40):
+    # 1. Top/bottom running headers and footers (must start near margin AND be brief, not entire paragraphs)
+    if b[1] < 55 and len(clean_t) < 160 and (re.search(r'JAMA|Lancet|BMJ|Frontiers|Nature|Science|Springer|Elsevier|GeroScience|\d{4}|Vol[:\.]|https?://|doi:|doi\.org|[©\u00a9]', clean_t, re.IGNORECASE) or len(clean_t) < 40):
         return True
-    if b[3] > h - 55 and (re.search(r'JAMA|Lancet|BMJ|Frontiers|Nature|Science|Springer|Elsevier|Vol[:\.]|1\s+3|\d{1,4}|doi:|https?://', clean_t, re.IGNORECASE) or len(clean_t) < 30):
+    if b[1] > h - 55 and len(clean_t) < 160 and (re.search(r'JAMA|Lancet|BMJ|Frontiers|Nature|Science|Springer|Elsevier|Vol[:\.]|1\s+3|\d{1,4}|doi:|https?://', clean_t, re.IGNORECASE) or len(clean_t) < 30):
         return True
     # 2. Publisher license, repository downloads, watermarks anywhere on page
     if re.search(r'Open Access\.\s+This is an open access article', clean_t, re.IGNORECASE):
@@ -173,6 +182,7 @@ def is_junk_block(b, page, text: str) -> bool:
 def extract_raw_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
     d = page.get_text("dict", textpage=textpage)
     raw_lines = []
+    width = float(page.rect.width)
     for b in d.get("blocks", []):
         if "lines" not in b:
             continue
@@ -181,6 +191,40 @@ def extract_raw_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
             valid_spans = [s for s in spans if s.get("text", "").strip()]
             if not valid_spans:
                 continue
+            
+            # If a line bridges the left margin notes (x < 120) and main column (x >= 120), split them
+            # into separate lines so margin references like "See Online for appendix" don't contaminate headings
+            left_margin_spans = [s for s in valid_spans if s["bbox"][2] <= 122.0]
+            col_spans = [s for s in valid_spans if s["bbox"][0] >= 120.0]
+            if left_margin_spans and col_spans and (col_spans[0]["bbox"][0] - left_margin_spans[-1]["bbox"][2]) >= 8.0:
+                # Add left margin line
+                t_left = " ".join(s["text"].strip() for s in left_margin_spans).strip()
+                if t_left:
+                    raw_lines.append({
+                        "text": t_left,
+                        "bbox": [
+                            min(s["bbox"][0] for s in left_margin_spans),
+                            min(s["bbox"][1] for s in left_margin_spans),
+                            max(s["bbox"][2] for s in left_margin_spans),
+                            max(s["bbox"][3] for s in left_margin_spans)
+                        ],
+                        "spans": left_margin_spans
+                    })
+                # Add main col line
+                t_col = " ".join(s["text"].strip() for s in col_spans).strip()
+                if t_col:
+                    raw_lines.append({
+                        "text": t_col,
+                        "bbox": [
+                            min(s["bbox"][0] for s in col_spans),
+                            min(s["bbox"][1] for s in col_spans),
+                            max(s["bbox"][2] for s in col_spans),
+                            max(s["bbox"][3] for s in col_spans)
+                        ],
+                        "spans": col_spans
+                    })
+                continue
+
             line_text = " ".join(s["text"].strip() for s in valid_spans)
             x0 = min(s["bbox"][0] for s in valid_spans)
             y0 = min(s["bbox"][1] for s in valid_spans)
@@ -218,6 +262,7 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
     min_cov = min(band)
     threshold = max(min_cov, 1)
     
+    # 1. Clear / near-empty vertical gutter detection
     best_start = None
     best_len = 0
     curr_start = None
@@ -241,12 +286,30 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
         best_len = curr_len
         best_start = curr_start
         
-    if best_start is not None and best_len >= 8:
+    if best_start is not None and best_len >= 8 and min_cov <= 3:
         split_x = best_start + (best_len / 2.0)
         left_count = sum(1 for l in body_lines if l["bbox"][2] < split_x)
         right_count = sum(1 for l in body_lines if l["bbox"][0] > split_x)
         if left_count >= 5 and right_count >= 5:
             return split_x, True
+
+    # 2. Valley detector for pages with wide cross-column tables or minor OCR bleed
+    best_x = None
+    best_ratio = 999.0
+    for x in range(start_x + 5, end_x - 5):
+        left_peak = max(coverage[max(0, x-60):max(1, x-10)])
+        right_peak = max(coverage[min(w-1, x+10):min(w, x+60)])
+        valley = sum(coverage[x-2:x+3]) / 5.0
+        if left_peak >= 12 and right_peak >= 12:
+            ratio = valley / min(left_peak, right_peak)
+            if ratio < 0.65 and ratio < best_ratio:
+                best_ratio = ratio
+                best_x = x
+    if best_x is not None:
+        left_count = sum(1 for l in body_lines if l["bbox"][2] < best_x)
+        right_count = sum(1 for l in body_lines if l["bbox"][0] > best_x)
+        if left_count >= 5 and right_count >= 5:
+            return float(best_x), True
             
     return width * 0.5, False
 
@@ -324,7 +387,9 @@ def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
         col_subset.sort(key=lambda item: (round(item["bbox"][1] / 3.0), item["bbox"][0]))
         curr_row = [col_subset[0]]
         for item in col_subset[1:]:
-            if abs(item["bbox"][1] - curr_row[-1]["bbox"][1]) <= 3.5:
+            # Do not merge if there is a wide horizontal gutter gap (e.g. left margin annotation vs main column heading)
+            h_gap = item["bbox"][0] - curr_row[-1]["bbox"][2]
+            if abs(item["bbox"][1] - curr_row[-1]["bbox"][1]) <= 3.5 and h_gap <= 6.0:
                 curr_row.append(item)
             else:
                 curr_row.sort(key=lambda r: r["bbox"][0])
@@ -379,6 +444,8 @@ def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0) ->
         
         is_break = False
         if is_structured_header_line(curr_text):
+            is_break = True
+        elif detect_section_header(curr_text):
             is_break = True
         elif vgap > max_vgap:
             is_break = True
