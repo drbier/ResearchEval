@@ -11,6 +11,7 @@ set SERVER=myown-deploy
 set "REMOTE_COMMAND=cd /var/www/fast && git checkout -f && git pull && venv/bin/pip install -r requirements.txt && sudo -u www-data pm2 restart fast --update-env"
 
 echo Executing remote deployment commands...
+echo (If prompted, please enter your server SSH/sudo password)
 echo.
 
 ssh -t %SERVER% "%REMOTE_COMMAND%"
