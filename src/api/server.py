@@ -2503,7 +2503,7 @@ ${escapeHtml(thought)}
                                 const sec = multiParaMatch[1].trim();
                                 const nums = multiParaMatch[2].split(',').map(n => n.trim()).filter(Boolean);
                                 for (const num of nums) {
-                                    items.push(formatAnchorDisplay(${sec}, Para ));
+                                    items.push(formatAnchorDisplay(sec + ", Para " + num));
                                 }
                             } else {
                                 items.push(formatAnchorDisplay(p));
