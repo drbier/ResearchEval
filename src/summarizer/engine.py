@@ -100,9 +100,10 @@ class PaperSummarizer:
         prompt: str,
         system_instruction: str,
         json_mode: bool = False,
-        preferred_model: Optional[str] = None
+        preferred_model: Optional[str] = None,
+        thinking_level: Optional[str] = None
     ) -> Tuple[str, str]:
-        """Invoke Gemini with automated GA fallback ladder and rate-limit backoff."""
+        """Invoke Gemini with automated GA fallback ladder, rate-limit backoff, and dynamic thinkingConfig."""
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY environment variable is not configured.")
 
@@ -110,6 +111,8 @@ class PaperSummarizer:
         for m in MODEL_HIERARCHY:
             if m not in models_to_try:
                 models_to_try.append(m)
+
+        effective_thinking = thinking_level or os.getenv("GEMINI_SUMMARIZER_THINKING_LEVEL", "low")
 
         last_err = ""
         for model in models_to_try:
@@ -122,6 +125,10 @@ class PaperSummarizer:
                     "maxOutputTokens": 8192
                 }
             }
+            if effective_thinking:
+                payload["generationConfig"]["thinkingConfig"] = {
+                    "thinkingLevel": effective_thinking
+                }
             if json_mode:
                 payload["generationConfig"]["responseMimeType"] = "application/json"
 

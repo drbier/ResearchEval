@@ -11,8 +11,11 @@ import os
 import tempfile
 import time
 import unittest
+from unittest.mock import patch, MagicMock
 from src.finder.cache import SearchQueryCache
 from src.finder.searcher import PaperFinder
+from src.appraisal.generator import SynthesisEngine
+from src.summarizer.engine import PaperSummarizer
 
 
 class TestSearchQueryCache(unittest.TestCase):
@@ -126,6 +129,48 @@ class TestDynamicThinkingLevel(unittest.TestCase):
         comp_query = "CoQ10 vs ubiquinol in congestive heart failure"
         level = self.finder.determine_thinking_level(comp_query)
         self.assertEqual(level, "medium")
+
+
+class TestAppraisalAndSummarizerThinkingConfig(unittest.TestCase):
+    @patch("requests.post")
+    def test_appraisal_invokes_medium_thinking_by_default(self, mock_post):
+        """SynthesisEngine._invoke_gemini_rest sends thinkingConfig with thinkingLevel='medium'."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "candidates": [{"content": {"parts": [{"text": "Appraisal text"}]}}]
+        }
+        mock_post.return_value = mock_resp
+
+        engine = SynthesisEngine(data_dir="data", api_key="dummy_key")
+        engine._invoke_gemini_rest("Test prompt", "System instruction")
+
+        self.assertTrue(mock_post.called)
+        call_kwargs = mock_post.call_args[1]
+        json_payload = call_kwargs.get("json", {})
+        gen_config = json_payload.get("generationConfig", {})
+        self.assertIn("thinkingConfig", gen_config)
+        self.assertEqual(gen_config["thinkingConfig"].get("thinkingLevel"), "medium")
+
+    @patch("requests.post")
+    def test_summarizer_invokes_low_thinking_by_default(self, mock_post):
+        """PaperSummarizer._invoke_gemini sends thinkingConfig with thinkingLevel='low'."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "candidates": [{"content": {"parts": [{"text": "Summary text"}]}}]
+        }
+        mock_post.return_value = mock_resp
+
+        summarizer = PaperSummarizer(api_key="dummy_key")
+        summarizer._invoke_gemini("Test prompt", "System instruction")
+
+        self.assertTrue(mock_post.called)
+        call_kwargs = mock_post.call_args[1]
+        json_payload = call_kwargs.get("json", {})
+        gen_config = json_payload.get("generationConfig", {})
+        self.assertIn("thinkingConfig", gen_config)
+        self.assertEqual(gen_config["thinkingConfig"].get("thinkingLevel"), "low")
 
 
 if __name__ == "__main__":

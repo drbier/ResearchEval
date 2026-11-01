@@ -113,13 +113,21 @@ Anchors & Text:
             "relevant_lexicon": relevant_lexicon
         }
 
-    def _invoke_gemini_rest(self, prompt: str, system_instruction: str, preferred_model: Optional[str] = None) -> Tuple[str, str, str]:
+    def _invoke_gemini_rest(
+        self,
+        prompt: str,
+        system_instruction: str,
+        preferred_model: Optional[str] = None,
+        thinking_level: Optional[str] = None
+    ) -> Tuple[str, str, str]:
         """Invoke Gemini via direct REST call with automated model fallback and optional thought capture."""
         models_to_try = [preferred_model] if preferred_model else []
         for m in MODEL_HIERARCHY:
             if m not in models_to_try:
                 models_to_try.append(m)
                 
+        effective_thinking = thinking_level or os.getenv("GEMINI_APPRAISAL_THINKING_LEVEL", "medium")
+
         last_error = ""
         for model in models_to_try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
@@ -131,6 +139,10 @@ Anchors & Text:
                     "maxOutputTokens": 8192
                 }
             }
+            if effective_thinking:
+                payload["generationConfig"]["thinkingConfig"] = {
+                    "thinkingLevel": effective_thinking
+                }
             try:
                 resp = requests.post(url, json=payload, timeout=45)
                 if resp.status_code == 200:
@@ -175,10 +187,12 @@ Anchors & Text:
             }
             
         # Step 2: Invoke verified Gemini endpoint
+        thinking_lvl = os.getenv("GEMINI_APPRAISAL_THINKING_LEVEL", "medium")
         raw_output, thought_output, used_model = self._invoke_gemini_rest(
             prompt=payload["user_prompt"],
             system_instruction=payload["system_instruction"],
-            preferred_model=model_override
+            preferred_model=model_override,
+            thinking_level=thinking_lvl
         )
         
         # Step 3: Sanitize and verify coordinate anchors
@@ -187,6 +201,7 @@ Anchors & Text:
         return {
             "status": "success",
             "selected_model": used_model,
+            "thinking_level": thinking_lvl,
             "triage": triage.model_dump(),
             "active_rules_detail": payload["active_rules"],
             "sanitization": sanitization.model_dump(),
