@@ -1,42 +1,60 @@
 import os
-import sys
 import re
-from typing import List, Dict, Any, Optional
 import pymupdf
-from pydantic import BaseModel, Field
-
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')
-if hasattr(sys.stderr, 'reconfigure'):
-    sys.stderr.reconfigure(encoding='utf-8')
+from typing import List, Dict, Any, Tuple, Optional
+from pydantic import BaseModel
 
 class CoordinateAnchor(BaseModel):
     anchor_id: str
     section: str
-    item_type: str  # 'header', 'para', 'table', 'fig', 'supp'
+    item_type: str  # "para", "table", "fig", "header"
     index: int
     text: str
     page_number: int
-    page_width: float = 595.0
-    page_height: float = 842.0
-    bbox: Optional[List[float]] = None  # [x0, y0, x1, y1] on the page
+    page_width: float
+    page_height: float
+    bbox: List[float]  # [x0, y0, x1, y1] in PDF points
     overflow_page: Optional[int] = None
     overflow_bbox: Optional[List[float]] = None
-    overflow_text: Optional[str] = None
 
 class IndexedDocument(BaseModel):
     filename: str
     doc_header: str
-    sections: Dict[str, List[CoordinateAnchor]] = Field(default_factory=dict)
-    all_anchors: Dict[str, str] = Field(default_factory=dict)  # anchor_id -> text
-    anchor_metadata: Dict[str, CoordinateAnchor] = Field(default_factory=dict)  # anchor_id -> CoordinateAnchor
-    raw_text: str = ""
+    sections: Dict[str, List[CoordinateAnchor]] = {}
+    all_anchors: Dict[str, str] = {}  # Map anchor_id to text
+    anchor_metadata: Dict[str, CoordinateAnchor] = {}
 
-def clean_text(text: str) -> str:
-    """Normalize whitespace and strip spurious control characters."""
-    text = re.sub(r'\r\n|\r', '\n', text)
+STRUCTURED_ABSTRACT_MAP = {
+    'IMPORTANCE': 'Importance',
+    'OBJECTIVE': 'Objective',
+    'BACKGROUND': 'Background',
+    'CONTEXT': 'Context',
+    'DESIGN, SETTING, AND PARTICIPANTS': 'Design',
+    'DESIGN': 'Design',
+    'SETTING': 'Setting',
+    'PARTICIPANTS': 'Participants',
+    'INTERVENTIONS': 'Intervention',
+    'INTERVENTION': 'Intervention',
+    'EXPOSURE': 'Exposure',
+    'EXPOSURES': 'Exposure',
+    'MAIN OUTCOMES AND MEASURES': 'Outcomes',
+    'MAIN OUTCOMES': 'Outcomes',
+    'OUTCOMES': 'Outcomes',
+    'MEASURES': 'Outcomes',
+    'RESULTS': 'Results',
+    'FINDINGS': 'Results',
+    'CONCLUSIONS AND RELEVANCE': 'Conclusions',
+    'CONCLUSIONS': 'Conclusions',
+    'CONCLUSION': 'Conclusions'
+}
+
+def clean_ocr_text(text: str) -> str:
+    """Standardize ligatures, special whitespace, and OCR hyphens."""
+    if not text:
+        return ""
+    text = text.replace('\xa0', ' ')
     text = re.sub(r'[ \t]+', ' ', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'(\w+)-\n(\w+)', r'\1\2', text)
     return text.strip()
 
 def detect_section_header(line: str) -> Optional[str]:
@@ -44,7 +62,6 @@ def detect_section_header(line: str) -> Optional[str]:
     clean_line = line.strip().strip(':').strip('.').strip('#').strip()
     upper = clean_line.upper()
     
-    # Common standard sections and clinical trial subheadings
     section_map = {
         'ABSTRACT': 'Abstract',
         'INTRODUCTION': 'Introduction',
@@ -77,7 +94,6 @@ def detect_section_header(line: str) -> Optional[str]:
         'REFERENCES': 'References'
     }
     
-    # Header heuristics: short length, uppercase or title case match
     if len(clean_line) < 45:
         if upper in section_map:
             return section_map[upper]
@@ -85,6 +101,13 @@ def detect_section_header(line: str) -> Optional[str]:
             if clean_line.upper().startswith(key + ' ') or clean_line.upper() == key:
                 return section_map[key]
     return None
+
+def is_structured_header_line(text: str) -> bool:
+    t = text.strip().upper()
+    for h in STRUCTURED_ABSTRACT_MAP:
+        if re.match(r'^' + re.escape(h) + r'(?:[\s\.:\-\u2013\u2014|]+.*)?$', t):
+            return True
+    return False
 
 def is_junk_block(b, page, text: str) -> bool:
     """Filter out publisher watermarks, barcodes, margin running heads, and disconnected axis fragments."""
@@ -107,14 +130,9 @@ def is_junk_block(b, page, text: str) -> bool:
         return True
     return False
 
-def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
-    """Extract individual text lines with exact bounding boxes, splitting lines accidentally merged across columns."""
+def extract_raw_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
     d = page.get_text("dict", textpage=textpage)
-    width = float(page.rect.width)
-    mid_x = width * 0.5
-    
-    clean_lines = []
-    
+    raw_lines = []
     for b in d.get("blocks", []):
         if "lines" not in b:
             continue
@@ -123,64 +141,178 @@ def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
             valid_spans = [s for s in spans if s.get("text", "").strip()]
             if not valid_spans:
                 continue
-                
-            left_spans = [s for s in valid_spans if s["bbox"][2] <= mid_x + 10]
-            right_spans = [s for s in valid_spans if s["bbox"][0] >= mid_x - 10]
+            line_text = " ".join(s["text"].strip() for s in valid_spans)
+            x0 = min(s["bbox"][0] for s in valid_spans)
+            y0 = min(s["bbox"][1] for s in valid_spans)
+            x1 = max(s["bbox"][2] for s in valid_spans)
+            y1 = max(s["bbox"][3] for s in valid_spans)
+            raw_lines.append({
+                "text": line_text,
+                "bbox": [x0, y0, x1, y1],
+                "spans": valid_spans
+            })
+    return raw_lines
+
+def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: float) -> Tuple[float, bool]:
+    w = int(width)
+    body_lines = [
+        l for l in lines 
+        if l["bbox"][1] >= height * 0.15 and l["bbox"][3] <= height * 0.90 and len(l.get("text", "").strip()) >= 2
+    ]
+    if not body_lines:
+        return width * 0.5, False
+        
+    coverage = [0] * w
+    for l in body_lines:
+        x0 = max(0, int(l["bbox"][0]))
+        x1 = min(w, int(l["bbox"][2]))
+        for x in range(x0, x1):
+            coverage[x] += 1
             
-            # If line has spans on both sides of center and there is an unmistakable gutter between them
-            if left_spans and right_spans and (min(s["bbox"][0] for s in right_spans) - max(s["bbox"][2] for s in left_spans)) >= 8.0:
-                t_left = " ".join(s["text"].strip() for s in left_spans if s["text"].strip())
-                t_right = " ".join(s["text"].strip() for s in right_spans if s["text"].strip())
-                if t_left:
-                    clean_lines.append({
-                        "text": t_left,
-                        "bbox": [
-                            min(s["bbox"][0] for s in left_spans),
-                            min(s["bbox"][1] for s in left_spans),
-                            max(s["bbox"][2] for s in left_spans),
-                            max(s["bbox"][3] for s in left_spans)
-                        ],
-                        "col": 1
-                    })
-                if t_right:
-                    clean_lines.append({
-                        "text": t_right,
-                        "bbox": [
-                            min(s["bbox"][0] for s in right_spans),
-                            min(s["bbox"][1] for s in right_spans),
-                            max(s["bbox"][2] for s in right_spans),
-                            max(s["bbox"][3] for s in right_spans)
-                        ],
-                        "col": 2
-                    })
+    start_x = int(w * 0.35)
+    end_x = int(w * 0.75)
+    band = coverage[start_x:end_x]
+    if not band:
+        return width * 0.5, False
+        
+    min_cov = min(band)
+    threshold = max(min_cov, 1)
+    
+    best_start = None
+    best_len = 0
+    curr_start = None
+    curr_len = 0
+    
+    for idx, cov in enumerate(band):
+        if cov <= threshold:
+            if curr_start is None:
+                curr_start = start_x + idx
+                curr_len = 1
             else:
-                line_text = " ".join(s["text"].strip() for s in valid_spans if s["text"].strip())
-                if len(valid_spans) > 1:
-                    x0 = min(s["bbox"][0] for s in valid_spans)
-                    x1 = max(s["bbox"][2] for s in valid_spans)
-                    # Filter out single-span OCR width glitches that extend across gutter
-                    if sum(1 for s in valid_spans if s["bbox"][0] >= mid_x - 10) >= len(valid_spans) * 0.7:
-                        x0 = max(x0, min(s["bbox"][0] for s in valid_spans if s["bbox"][0] >= mid_x - 10))
-                        col = 2
-                    elif sum(1 for s in valid_spans if s["bbox"][2] <= mid_x + 10) >= len(valid_spans) * 0.7:
-                        x1 = min(x1, max(s["bbox"][2] for s in valid_spans if s["bbox"][2] <= mid_x + 10))
-                        col = 1
-                    else:
-                        col = 0
-                else:
-                    x0 = valid_spans[0]["bbox"][0]
-                    x1 = valid_spans[0]["bbox"][2]
-                    col = 1 if x1 <= mid_x + 10 else (2 if x0 >= mid_x - 10 else 0)
-                    
-                y0 = min(s["bbox"][1] for s in valid_spans)
-                y1 = max(s["bbox"][3] for s in valid_spans)
-                clean_lines.append({
-                    "text": line_text,
-                    "bbox": [x0, y0, x1, y1],
-                    "col": col
+                curr_len += 1
+        else:
+            if curr_start is not None:
+                if curr_len > best_len:
+                    best_len = curr_len
+                    best_start = curr_start
+                curr_start = None
+                curr_len = 0
+    if curr_start is not None and curr_len > best_len:
+        best_len = curr_len
+        best_start = curr_start
+        
+    if best_start is not None and best_len >= 8:
+        split_x = best_start + (best_len / 2.0)
+        left_count = sum(1 for l in body_lines if l["bbox"][2] < split_x)
+        right_count = sum(1 for l in body_lines if l["bbox"][0] > split_x)
+        if left_count >= 5 and right_count >= 5:
+            return split_x, True
+            
+    return width * 0.5, False
+
+def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
+    """Extract individual text lines with exact bounding boxes, accurately handling multi-column gutters."""
+    raw_lines = extract_raw_page_lines(page, textpage=textpage)
+    width = float(page.rect.width)
+    height = float(page.rect.height)
+    
+    split_x, is_two_col = detect_page_column_split(raw_lines, width, height)
+    
+    unmerged_lines = []
+    for l in raw_lines:
+        valid_spans = l["spans"]
+        if not is_two_col:
+            unmerged_lines.append({
+                "text": l["text"],
+                "bbox": l["bbox"],
+                "col": 0
+            })
+            continue
+            
+        left_spans = [s for s in valid_spans if s["bbox"][2] <= split_x + 8]
+        right_spans = [s for s in valid_spans if s["bbox"][0] >= split_x - 8]
+        
+        # If line has spans on both sides of split_x with an unmistakable gutter between them
+        if left_spans and right_spans and (min(s["bbox"][0] for s in right_spans) - max(s["bbox"][2] for s in left_spans)) >= 8.0:
+            t_left = " ".join(s["text"].strip() for s in left_spans if s["text"].strip())
+            t_right = " ".join(s["text"].strip() for s in right_spans if s["text"].strip())
+            if t_left:
+                unmerged_lines.append({
+                    "text": t_left,
+                    "bbox": [
+                        min(s["bbox"][0] for s in left_spans),
+                        min(s["bbox"][1] for s in left_spans),
+                        max(s["bbox"][2] for s in left_spans),
+                        max(s["bbox"][3] for s in left_spans)
+                    ],
+                    "col": 1
                 })
-                
-    return clean_lines
+            if t_right:
+                unmerged_lines.append({
+                    "text": t_right,
+                    "bbox": [
+                        min(s["bbox"][0] for s in right_spans),
+                        min(s["bbox"][1] for s in right_spans),
+                        max(s["bbox"][2] for s in right_spans),
+                        max(s["bbox"][3] for s in right_spans)
+                    ],
+                    "col": 2
+                })
+        else:
+            line_text = l["text"]
+            x0 = l["bbox"][0]
+            x1 = l["bbox"][2]
+            if x1 <= split_x + 8:
+                col = 1
+            elif x0 >= split_x - 8:
+                col = 2
+            else:
+                col = 0
+            unmerged_lines.append({
+                "text": line_text,
+                "bbox": l["bbox"],
+                "col": col
+            })
+            
+    # Merge horizontal line fragments within each column that share the same baseline
+    merged_lines = []
+    target_cols = [0, 1, 2] if is_two_col else [0]
+    for target_col in target_cols:
+        col_subset = [l for l in unmerged_lines if l["col"] == target_col]
+        if not col_subset:
+            continue
+        col_subset.sort(key=lambda item: (round(item["bbox"][1] / 3.0), item["bbox"][0]))
+        curr_row = [col_subset[0]]
+        for item in col_subset[1:]:
+            if abs(item["bbox"][1] - curr_row[-1]["bbox"][1]) <= 3.5:
+                curr_row.append(item)
+            else:
+                curr_row.sort(key=lambda r: r["bbox"][0])
+                merged_lines.append({
+                    "text": " ".join(r["text"] for r in curr_row),
+                    "bbox": [
+                        min(r["bbox"][0] for r in curr_row),
+                        min(r["bbox"][1] for r in curr_row),
+                        max(r["bbox"][2] for r in curr_row),
+                        max(r["bbox"][3] for r in curr_row)
+                    ],
+                    "col": target_col
+                })
+                curr_row = [item]
+        if curr_row:
+            curr_row.sort(key=lambda r: r["bbox"][0])
+            merged_lines.append({
+                "text": " ".join(r["text"] for r in curr_row),
+                "bbox": [
+                    min(r["bbox"][0] for r in curr_row),
+                    min(r["bbox"][1] for r in curr_row),
+                    max(r["bbox"][2] for r in curr_row),
+                    max(r["bbox"][3] for r in curr_row)
+                ],
+                "col": target_col
+            })
+            
+    return merged_lines
 
 def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0) -> List[Any]:
     """Cluster lines strictly within a single column into cohesive paragraphs with tight bounding boxes."""
@@ -197,9 +329,12 @@ def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0) ->
         prev = curr[-1]
         vgap = l["bbox"][1] - prev["bbox"][3]
         prev_text = prev["text"].strip()
+        curr_text = l["text"].strip()
         
         is_break = False
-        if vgap > max_vgap:
+        if is_structured_header_line(curr_text):
+            is_break = True
+        elif vgap > max_vgap:
             is_break = True
         elif vgap > 5.0 and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text):
             is_break = True
@@ -217,21 +352,7 @@ def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0) ->
         
     blocks = []
     for cl in clusters:
-        # Group fragments on same horizontal baseline
-        cl.sort(key=lambda item: (round(item["bbox"][1] / 3.0), item["bbox"][0]))
-        merged_line_texts = []
-        curr_row = [cl[0]]
-        for item in cl[1:]:
-            if abs(item["bbox"][1] - curr_row[-1]["bbox"][1]) <= 3.5:
-                curr_row.append(item)
-            else:
-                curr_row.sort(key=lambda r: r["bbox"][0])
-                merged_line_texts.append(" ".join(r["text"] for r in curr_row))
-                curr_row = [item]
-        if curr_row:
-            curr_row.sort(key=lambda r: r["bbox"][0])
-            merged_line_texts.append(" ".join(r["text"] for r in curr_row))
-            
+        merged_line_texts = [item["text"] for item in cl]
         block_text = "\n".join(merged_line_texts)
         x0 = min(item["bbox"][0] for item in cl)
         y0 = min(item["bbox"][1] for item in cl)
@@ -247,9 +368,7 @@ def decompose_page_into_blocks(page, textpage=None) -> List[Any]:
     if not lines:
         return page.get_text("blocks", textpage=textpage) if textpage else page.get_text("blocks")
         
-    width = float(page.rect.width)
     height = float(page.rect.height)
-    mid_x = width * 0.5
     
     col1_lines = [l for l in lines if l["col"] == 1]
     col2_lines = [l for l in lines if l["col"] == 2]
@@ -285,18 +404,14 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     
     current_section = "Introduction"
     section_para_counters: Dict[str, int] = {}
-    section_table_counters: Dict[str, int] = {}
-    section_fig_counters: Dict[str, int] = {}
     
     indexed_doc = IndexedDocument(filename=filename, doc_header="")
     full_text_accumulator: List[str] = []
     
-    # Locate local Tessdata directory for automatic OCR fallback on scanned PDFs
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     tessdata_dir = os.path.join(base_dir, "data", "tessdata")
     has_tessdata = os.path.exists(os.path.join(tessdata_dir, "eng.traineddata"))
     
-    # Detect if PDF contains selectable digital text or is a scanned/flattened image PDF
     sample_text = "".join(doc[i].get_text().strip() for i in range(min(5, len(doc))))
     is_scanned_pdf = (len(sample_text) < 100) and has_tessdata
     if is_scanned_pdf:
@@ -347,10 +462,8 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
 
         full_text_accumulator.append(page_text)
         
-        # Order blocks according to two-column human reading layout, filtering junk
         blocks = order_page_blocks(raw_blocks, page)
         for b, block_text in blocks:
-            # Check lines for section header (supports standalone lines and short headers)
             lines = [l.strip() for l in block_text.split('\n') if l.strip()]
             for l_idx, line in enumerate(lines[:5]):
                 detected = detect_section_header(line)
@@ -365,7 +478,6 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             if not block_text:
                 continue
             
-            # Distinguish narrative discussion sentences from true Table/Figure captions
             is_narrative = bool(re.search(
                 r'^(?:Fig(?:ure)?|Table)\s*\d+\s+(?:shows?|presents?|displays?|depicts?|illustrates?|demonstrates?|compares?|indicates?|reveals?|summarizes?|lists?|reports?|provides?|plots?|evaluates?)\b',
                 block_text, re.IGNORECASE
@@ -420,42 +532,20 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         p_curr = i + 1
         p_next = i + 2
         
-        # Find paragraph anchors on current page
         anchors_on_curr = [a for a in indexed_doc.anchor_metadata.values() if a.page_number == p_curr and a.item_type == "para"]
         if not anchors_on_curr:
             continue
             
         last_para = anchors_on_curr[-1]
         t = last_para.text.strip()
-        # If line ends without terminal punctuation and is not a short header/fragment
-        if t and len(t) > 60 and not re.search(r'[\.\?!:]["\'\]\)]*$', t):
-            blocks_next = order_page_blocks(doc[i + 1].get_text("blocks"), doc[i + 1])
-            for b_next, b_text in blocks_next:
-                if detect_section_header(b_text.split('\n')[0]):
-                    break
-                # Only merge if next block starts with lowercase or continuation word
-                if re.match(r'^[a-z0-9]|^(?:and|or|of|to|with|in|that|which|the|is|was|are|were)\b', b_text, re.IGNORECASE):
-                    last_para.overflow_page = p_next
-                    last_para.overflow_bbox = [float(b_next[0]), float(b_next[1]), float(b_next[2]), float(b_next[3])]
-                    last_para.overflow_text = b_text
-                    
-                    merged_text = f"{last_para.text} {b_text}"
-                    last_para.text = merged_text
-                    indexed_doc.all_anchors[last_para.anchor_id] = merged_text
-                    break
-
-    indexed_doc.raw_text = clean_text("\n\n".join(full_text_accumulator))
+        if not re.search(r'[\.\?!:]["\'\]\)]*$', t) and len(t) > 60:
+            anchors_on_next = [a for a in indexed_doc.anchor_metadata.values() if a.page_number == p_next and a.item_type == "para"]
+            if anchors_on_next:
+                first_next = anchors_on_next[0]
+                last_para.overflow_page = p_next
+                last_para.overflow_bbox = first_next.bbox
+                last_para.text = f"{last_para.text} {first_next.text}"
+                indexed_doc.all_anchors[last_para.anchor_id] = last_para.text
+                
+    doc.close()
     return indexed_doc
-
-if __name__ == "__main__":
-    import sys
-    sys.stdout.reconfigure(encoding='utf-8')
-    test_pdf = r"D:\SSD-Drive\Antigravity\ResearchEval\Reference_papers\2.Statistics\Interpreting_the_results_of_noninferiority_trials-.pdf"
-    if os.path.exists(test_pdf):
-        indexed = parse_and_index_pdf(test_pdf)
-        print(f"Indexed PDF: {indexed.filename}")
-        print(f"Total Anchors: {len(indexed.all_anchors)}")
-        print("Sections detected:", list(indexed.sections.keys()))
-        for k in list(indexed.all_anchors.keys())[:8]:
-            sample = indexed.all_anchors[k].replace("\n", " ")[:80]
-            print(f"{k} -> {sample}...")

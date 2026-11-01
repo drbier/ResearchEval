@@ -425,10 +425,10 @@ def view_anchor_crop(
         annot.set_colors(stroke=(1.0, 0.9, 0.2))
         annot.update()
         crop_rect = pymupdf.Rect(
-            max(0, rect.x0 - 10),
-            max(0, rect.y0 - 6),
-            min(page.rect.width, rect.x1 + 10),
-            min(page.rect.height, rect.y1 + 6)
+            max(0, rect.x0 - 16),
+            max(0, rect.y0 - 10),
+            min(page.rect.width, rect.x1 + 16),
+            min(page.rect.height, rect.y1 + 10)
         )
         pix1 = page.get_pixmap(clip=crop_rect, dpi=300)
         crops.append(Image.open(io.BytesIO(pix1.tobytes("png"))))
@@ -443,10 +443,10 @@ def view_anchor_crop(
             annot2.set_colors(stroke=(1.0, 0.9, 0.2))
             annot2.update()
             crop_rect2 = pymupdf.Rect(
-                max(0, rect2.x0 - 10),
-                max(0, rect2.y0 - 6),
-                min(p_next.rect.width, rect2.x1 + 10),
-                min(p_next.rect.height, rect2.y1 + 6)
+                max(0, rect2.x0 - 16),
+                max(0, rect2.y0 - 10),
+                min(p_next.rect.width, rect2.x1 + 16),
+                min(p_next.rect.height, rect2.y1 + 10)
             )
             pix2 = p_next.get_pixmap(clip=crop_rect2, dpi=300)
             crops.append(Image.open(io.BytesIO(pix2.tobytes("png"))))
@@ -1993,10 +1993,10 @@ ${title || url}`);
                 const width = (bbox[2] - bbox[0]) * scale;
                 const height = (bbox[3] - bbox[1]) * scale;
 
-                hitbox.style.left = Math.max(0, left - 4) + 'px';
-                hitbox.style.top = Math.max(0, top - 3) + 'px';
-                hitbox.style.width = (width + 8) + 'px';
-                hitbox.style.height = (height + 6) + 'px';
+                hitbox.style.left = Math.max(0, left - 6) + 'px';
+                hitbox.style.top = Math.max(0, top - 4) + 'px';
+                hitbox.style.width = (width + 12) + 'px';
+                hitbox.style.height = (height + 8) + 'px';
                 hitbox.style.display = 'block';
 
                 if (shouldScroll) {
