@@ -7,7 +7,7 @@ from pydantic import BaseModel
 class CoordinateAnchor(BaseModel):
     anchor_id: str
     section: str
-    item_type: str  # "para", "table", "fig", "header"
+    item_type: str  # "para", "table", "fig", "header", "metadata"
     index: int
     text: str
     page_number: int
@@ -30,6 +30,11 @@ STRUCTURED_ABSTRACT_MAP = {
     'OBJECTIVE': 'Objective',
     'BACKGROUND': 'Background',
     'CONTEXT': 'Context',
+    'METHODS': 'Methods',
+    'METHOD': 'Methods',
+    'PATIENTS AND METHODS': 'Methods',
+    'MATERIALS AND METHODS': 'Methods',
+    'STUDY DESIGN': 'Methods',
     'DESIGN, SETTING, AND PARTICIPANTS': 'Design',
     'DESIGN': 'Design',
     'SETTING': 'Setting',
@@ -44,10 +49,33 @@ STRUCTURED_ABSTRACT_MAP = {
     'MEASURES': 'Outcomes',
     'RESULTS': 'Results',
     'FINDINGS': 'Results',
+    'INTERPRETATION': 'Interpretation',
+    'INTERPRETATIONS': 'Interpretation',
     'CONCLUSIONS AND RELEVANCE': 'Conclusions',
     'CONCLUSIONS': 'Conclusions',
-    'CONCLUSION': 'Conclusions'
+    'CONCLUSION': 'Conclusions',
+    'FUNDING': 'Funding'
 }
+
+PRIMARY_ABSTRACT_HEADERS = {
+    'BACKGROUND', 'OBJECTIVE', 'METHODS', 'METHOD', 'PATIENTS AND METHODS',
+    'MATERIALS AND METHODS', 'FINDINGS', 'RESULTS', 'INTERPRETATION',
+    'INTERPRETATIONS', 'CONCLUSIONS', 'CONCLUSION', 'FUNDING'
+}
+
+METADATA_CONTENT_REGEX = re.compile(
+    r'\b(?:Correspondence(?:\s+to)?|Department\s+of|Hospital|University|Institute|School\s+of\s+Medicine|'
+    r'Centre|Center|Clinic|Faculty\s+of|Published\s+Online|doi(?:\.org)?|https?://doi|N\s+Engl\s+J\s+Med|'
+    r'Lancet|BMJ|JAMA|Cell\s+Metabolism|Nature|Springer|Elsevier|Wiley|PMID|PMCID|ClinicalTrials\.gov|'
+    r'NCT\d{8}|Author\s+Affiliations?|\*Members\s+listed|Contributed\s+equally|Cite\s+this\s+as)\b',
+    re.IGNORECASE
+)
+
+EXPLICIT_METADATA_HEADER_REGEX = re.compile(
+    r'^(?:Correspondence:?|Correspondence\s+to:?|Cite\s+this\s+as:?|Keywords:?|\*Corresponding\s+author:?|'
+    r'Open\s+Access\.\s+[©\u00a9]|Copyright\s+[©\u00a9]|Author\s+contributions:?|Competing\s+interests:?)',
+    re.IGNORECASE
+)
 
 def clean_ocr_text(text: str) -> str:
     """Standardize ligatures, special whitespace, OCR hyphens, and bullet glyph artifacts."""
@@ -84,40 +112,32 @@ def detect_section_header(line: str, current_section: Optional[str] = None) -> O
         'PATIENTS AND METHODS': 'Methods',
         'MATERIALS AND METHODS': 'Methods',
         'MATERIALS & METHODS': 'Methods',
-        'PATIENTS & METHODS': 'Methods',
+        'METHODOLOGY': 'Methods',
         'STUDY DESIGN': 'Methods',
-        'PATIENT POPULATION': 'Methods',
-        'TREATMENT PLAN': 'Methods',
-        'ASSESSMENTS': 'Methods',
-        'STATISTICAL ANALYSIS': 'Methods',
         'RESULTS': 'Results',
         'FINDINGS': 'Results',
-        'EFFICACY': 'Results',
-        'SAFETY': 'Results',
-        'TREATMENT EXPOSURE': 'Results',
         'RESULTS AND DISCUSSION': 'Results',
-        'RESULTS & DISCUSSION': 'Results',
         'DISCUSSION': 'Discussion',
+        'LIMITATIONS': 'Discussion',
         'CONCLUSIONS': 'Conclusions',
         'CONCLUSION': 'Conclusions',
-        'CONCLUSIONS AND RELEVANCE': 'Conclusions',
-        'CONCLUSION AND RELEVANCE': 'Conclusions',
-        'LIMITATIONS': 'Discussion',
-        'LIMITATIONS OF THE STUDY': 'Discussion',
-        'LIMITATIONS OF OUR WORK': 'Discussion',
-        'RESOURCE AVAILABILITY': 'Methods',
-        'STAR METHODS': 'Methods',
-        'STAR*METHODS': 'Methods',
-        'SUPPLEMENTARY MATERIAL': 'Supplementary',
-        'SUPPLEMENTARY APPENDIX': 'Supplementary',
-        'APPENDIX': 'Supplementary',
-        'REFERENCES': 'References'
+        'INTERPRETATION': 'Conclusions',
+        'DECLARATIONS': 'References',
+        'CONFLICT OF INTEREST': 'References',
+        'CONFLICTS OF INTEREST': 'References',
+        'COMPETING INTERESTS': 'References',
+        'ACKNOWLEDGEMENTS': 'References',
+        'ACKNOWLEDGMENT': 'References',
+        'ACKNOWLEDGMENTS': 'References',
+        'REFERENCES': 'References',
+        'LITERATURE CITED': 'References',
+        'BIBLIOGRAPHY': 'References',
+        'SUPPLEMENTARY INFORMATION': 'Appendix',
+        'SUPPLEMENTARY MATERIAL': 'Appendix',
+        'SUPPLEMENTARY APPENDIX': 'Appendix',
+        'APPENDIX': 'Appendix'
     }
     
-    # If currently in Abstract, subheadings like "Methods:", "Results:", "Conclusion:" within a structured abstract
-    # do NOT end the abstract unless an explicit "Introduction", "Methods", "Results", etc. is reached.
-    # However, if we encounter a true manuscript section header (Introduction, Background, Methods, Results, Discussion, Conclusions)
-    # we MUST allow transitioning out of Abstract!
     if current_section == 'Abstract':
         if upper in ('INTRODUCTION', 'BACKGROUND', 'METHODS', 'PATIENTS AND METHODS', 'MATERIALS AND METHODS', 'RESULTS', 'FINDINGS', 'DISCUSSION', 'CONCLUSIONS', 'CONCLUSION'):
             return section_map[upper]
@@ -140,11 +160,40 @@ def detect_section_header(line: str, current_section: Optional[str] = None) -> O
             return section_map[key]
     return None
 
-def is_structured_header_line(text: str) -> bool:
-    t = text.strip().upper()
+def is_structured_header_line(curr_text: str, prev_text: str = "") -> bool:
+    """
+    Identifies structured abstract subsection labels (e.g. 'Background', 'Methods', 'Findings', 'Interpretation').
+    Guards against accidental splitting on lowercase prose words (e.g. 'exposure to...').
+    """
+    t = curr_text.strip()
+    if not t or t[0].islower():
+        return False
+    
+    # 1. Primary headers (Methods, Background, Findings, Results, Interpretation, Conclusions, Funding)
+    # Always start a new paragraph if capitalized and followed by colon, capital letter, bracket, or standalone
+    for h in PRIMARY_ABSTRACT_HEADERS:
+        m = re.match(r'^(' + re.escape(h) + r')(?:\s*[:\.\-\u2013\u2014|]|\s+([A-Z0-9\(\[])|\s*$)', t, re.IGNORECASE)
+        if m:
+            matched_kw = m.group(1)
+            if matched_kw[0].isupper():
+                cont = m.group(2)
+                if cont is None or cont.isupper() or cont in "([0-9":
+                    return True
+            
+    # 2. Secondary/Sub-headers (Design, Setting, Participants, Interventions, Outcomes, Exposure)
+    # Must have preceding sentence-terminal punctuation or explicit colon to prevent breaking running prose
     for h in STRUCTURED_ABSTRACT_MAP:
-        if re.match(r'^' + re.escape(h) + r'(?:[\s\.:\-\u2013\u2014|]+.*)?$', t):
-            return True
+        m = re.match(r'^(' + re.escape(h) + r')(?:\s*[:\.\-\u2013\u2014|]|\s+([A-Z0-9\(\[])|\s*$)', t, re.IGNORECASE)
+        if m:
+            matched_kw = m.group(1)
+            if matched_kw[0].isupper():
+                if re.match(r'^[A-Za-z\s]+[:\.\-]', t):
+                    return True
+                if prev_text and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text.strip()):
+                    cont = m.group(2)
+                    if cont is None or cont.isupper() or cont in "([0-9":
+                        return True
+            
     return False
 
 def is_junk_block(b, page, text: str) -> bool:
@@ -174,15 +223,68 @@ def is_junk_block(b, page, text: str) -> bool:
         return True
     if len(clean_t) < 25 and not re.search(r'[a-zA-Z]{3,}', clean_t):
         return True
+    if len(clean_t) < 15 and re.search(r'crossmark|sciencedirect|elsevier|springer|wiley', clean_t, re.IGNORECASE):
+        return True
+    if len(clean_t) <= 6 and (clean_t.endswith(']') or not clean_t.isalnum()):
+        return True
     # 5. Standalone copyright notice
     if re.match(r'^[©\u00a9]\s*The\s+Author', clean_t, re.IGNORECASE):
         return True
     return False
 
-def extract_raw_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
+def is_non_prose_metadata_block(b: Tuple[float, float, float, float], page, text: str, page_num: int) -> bool:
+    """
+    Stage 2: Strict Conjunction Metadata Exclusion Filter (GEOMETRY AND CONTENT).
+    Identifies publisher sidebars, affiliations, DOIs, and correspondence blocks
+    so they are completely excluded from paragraph counters.
+    """
+    w = float(page.rect.width)
+    h = float(page.rect.height)
+    clean_t = text.strip()
+    if not clean_t:
+        return True
+
+    x0, y0, x1, y1 = b[0], b[1], b[2], b[3]
+    block_w = x1 - x0
+    block_h = y1 - y0
+
+    # Condition C: Explicit Metadata Header
+    if EXPLICIT_METADATA_HEADER_REGEX.search(clean_t):
+        return True
+
+    # Condition B: Extreme Aspect Ratio Banners
+    # Vertical margin date/license banner (e.g. BMJ date banner: width <= 0.028 * W, height >= 0.06 * H)
+    if block_w <= (0.028 * w) and block_h >= (0.06 * h):
+        return True
+    # Horizontal micro-running DOI/tag banner
+    if block_h <= (0.016 * h) and len(clean_t) < 65 and re.search(r'doi|https?://|vol|issue|issn', clean_t, re.IGNORECASE):
+        return True
+
+    # Condition A: Dynamic Sidebar Conjunction (GEOMETRY AND CONTENT) on Pages 1-2
+    if page_num <= 2:
+        is_sidebar_geometry = (x0 >= (0.56 * w)) and (block_w <= (0.35 * w))
+        if is_sidebar_geometry and METADATA_CONTENT_REGEX.search(clean_t):
+            return True
+
+        # Left-margin correspondence/author block (e.g. BMJ left margin notes: x1 <= 0.30 * W)
+        is_left_margin_geometry = (x1 <= (0.30 * w)) and (block_w <= (0.28 * w))
+        if is_left_margin_geometry and METADATA_CONTENT_REGEX.search(clean_t) and not is_structured_header_line(clean_t):
+            return True
+
+    return False
+
+def extract_raw_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[str, Any]]:
+    """
+    Stage 1: Extract individual text lines with dynamic gutter cleaving.
+    Splits right margin text from main prose lines on Pages 1-2 before baseline merging.
+    """
     d = page.get_text("dict", textpage=textpage)
     raw_lines = []
-    width = float(page.rect.width)
+    w = float(page.rect.width)
+    
+    right_gutter_min = 0.77 * w
+    right_gutter_max = 0.82 * w
+
     for b in d.get("blocks", []):
         if "lines" not in b:
             continue
@@ -192,44 +294,63 @@ def extract_raw_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
             if not valid_spans:
                 continue
             
-            # If a line bridges the left margin notes (x < 120) and main column (x >= 120), split them
-            # into separate lines so margin references like "See Online for appendix" don't contaminate headings
-            left_margin_spans = [s for s in valid_spans if s["bbox"][2] <= 122.0]
-            col_spans = [s for s in valid_spans if s["bbox"][0] >= 120.0]
-            if left_margin_spans and col_spans and (col_spans[0]["bbox"][0] - left_margin_spans[-1]["bbox"][2]) >= 8.0:
-                # Add left margin line
-                t_left = " ".join(s["text"].strip() for s in left_margin_spans).strip()
-                if t_left:
-                    raw_lines.append({
-                        "text": t_left,
-                        "bbox": [
-                            min(s["bbox"][0] for s in left_margin_spans),
-                            min(s["bbox"][1] for s in left_margin_spans),
-                            max(s["bbox"][2] for s in left_margin_spans),
-                            max(s["bbox"][3] for s in left_margin_spans)
-                        ],
-                        "spans": left_margin_spans
-                    })
-                # Add main col line
-                t_col = " ".join(s["text"].strip() for s in col_spans).strip()
-                if t_col:
-                    raw_lines.append({
-                        "text": t_col,
-                        "bbox": [
-                            min(s["bbox"][0] for s in col_spans),
-                            min(s["bbox"][1] for s in col_spans),
-                            max(s["bbox"][2] for s in col_spans),
-                            max(s["bbox"][3] for s in col_spans)
-                        ],
-                        "spans": col_spans
-                    })
-                continue
+            # Filter gutter noise glyphs on Pages 1-2 (e.g. OCR vertical line speckles / artifacts)
+            if page_num <= 2:
+                filtered_spans = []
+                for s in valid_spans:
+                    st = s["text"].strip()
+                    sx0 = s["bbox"][0]
+                    if right_gutter_min <= sx0 <= right_gutter_max and len(st) <= 2 and not st.isalnum():
+                        continue
+                    if right_gutter_min <= sx0 <= right_gutter_max and len(st) == 1 and st.isdigit():
+                        continue
+                    filtered_spans.append(s)
+                valid_spans = filtered_spans
+                if not valid_spans:
+                    continue
+
+            # Right margin cleaving on Pages 1-2 (split main column from right sidebar at x >= 0.78 * w)
+            if page_num <= 2:
+                main_spans_right = [s for s in valid_spans if s["bbox"][2] <= (0.805 * w)]
+                sidebar_spans_right = [s for s in valid_spans if s["bbox"][0] >= (0.780 * w)]
+                if main_spans_right and sidebar_spans_right and (sidebar_spans_right[0]["bbox"][0] - main_spans_right[-1]["bbox"][2]) >= 4.0:
+                    t_main = " ".join(s["text"].strip() for s in main_spans_right).strip()
+                    if t_main:
+                        raw_lines.append({
+                            "text": t_main,
+                            "bbox": [
+                                min(s["bbox"][0] for s in main_spans_right),
+                                min(s["bbox"][1] for s in main_spans_right),
+                                max(s["bbox"][2] for s in main_spans_right),
+                                max(s["bbox"][3] for s in main_spans_right)
+                            ],
+                            "spans": main_spans_right
+                        })
+                    t_side = " ".join(s["text"].strip() for s in sidebar_spans_right).strip()
+                    if t_side:
+                        raw_lines.append({
+                            "text": t_side,
+                            "bbox": [
+                                min(s["bbox"][0] for s in sidebar_spans_right),
+                                min(s["bbox"][1] for s in sidebar_spans_right),
+                                max(s["bbox"][2] for s in sidebar_spans_right),
+                                max(s["bbox"][3] for s in sidebar_spans_right)
+                            ],
+                            "spans": sidebar_spans_right
+                        })
+                    continue
 
             line_text = " ".join(s["text"].strip() for s in valid_spans)
             x0 = min(s["bbox"][0] for s in valid_spans)
             y0 = min(s["bbox"][1] for s in valid_spans)
             x1 = max(s["bbox"][2] for s in valid_spans)
             y1 = max(s["bbox"][3] for s in valid_spans)
+            
+            # Drop pure punctuation noise lines
+            alnum = re.sub(r'[^a-zA-Z0-9]', '', line_text)
+            if len(alnum) == 0 and len(line_text) <= 3:
+                continue
+                
             raw_lines.append({
                 "text": line_text,
                 "bbox": [x0, y0, x1, y1],
@@ -313,18 +434,35 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
             
     return width * 0.5, False
 
-def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
-    """Extract individual text lines with exact bounding boxes, accurately handling multi-column gutters."""
-    raw_lines = extract_raw_page_lines(page, textpage=textpage)
+def extract_clean_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[str, Any]]:
+    """Extract individual text lines with exact bounding boxes, accurately isolating sidebars from main columns."""
+    raw_lines = extract_raw_page_lines(page, textpage=textpage, page_num=page_num)
     width = float(page.rect.width)
     height = float(page.rect.height)
     
-    split_x, is_two_col = detect_page_column_split(raw_lines, width, height)
+    # Check if page has an indented left margin layout (e.g. BMJ where main body starts at x >= 0.18 * W)
+    prose_x0s = [l["bbox"][0] for l in raw_lines if (l["bbox"][2] - l["bbox"][0]) >= (0.30 * width)]
+    has_left_sidebar_layout = (len(prose_x0s) >= 5 and sorted(prose_x0s)[len(prose_x0s) // 5] >= (0.18 * width))
+
+    non_sidebar_lines = []
+    sidebar_lines = []
+    
+    for l in raw_lines:
+        x0, y0, x1, y1 = l["bbox"]
+        line_w = x1 - x0
+        if page_num <= 2 and x0 >= (0.77 * width) and line_w <= (0.24 * width):
+            sidebar_lines.append({"text": l["text"], "bbox": l["bbox"], "col": 3, "spans": l.get("spans", [])})
+        elif page_num <= 2 and has_left_sidebar_layout and x1 <= (0.24 * width) and line_w <= (0.22 * width):
+            sidebar_lines.append({"text": l["text"], "bbox": l["bbox"], "col": 4, "spans": l.get("spans", [])})
+        else:
+            non_sidebar_lines.append(l)
+            
+    split_x, is_two_col = detect_page_column_split(non_sidebar_lines, width, height)
     
     unmerged_lines = []
-    for l in raw_lines:
-        valid_spans = l["spans"]
-        if not is_two_col:
+    for l in non_sidebar_lines:
+        valid_spans = l.get("spans", [])
+        if not is_two_col or not valid_spans:
             unmerged_lines.append({
                 "text": l["text"],
                 "bbox": l["bbox"],
@@ -377,9 +515,11 @@ def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
                 "col": col
             })
             
+    unmerged_lines.extend(sidebar_lines)
+    
     # Merge horizontal line fragments within each column that share the same baseline
     merged_lines = []
-    target_cols = [0, 1, 2] if is_two_col else [0]
+    target_cols = [0, 1, 2, 3, 4]
     for target_col in target_cols:
         col_subset = [l for l in unmerged_lines if l["col"] == target_col]
         if not col_subset:
@@ -387,7 +527,6 @@ def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
         col_subset.sort(key=lambda item: (round(item["bbox"][1] / 3.0), item["bbox"][0]))
         curr_row = [col_subset[0]]
         for item in col_subset[1:]:
-            # Do not merge if there is a wide horizontal gutter gap (e.g. left margin annotation vs main column heading)
             h_gap = item["bbox"][0] - curr_row[-1]["bbox"][2]
             if abs(item["bbox"][1] - curr_row[-1]["bbox"][1]) <= 3.5 and h_gap <= 6.0:
                 curr_row.append(item)
@@ -425,13 +564,22 @@ def extract_clean_page_lines(page, textpage=None) -> List[Dict[str, Any]]:
             
     return merged_lines
 
-def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0) -> List[Any]:
-    """Cluster lines strictly within a single column into cohesive paragraphs with tight bounding boxes."""
+def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0, page_width: float = 612.0) -> List[Any]:
+    """
+    Stage 3: Spacing- and Indentation-Bounded Cohesive Clustering.
+    Clusters lines within a column into cohesive paragraphs, respecting structured subheadings,
+    inter-paragraph leading gaps, and paragraph indentations.
+    """
     if not lines:
         return []
     lines.sort(key=lambda l: (l["bbox"][1], l["bbox"][0]))
     x0_values = sorted([l["bbox"][0] for l in lines])
     col_left_margin = x0_values[len(x0_values) // 5]
+    
+    # Calculate median line height/leading for dynamic gap thresholds
+    heights = [(l["bbox"][3] - l["bbox"][1]) for l in lines if (l["bbox"][3] - l["bbox"][1]) > 4.0]
+    median_h = sorted(heights)[len(heights) // 2] if heights else 10.0
+    paragraph_gap_threshold = max(max_vgap, 1.45 * median_h)
     
     clusters = []
     curr = [lines[0]]
@@ -443,15 +591,18 @@ def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0) ->
         curr_text = l["text"].strip()
         
         is_break = False
-        if is_structured_header_line(curr_text):
+        # 1. Structured header or main section title line always starts a new cluster
+        if is_structured_header_line(curr_text, prev_text):
             is_break = True
         elif detect_section_header(curr_text):
             is_break = True
-        elif vgap > max_vgap:
+        # 2. Substantial vertical leading gap with sentence-terminal punctuation
+        elif vgap > paragraph_gap_threshold and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text):
             is_break = True
-        elif vgap > 5.0 and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text):
+        elif vgap > (max_vgap * 1.5):
             is_break = True
-        elif (l["bbox"][0] - col_left_margin) >= 7.0 and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text):
+        # 3. Standard paragraph indentation with preceding sentence termination
+        elif (l["bbox"][0] - col_left_margin) >= (0.015 * page_width) and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text):
             is_break = True
             
         if is_break:
@@ -475,45 +626,61 @@ def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0) ->
         
     return blocks
 
-def decompose_page_into_blocks(page, textpage=None) -> List[Any]:
+def decompose_page_into_blocks(page, textpage=None, page_num: int = 1) -> List[Any]:
     """Deconstructs page lines into strictly column-isolated blocks in true academic reading order."""
-    lines = extract_clean_page_lines(page, textpage=textpage)
+    lines = extract_clean_page_lines(page, textpage=textpage, page_num=page_num)
     if not lines:
         return page.get_text("blocks", textpage=textpage) if textpage else page.get_text("blocks")
         
+    width = float(page.rect.width)
     height = float(page.rect.height)
     
     col1_lines = [l for l in lines if l["col"] == 1]
     col2_lines = [l for l in lines if l["col"] == 2]
     full_lines = [l for l in lines if l["col"] == 0]
+    side3_lines = [l for l in lines if l["col"] == 3]
+    side4_lines = [l for l in lines if l["col"] == 4]
     
     is_two_column = len(col1_lines) >= 4 and len(col2_lines) >= 4
+    result_blocks = []
     if is_two_column:
-        top_full = cluster_column_lines([l for l in full_lines if l["bbox"][3] < height * 0.35], max_vgap=18.0)
-        col1_blocks = cluster_column_lines(col1_lines, max_vgap=14.0)
-        col2_blocks = cluster_column_lines(col2_lines, max_vgap=14.0)
-        bot_full = cluster_column_lines([l for l in full_lines if l["bbox"][1] >= height * 0.35], max_vgap=18.0)
-        return top_full + col1_blocks + col2_blocks + bot_full
+        top_full = cluster_column_lines([l for l in full_lines if l["bbox"][3] < height * 0.35], max_vgap=18.0, page_width=width)
+        col1_blocks = cluster_column_lines(col1_lines, max_vgap=14.0, page_width=width)
+        col2_blocks = cluster_column_lines(col2_lines, max_vgap=14.0, page_width=width)
+        bot_full = cluster_column_lines([l for l in full_lines if l["bbox"][1] >= height * 0.35], max_vgap=18.0, page_width=width)
+        result_blocks = top_full + col1_blocks + col2_blocks + bot_full
     else:
-        return cluster_column_lines(lines, max_vgap=14.0)
+        result_blocks = cluster_column_lines(full_lines, max_vgap=14.0, page_width=width)
+        
+    # Append isolated sidebar blocks after main prose
+    if side4_lines:
+        result_blocks.extend(cluster_column_lines(side4_lines, max_vgap=14.0, page_width=width))
+    if side3_lines:
+        result_blocks.extend(cluster_column_lines(side3_lines, max_vgap=14.0, page_width=width))
+        
+    return result_blocks
 
 def order_page_blocks(raw_blocks, page) -> List[Any]:
-    """Filter junk blocks while preserving the column-aware reading order."""
-    valid = []
+    """Sort blocks into true column-based reading order while filtering out junk margin blocks."""
+    clean_blocks = []
     for b in raw_blocks:
-        t = b[4].strip().replace('\xa0', ' ')
+        t = b[4].strip()
         if not t or is_junk_block(b, page, t):
             continue
-        valid.append((b, t))
-    return valid
+        clean_blocks.append((b, t))
+        
+    return clean_blocks
 
 def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
-    """Parse a medical paper PDF into structured, coordinate-indexed blocks."""
+    """
+    Ingest a medical research PDF and index each paragraph with high-precision bounding box coordinates.
+    Employs the 3-stage pre-counter exclusion and cleaving pipeline to guarantee contiguous numbering.
+    """
     if not os.path.exists(pdf_path):
-        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-    
-    doc = pymupdf.open(pdf_path)
+        raise FileNotFoundError(f"PDF not found: {pdf_path}")
+        
     filename = os.path.basename(pdf_path)
+    doc = pymupdf.open(pdf_path)
     
     current_section = "Header"
     section_para_counters: Dict[str, int] = {}
@@ -564,14 +731,14 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             try:
                 tp = page.get_textpage_ocr(tessdata=tessdata_dir, dpi=200, full=True)
                 page_text = tp.extractText()
-                raw_blocks = decompose_page_into_blocks(page, textpage=tp)
+                raw_blocks = decompose_page_into_blocks(page, textpage=tp, page_num=page_num)
             except Exception as e:
                 print(f"[Indexer] Warning: OCR failed on page {page_num}: {e}")
                 page_text = page.get_text("text")
-                raw_blocks = decompose_page_into_blocks(page)
+                raw_blocks = decompose_page_into_blocks(page, page_num=page_num)
         else:
             page_text = page.get_text("text")
-            raw_blocks = decompose_page_into_blocks(page)
+            raw_blocks = decompose_page_into_blocks(page, page_num=page_num)
 
         full_text_accumulator.append(page_text)
         
@@ -604,43 +771,58 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             if current_section == "Header":
                 # Front matter preceding abstract/intro belongs to [Doc_Header]
                 continue
+
+            # Stage 2 Pre-Counter Gate: Check for non-prose metadata (sidebars, affiliations, DOIs, correspondence)
+            if is_non_prose_metadata_block(b, page, block_text, page_num):
+                # Metadata blocks do NOT consume a paragraph index; they are recorded as metadata items
+                meta_anchor_id = f"[{current_section}, Meta p{page_num}_{int(b[1])}]"
+                anchor_meta = CoordinateAnchor(
+                    anchor_id=meta_anchor_id,
+                    section=current_section,
+                    item_type="metadata",
+                    index=0,
+                    text=block_text,
+                    page_number=page_num,
+                    page_width=float(page.rect.width),
+                    page_height=float(page.rect.height),
+                    bbox=[float(b[0]), float(b[1]), float(b[2]), float(b[3])]
+                )
+                indexed_doc.anchor_metadata[meta_anchor_id] = anchor_meta
+                continue
             
             is_narrative = bool(re.search(
                 r'^(?:Fig(?:ure)?|Table)\s*\d+\s+(?:shows?|presents?|displays?|depicts?|illustrates?|demonstrates?|compares?|indicates?|reveals?|summarizes?|lists?|reports?|provides?|plots?|evaluates?)\b',
                 block_text, re.IGNORECASE
             ))
             
-            is_table = False
-            is_fig = False
+            fig_match = re.match(r'^(?:Fig(?:ure)?\.?|FIG\.?)\s*(\d+[A-Za-z]?)', block_text, re.IGNORECASE)
+            table_match = re.match(r'^(?:Table)\s*(\d+[A-Za-z]?)', block_text, re.IGNORECASE)
             
-            if not is_narrative:
-                tbl_match = re.match(r'^(?:Table\s*(\d+)[\s\.:\-\u2013\u2014|]+(?![a-z]))', block_text, re.IGNORECASE)
-                fig_match = re.match(r'^(?:Fig(?:ure)?\.?\s*(\d+)[\s\.:\-\u2013\u2014|]+(?![a-z]))', block_text, re.IGNORECASE)
-                if tbl_match:
-                    is_table = True
-                    tbl_num = tbl_match.group(1)
-                    anchor_id = f"[{current_section}, Table {tbl_num}]"
-                    item_type = "table"
-                    idx = int(tbl_num)
-                elif fig_match:
-                    is_fig = True
-                    fig_num = fig_match.group(1)
-                    anchor_id = f"[{current_section}, Fig {fig_num}]"
-                    item_type = "fig"
-                    idx = int(fig_num)
-            
-            if not is_table and not is_fig:
-                section_para_counters[current_section] = section_para_counters.get(current_section, 0) + 1
-                p_idx = section_para_counters[current_section]
-                anchor_id = f"[{current_section}, Para {p_idx}]"
+            if fig_match and not is_narrative:
+                item_type = "fig"
+                num_str = fig_match.group(1)
+                digits = re.findall(r'\d+', num_str)
+                idx_num = int(digits[0]) if digits else 1
+                anchor_id = f"[{current_section}, Fig {num_str}]"
+            elif table_match and not is_narrative:
+                item_type = "table"
+                num_str = table_match.group(1)
+                digits = re.findall(r'\d+', num_str)
+                idx_num = int(digits[0]) if digits else 1
+                anchor_id = f"[{current_section}, Table {num_str}]"
+            else:
                 item_type = "para"
-                idx = p_idx
-            
-            anchor_obj = CoordinateAnchor(
+                if current_section not in section_para_counters:
+                    section_para_counters[current_section] = 0
+                section_para_counters[current_section] += 1
+                idx_num = section_para_counters[current_section]
+                anchor_id = f"[{current_section}, Para {idx_num}]"
+                
+            anchor = CoordinateAnchor(
                 anchor_id=anchor_id,
                 section=current_section,
                 item_type=item_type,
-                index=idx,
+                index=idx_num,
                 text=block_text,
                 page_number=page_num,
                 page_width=float(page.rect.width),
@@ -648,32 +830,30 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                 bbox=[float(b[0]), float(b[1]), float(b[2]), float(b[3])]
             )
             
+            indexed_doc.all_anchors[anchor_id] = block_text
+            indexed_doc.anchor_metadata[anchor_id] = anchor
             if current_section not in indexed_doc.sections:
                 indexed_doc.sections[current_section] = []
-            indexed_doc.sections[current_section].append(anchor_obj)
-            indexed_doc.all_anchors[anchor_id] = block_text
-            indexed_doc.anchor_metadata[anchor_id] = anchor_obj
-            
-    # Post-process: Check only the last body paragraph on the page if it overflows mid-sentence
-    for i in range(len(doc) - 1):
-        p_curr = i + 1
-        p_next = i + 2
-        
+            indexed_doc.sections[current_section].append(anchor)
+
+    # Overflow stitching for sentences cut across physical page breaks
+    for p_idx in range(len(doc) - 1):
+        p_curr = p_idx + 1
+        p_next = p_idx + 2
         anchors_on_curr = [a for a in indexed_doc.anchor_metadata.values() if a.page_number == p_curr and a.item_type == "para"]
         if not anchors_on_curr:
             continue
-            
         last_para = anchors_on_curr[-1]
         t = last_para.text.strip()
         if not re.search(r'[\.\?!:]["\'\]\)]*$', t) and len(t) > 60:
             anchors_on_next = [a for a in indexed_doc.anchor_metadata.values() if a.page_number == p_next and a.item_type == "para"]
             if anchors_on_next:
-                first_next = anchors_on_next[0]
-                last_para.overflow_page = p_next
-                last_para.overflow_bbox = first_next.bbox
-                last_para.text = f"{last_para.text} {first_next.text}"
-                indexed_doc.all_anchors[last_para.anchor_id] = last_para.text
-                
-    indexed_doc.raw_text = clean_ocr_text("\n\n".join(full_text_accumulator))
+                first_next_para = anchors_on_next[0]
+                t_next = first_next_para.text.strip()
+                if t_next and t_next[0].islower():
+                    last_para.overflow_page = p_next
+                    last_para.overflow_bbox = first_next_para.bbox
+                    
+    indexed_doc.raw_text = "\n\n".join(full_text_accumulator)
     doc.close()
     return indexed_doc
