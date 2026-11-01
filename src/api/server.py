@@ -2477,9 +2477,9 @@ ${escapeHtml(thought)}
                 if (!text) return '';
 
                 // Group consecutive coordinate anchor brackets so they export neatly demarcated as [Abs, p38; Abs, p39; Abs, p41]
-                const consecutiveCoordGroupRegex = /(\[\s*[^[\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?\](?:\s*\[\s*[^[\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?\])*)/gi;
+                const consecutiveCoordGroupRegex = /(\[\s*[^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig)\b[^\]]*?\](?:\s*\[\s*[^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig)\b[^\]]*?\])*)/gi;
                 text = text.replace(consecutiveCoordGroupRegex, function(fullMatch) {
-                    const singleBracketRe = /\[\s*([^[\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?)\s*\]/gi;
+                    const singleBracketRe = /\[\s*([^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig)\b[^\]]*?)\s*\]/gi;
                     const items = [];
                     let match;
                     while ((match = singleBracketRe.exec(fullMatch)) !== null) {
@@ -2593,6 +2593,8 @@ ${escapeHtml(thought)}
                 let content = data.final_markdown || data.raw_output || '';
                 // Strip raw {R_...} or [R_...] rule tags if emitted by model
                 content = content.replace(/\s*\{R_[A-Z0-9_]+\}/g, '').replace(/\s*\[R_[A-Z0-9_]+\]/g, '');
+                // Normalize any model variations like "Paragraph" -> "Para" in citations
+                content = content.replace(/(\[[^\]]*?\b)Paragraphs?\b/gi, '$1Para');
 
                 // Clean any raw LaTeX math formatting or macros emitted by the model
                 function cleanLatexMath(str) {
@@ -2651,7 +2653,7 @@ ${escapeHtml(thought)}
                     let html = marked.parse(content);
                     // Match coordinate blocks, supporting single, multi-paragraph, and compound citations
                     // e.g. [Results, Para 17; Discussion, Para 18], [Methods, Para 26; Results, Para 19], [Abstract, Para 2, 3; Methods, Para 3, 27]
-                    const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Para|Table|Fig)\b[^\]]*?)\]/gi;
+                    const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig)\b[^\]]*?)\]/gi;
                     html = html.replace(bracketCoordRegex, function(fullMatch, inner) {
                         const trimmed = inner.trim();
                         if (trimmed.toLowerCase() === 'doc_header') {

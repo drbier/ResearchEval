@@ -107,7 +107,10 @@ def sanitize_and_verify_appraisal(markdown_text: str, valid_anchor_set: Dict[str
     cleaned = re.sub(r'\s*\{R_[A-Z0-9_]+\}', '', cleaned)
     cleaned = re.sub(r'\s*\[R_[A-Z0-9_]+\]', '', cleaned)
 
-    # 4. Expand combined multi-paragraph citations: [Methods, Para 1, 13] -> [Methods, Para 1] [Methods, Para 13]
+    # 4. Normalize any model variations like "Paragraph" / "Paragraphs" / "paragraph" -> "Para" inside bracket citations
+    cleaned = re.sub(r'(\[[^\]]*?\b)Paragraphs?\b', r'\1Para', cleaned, flags=re.IGNORECASE)
+
+    # 5. Expand combined multi-paragraph citations: [Methods, Para 1, 13] -> [Methods, Para 1] [Methods, Para 13]
     def expand_combined_paras(match):
         sec = match.group(1).strip()
         nums = [n.strip() for n in match.group(2).split(',') if n.strip()]
