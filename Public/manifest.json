@@ -1,7 +1,7 @@
 {
-  "name": "F.A.S.T. - Find · Appraise · Summarize Trials",
+  "name": "F.A.S.T. - Find · Analyze · Summarize Trials",
   "short_name": "F.A.S.T.",
-  "description": "Deterministic Clinical Research Appraiser with Inline Source Grounding",
+  "description": "Deterministic Clinical Research Analyzer with Inline Source Grounding",
   "start_url": "/",
   "id": "/",
   "display": "standalone",

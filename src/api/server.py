@@ -31,8 +31,8 @@ from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_D
 from src.summarizer.engine import PaperSummarizer, MODEL_DESIGNATION as SUMMARIZER_MODEL_DESIGNATION
 
 app = FastAPI(
-    title="F.A.S.T. - Find. Appraise. Summarize Trials",
-    description="Deterministic Clinical Research Appraiser with Inline Coordinate Grounding",
+    title="F.A.S.T. - Find. Analyze. Summarize Trials",
+    description="Deterministic Clinical Research Analyzer with Inline Coordinate Grounding",
     version="1.0.0"
 )
 
@@ -173,8 +173,9 @@ def resolve_paper_url(url: str = Form(...)):
     res = fetcher.resolve_url(url)
     return res
 
+@app.post("/analyze-fetched")
 @app.post("/appraise-fetched")
-def appraise_fetched_paper(
+def analyze_fetched_paper(
     filename: str = Form(...),
     model_override: Optional[str] = Form(None),
     api_key: Optional[str] = Form(None)
@@ -214,8 +215,9 @@ def appraise_fetched_paper(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/analyze")
 @app.post("/appraise")
-async def appraise_paper(
+async def analyze_paper(
     file: UploadFile = File(...),
     model_override: Optional[str] = Form(None),
     api_key: Optional[str] = Form(None)
@@ -489,7 +491,7 @@ def index_page():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>F.A.S.T. — Find · Appraise · Summarize Trials</title>
+        <title>F.A.S.T. — Find · Analyze · Summarize Trials</title>
         
         <!-- PWA Meta Tags & Web Manifest -->
         <link rel="manifest" href="/manifest.json">
@@ -741,17 +743,17 @@ def index_page():
                     </div>
                     <div>
                         <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">F.A.S.T.</h1>
-                        <p class="text-slate-500 text-[11px] font-medium mt-0.5">Find <span class="text-slate-400 font-bold mx-1">·</span> Appraise <span class="text-slate-400 font-bold mx-1">·</span> Summarize Trials</p>
+                        <p class="text-slate-500 text-[11px] font-medium mt-0.5">Find <span class="text-slate-400 font-bold mx-1">·</span> Analyze <span class="text-slate-400 font-bold mx-1">·</span> Summarize Trials</p>
                     </div>
                 </div>
 
-                <!-- Master 3-Mode Navigation Switcher: F.A.S.T. (Find -> Appraise -> Summarize Trials) -->
+                <!-- Master 3-Mode Navigation Switcher: F.A.S.T. (Find -> Analyze -> Summarize Trials) -->
                 <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold gap-1 shrink-0">
                     <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
                         <span>🔍</span> <span>Find</span>
                     </button>
                     <button id="masterTabAppraisal" onclick="switchMasterMode('appraisal')" class="px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs">
-                        <span>🔬</span> <span>Appraise</span>
+                        <span>🔬</span> <span>Analyze</span>
                     </button>
                     <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
                         <span>📝</span> <span>Summarize</span>
@@ -805,7 +807,7 @@ def index_page():
                             <div class="text-[11px] text-slate-400">
                                 <span class="font-semibold text-slate-200">Applicable Methodological Rules:</span>
                                 <ul id="tooltipRulesList" class="mt-1 list-disc list-inside space-y-0.5 text-[10px] text-slate-300">
-                                    <li>Grounded Appraisal Rules</li>
+                                    <li>Grounded Analysis Rules</li>
                                 </ul>
                             </div>
                         </div>
@@ -982,13 +984,13 @@ def index_page():
             <div id="resultBox" class="hidden">
                 <!-- Draggable Split Container: Left Appraisal | Resizer | Right Source Inspector -->
                 <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch rounded-lg border border-slate-200 shadow-sm overflow-hidden bg-white" style="height: calc(100vh - 105px); min-height: 650px;">
-                    <!-- Left: Clinical Appraisal & Show Thinking Tab Switcher (Behavior 3) -->
+                    <!-- Left: Clinical Analysis & Show Thinking Tab Switcher (Behavior 3) -->
                     <div id="leftPane" class="bg-white p-6 border-r border-slate-200 overflow-y-auto select-text flex flex-col h-full" style="width: 55%; min-width: 25%; max-width: 75%;">
                         <div class="sticky top-0 bg-white z-10 pb-3 border-b border-slate-200 mb-4 flex flex-wrap justify-between items-center gap-2">
                             <div class="flex items-center gap-2">
                                 <div class="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-medium">
                                     <button id="leftTabAppraisalBtn" onclick="switchLeftTab('appraisal')" class="px-3 py-1 rounded-md bg-white text-sky-800 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
-                                        <span>📄</span> <span>Clinical Appraisal</span>
+                                        <span>📄</span> <span>Clinical Analysis</span>
                                     </button>
                                     <button id="leftTabThinkingBtn" onclick="switchLeftTab('thinking')" class="px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer">
                                         <span>🧠</span> <span>Show Thinking / Audit</span>
@@ -1280,17 +1282,17 @@ def index_page():
                         <button 
                             onclick="appraisePaperFromExternal('${appraiseTargetUrl}')" 
                             class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                            title="Open full interactive appraisal in Workbench (Full manuscript retrieved via PMC)"
+                            title="Open full interactive analysis in Workbench (Full manuscript retrieved via PMC)"
                         >
-                            <span>🔬</span> <span>Appraise Full Text</span>
+                            <span>🔬</span> <span>Analyze Full Text</span>
                         </button>
                     ` : `
                         <button 
                             onclick="appraisePaperFromExternal('${safeUrl}')" 
                             class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                            title="Paywalled paper: Appraise published abstract or upload full-text PDF in Workbench"
+                            title="Paywalled paper: Analyze published abstract or upload full-text PDF in Workbench"
                         >
-                            <span>📄</span> <span>Appraise Abstract</span>
+                            <span>📄</span> <span>Analyze Abstract</span>
                         </button>
                     `;
 
@@ -2135,7 +2137,7 @@ ${title || url}`);
                 } else {
                     rulesListHtml = `
                         <div class="bg-white border border-slate-200 rounded-md p-4 text-xs text-slate-500 italic">
-                            Standard methodological appraisal framework rules applied.
+                            Standard methodological analysis framework rules applied.
                         </div>
                     `;
                 }
@@ -2349,7 +2351,7 @@ ${escapeHtml(thought)}
                     }
 
                     // Full text PDF retrieved!
-                    statusText.innerHTML = `<span class="font-semibold text-emerald-700">✓ ${data.message || 'Full text retrieved via PubMed API!'}</span> Starting appraisal pipeline...`;
+                    statusText.innerHTML = `<span class="font-semibold text-emerald-700">✓ ${data.message || 'Full text retrieved via PubMed API!'}</span> Starting analysis pipeline...`;
                     await executeAppraisalForFilename(data.pdf_filename, false);
                 } catch (err) {
                     spinner.classList.add('hidden');
@@ -2371,8 +2373,8 @@ ${escapeHtml(thought)}
 
                 statusBox.classList.remove('hidden');
                 statusText.innerText = isAbstractOnly ? 
-                    'Extracting coordinates & appraising Abstract...' : 
-                    'Ingesting full text layout, triaging & synthesizing appraisal...';
+                    'Extracting coordinates & analyzing Abstract...' : 
+                    'Ingesting full text layout, triaging & synthesizing analysis...';
 
                 const formData = new FormData();
                 formData.append('filename', filename);
@@ -2443,7 +2445,7 @@ ${escapeHtml(thought)}
                             ? data.active_rules_detail.map(r => `<li><span class="text-sky-200 font-medium">${escapeHtml(r.target_domain || r.rule_id)}</span></li>`).join('')
                             : (applicableRules.length > 0 
                                 ? applicableRules.map(r => `<li><span class="text-sky-200 font-medium">${escapeHtml(r)}</span></li>`).join('')
-                                : '<li>Standard critical appraisal framework</li>');
+                                : '<li>Standard critical analysis framework</li>');
                         tipList.innerHTML = rulesList;
                     }
                 }
@@ -2567,7 +2569,7 @@ ${escapeHtml(thought)}
                 closeSectionPopup();
                 const fileInput = document.getElementById('pdfFile');
                 if (!fileInput.files[0]) {
-                    alert('Please select a PDF file to appraise.');
+                    alert('Please select a PDF file to analyze.');
                     return;
                 }
 
