@@ -112,6 +112,7 @@ summarizer = PaperSummarizer()
 class FinderSearchRequest(BaseModel):
     query: str
     max_results: Optional[int] = 10
+    force_refresh: Optional[bool] = False
 
 
 class SummarizerGenerateRequest(BaseModel):
@@ -121,9 +122,13 @@ class SummarizerGenerateRequest(BaseModel):
 
 @app.post("/api/finder/search")
 def api_finder_search(req: FinderSearchRequest):
-    """Execute Zero-Trust 4-tier relaxation search and binary clinical gate verification."""
+    """Execute Zero-Trust 4-tier relaxation search and binary clinical gate verification with SQLite query caching."""
     try:
-        res = finder.find_papers(query=req.query, max_results=req.max_results or 10)
+        res = finder.find_papers(
+            query=req.query,
+            max_results=req.max_results or 10,
+            force_refresh=bool(req.force_refresh)
+        )
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -869,15 +874,21 @@ def index_page():
                                 <span id="finderBtnText">Find Verified Papers</span>
                             </button>
                         </div>
-                        <!-- Quick Example Chips -->
-                        <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500">
-                            <span class="font-medium">Try example query:</span>
-                            <button onclick="setFinderQuery('CoQ10 reduced cardiovascular mortality in elderly Swedish cohort, 5 year follow up')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-100 hover:text-sky-700 border border-slate-200 transition">
-                                CoQ10 cardiovascular mortality in Swedish cohort
-                            </button>
-                            <button onclick="setFinderQuery('Curcumin osteoarthritis randomized trial knee pain and inflammatory biomarkers')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-100 hover:text-sky-700 border border-slate-200 transition">
-                                Curcumin knee osteoarthritis RCT
-                            </button>
+                        <!-- Quick Example Chips & Cache Toggle -->
+                        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-500">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-medium">Try example query:</span>
+                                <button onclick="setFinderQuery('CoQ10 reduced cardiovascular mortality in elderly Swedish cohort, 5 year follow up')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-100 hover:text-sky-700 border border-slate-200 transition">
+                                    CoQ10 cardiovascular mortality in Swedish cohort
+                                </button>
+                                <button onclick="setFinderQuery('Curcumin osteoarthritis randomized trial knee pain and inflammatory biomarkers')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-100 hover:text-sky-700 border border-slate-200 transition">
+                                    Curcumin knee osteoarthritis RCT
+                                </button>
+                            </div>
+                            <label class="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-slate-500 hover:text-slate-800" title="Bypass the 24-hour cache and query PubMed/Gemini fresh">
+                                <input type="checkbox" id="finderForceRefresh" class="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"/>
+                                <span>Bypass 24h Cache (Force Refresh)</span>
+                            </label>
                         </div>
                     </div>
 
@@ -1165,11 +1176,12 @@ def index_page():
                     banner.classList.remove('hidden');
                 }
 
+                const forceRefresh = document.getElementById('finderForceRefresh')?.checked || false;
                 try {
                     const resp = await fetch('/api/finder/search', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: query, max_results: 10 })
+                        body: JSON.stringify({ query: query, max_results: 10, force_refresh: forceRefresh })
                     });
                     const data = await resp.json();
 
@@ -1185,11 +1197,18 @@ def index_page():
                             "rounded-lg p-3 text-xs flex items-center justify-between border bg-amber-50 text-amber-900 border-amber-200" :
                             "rounded-lg p-3 text-xs flex items-center justify-between border bg-emerald-50 text-emerald-900 border-emerald-200";
                         
+                        const cacheBadge = data.from_cache ? 
+                            '<span class="px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-bold text-[10px] border border-sky-300">⚡ CACHED</span>' : '';
+                        const reasoningBadge = data.thinking_level ? 
+                            `<span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-mono border border-slate-200">reasoning: ${data.thinking_level}</span>` : '';
+
                         banner.innerHTML = `
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <span class="font-bold">${data.qualifying_count} Verified Studies Found</span>
                                 <span class="text-slate-400">•</span>
                                 <span>Source: ${data.source_database} (${tierName})</span>
+                                ${cacheBadge}
+                                ${reasoningBadge}
                                 ${data.is_fallback ? '<span class="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-bold text-[10px]">FALLBACK</span>' : ''}
                             </div>
                             <span class="font-mono text-[11px] text-slate-500">Evaluated ${data.total_evaluated} candidates</span>

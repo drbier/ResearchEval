@@ -20,6 +20,8 @@ from typing import Dict, List, Optional, Tuple, Any
 import requests
 import xml.etree.ElementTree as ET
 
+from src.finder.cache import SearchQueryCache
+
 try:
     import dotenv
     dotenv.load_dotenv()
@@ -117,21 +119,48 @@ class PaperFinder:
     and binary clinical gate qualification.
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    NEGATION_TOKENS = [
+        "without", "excluding", "except", "non-", "negative for",
+        "neither", "nor", "in the absence of", "no history of", "free of"
+    ]
+
+    def __init__(self, api_key: Optional[str] = None, cache_db_path: str = "data/search_cache.db"):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.ncbi_esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
         self.ncbi_efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
         self.s2_search_url = "https://api.semanticscholar.org/graph/v1/paper/search"
         self.model_designation = MODEL_DESIGNATION
+        self.cache = SearchQueryCache(db_path=cache_db_path)
+
+    def determine_thinking_level(self, query: str, entities: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Constraint 1: Dynamic thinkingLevel heuristic.
+        - Escalate to 'medium' if query contains explicit medical negation/exclusion,
+          high syntactic complexity (> 120 chars), or complex multi-agent differential logic.
+        - Default to 'low' for standard keyword / associative retrieval.
+        """
+        q_lower = query.lower()
+        if any(neg in q_lower for neg in self.NEGATION_TOKENS):
+            return "medium"
+        if len(query.strip()) > 120:
+            return "medium"
+        if any(comp in q_lower for comp in [" vs ", " vs. ", " versus ", " compared to ", " superiority "]):
+            return "medium"
+        if entities:
+            int_agents = entities.get("intervention_agents", [])
+            if len(int_agents) > 2:
+                return "medium"
+        return "low"
 
     def _invoke_gemini(
         self,
         prompt: str,
         system_instruction: str,
         json_mode: bool = False,
-        preferred_model: Optional[str] = None
+        preferred_model: Optional[str] = None,
+        thinking_level: Optional[str] = None
     ) -> Tuple[str, str]:
-        """Invoke Gemini with automated GA fallback ladder and rate-limit backoff."""
+        """Invoke Gemini with automated GA fallback ladder, rate-limit backoff, and dynamic thinkingConfig."""
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY environment variable is not configured.")
 
@@ -151,6 +180,10 @@ class PaperFinder:
                     "maxOutputTokens": 4096
                 }
             }
+            if thinking_level:
+                payload["generationConfig"]["thinkingConfig"] = {
+                    "thinkingLevel": thinking_level
+                }
             if json_mode:
                 payload["generationConfig"]["responseMimeType"] = "application/json"
 
@@ -220,7 +253,8 @@ class PaperFinder:
         )
 
         user_prompt = f"Extract clinical entities for search: \"{query.strip()}\""
-        raw_json, _ = self._invoke_gemini(user_prompt, system_prompt, json_mode=True)
+        thinking_level = self.determine_thinking_level(query)
+        raw_json, _ = self._invoke_gemini(user_prompt, system_prompt, json_mode=True, thinking_level=thinking_level)
 
         try:
             entities = json.loads(raw_json)
@@ -717,7 +751,8 @@ class PaperFinder:
         )
 
         try:
-            raw_json, _ = self._invoke_gemini(prompt, system_instruction, json_mode=True)
+            thinking_level = self.determine_thinking_level(user_query, entities)
+            raw_json, _ = self._invoke_gemini(prompt, system_instruction, json_mode=True, thinking_level=thinking_level)
             res = json.loads(raw_json)
 
             score = int(res.get("match_score", 0))
@@ -826,7 +861,8 @@ class PaperFinder:
         )
 
         try:
-            raw_json, _ = self._invoke_gemini(user_prompt, system_instruction, json_mode=True)
+            thinking_level = self.determine_thinking_level(user_query, entities)
+            raw_json, _ = self._invoke_gemini(user_prompt, system_instruction, json_mode=True, thinking_level=thinking_level)
             evals = json.loads(raw_json)
             if not isinstance(evals, list):
                 if isinstance(evals, dict) and "evaluations" in evals:
@@ -866,9 +902,10 @@ class PaperFinder:
                 verified_papers.append(res)
         return verified_papers
 
-    def find_papers(self, query: str, max_results: int = 10) -> Dict[str, Any]:
+    def find_papers(self, query: str, max_results: int = 10, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Execute the 4-tier programmatic relaxation search workflow and return verified papers.
+        Supports SQLite query caching with force_refresh bypass.
         Output format strictly adheres to the Zero-Trust URL Rule.
         """
         query_clean = query.strip()
@@ -879,6 +916,16 @@ class PaperFinder:
                 "qualifying_papers": [],
                 "formatted_output": "Search Failed: Empty query."
             }
+
+        # Step 0: SQLite Query Cache Check (Bypassed if force_refresh=True)
+        cached = self.cache.get(query_clean, force_refresh=force_refresh)
+        if cached:
+            cached_copy = dict(cached)
+            all_qualifying = cached_copy.get("qualifying_papers", [])
+            cached_copy["qualifying_papers"] = all_qualifying[:max_results]
+            cached_copy["qualifying_count"] = len(cached_copy["qualifying_papers"])
+            cached_copy["from_cache"] = True
+            return cached_copy
 
         # Step 1: Entity Extraction via Gemini Flash
         entities = self.extract_clinical_entities(query_clean)
@@ -982,7 +1029,8 @@ class PaperFinder:
 
         strict_formatted_output = "\n\n".join(formatted_blocks)
 
-        return {
+        thinking_level = self.determine_thinking_level(query_clean, entities)
+        result = {
             "status": "success",
             "query": query_clean,
             "entities": entities,
@@ -994,6 +1042,12 @@ class PaperFinder:
             "qualifying_papers": final_papers,
             "formatted_output": strict_formatted_output,
             "model_designation": MODEL_DESIGNATION,
-            "model_endpoint": PRIMARY_MODEL
+            "model_endpoint": PRIMARY_MODEL,
+            "thinking_level": thinking_level,
+            "from_cache": False
         }
+
+        # Store in SQLite Query Cache
+        self.cache.set(query_clean, result)
+        return result
 

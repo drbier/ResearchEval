@@ -29,6 +29,9 @@ wheels/
 # Uploads & Temp files
 data/uploads/*
 !data/uploads/.gitkeep
+data/*.db
+data/*.db-wal
+data/*.db-shm
 
 # Reference PDFs (Keep local, do not push to remote repository)
 Reference_papers/
