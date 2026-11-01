@@ -242,6 +242,43 @@ class TestResearchEvalPipeline(unittest.TestCase):
         self.assertIn("eGFR Slope & Composite Renal Endpoints", lex_terms)
         self.assertIn("Expanded Disability Status Scale (EDSS)", lex_terms)
 
+    def test_10_subsection_and_overflow_stitching(self):
+        """Verify numbered subsection boundary detection, table grouping, and cross-page sentence overflow stitching."""
+        homocysteine_pdf = os.path.join(
+            self.data_dir,
+            "uploads",
+            "Associations of Plasma Homocysteine Reflecting Vitamin B12 and Folate Status with Fatigue-Related Outcomes in Healthy Adults.pdf"
+        )
+        if not os.path.exists(homocysteine_pdf):
+            self.skipTest("Homocysteine test PDF not found in uploads")
+
+        indexed = parse_and_index_pdf(homocysteine_pdf)
+        
+        # Verify Methods Para 1 contains 2.1
+        m1 = indexed.anchor_metadata.get("[Methods, Para 1]")
+        self.assertIsNotNone(m1)
+        self.assertIn("2.1. Study Design", m1.text)
+        self.assertEqual(m1.page_number, 2)
+
+        # Verify Methods Para 2 contains 2.2, has cross-page overflow to Page 3, and includes 602 participants text
+        m2 = indexed.anchor_metadata.get("[Methods, Para 2]")
+        self.assertIsNotNone(m2)
+        self.assertIn("2.2. Exclusion Criteria", m2.text)
+        self.assertIn("602 participants were included", m2.text)
+        self.assertEqual(m2.page_number, 2)
+        self.assertEqual(m2.overflow_page, 3)
+        self.assertIsNotNone(m2.overflow_bbox)
+
+        # Verify Methods Para 3 is 2.3 Blood Sampling (not phantom continuation)
+        m3 = indexed.anchor_metadata.get("[Methods, Para 3]")
+        self.assertIsNotNone(m3)
+        self.assertIn("2.3. Blood Sampling", m3.text)
+
+        # Verify Results Table 1 was recognized as Table item_type and not a phantom paragraph
+        t1 = indexed.anchor_metadata.get("[Results, Table 1]")
+        self.assertIsNotNone(t1)
+        self.assertEqual(t1.item_type, "table")
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -319,36 +319,38 @@ def extract_raw_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[
                 if not valid_spans:
                     continue
 
-            # Right margin cleaving on Pages 1-2 (split main column from right sidebar at x >= 0.78 * w)
-            if page_num <= 2:
+            # Right margin cleaving on Page 1 (split main column from right sidebar at x >= 0.78 * w only if sidebar contains metadata)
+            if page_num == 1:
                 main_spans_right = [s for s in valid_spans if s["bbox"][2] <= (0.805 * w)]
                 sidebar_spans_right = [s for s in valid_spans if s["bbox"][0] >= (0.780 * w)]
-                if main_spans_right and sidebar_spans_right and (sidebar_spans_right[0]["bbox"][0] - main_spans_right[-1]["bbox"][2]) >= 4.0:
-                    t_main = " ".join(s["text"].strip() for s in main_spans_right).strip()
-                    if t_main:
-                        raw_lines.append({
-                            "text": t_main,
-                            "bbox": [
-                                min(s["bbox"][0] for s in main_spans_right),
-                                min(s["bbox"][1] for s in main_spans_right),
-                                max(s["bbox"][2] for s in main_spans_right),
-                                max(s["bbox"][3] for s in main_spans_right)
-                            ],
-                            "spans": main_spans_right
-                        })
-                    t_side = " ".join(s["text"].strip() for s in sidebar_spans_right).strip()
-                    if t_side:
-                        raw_lines.append({
-                            "text": t_side,
-                            "bbox": [
-                                min(s["bbox"][0] for s in sidebar_spans_right),
-                                min(s["bbox"][1] for s in sidebar_spans_right),
-                                max(s["bbox"][2] for s in sidebar_spans_right),
-                                max(s["bbox"][3] for s in sidebar_spans_right)
-                            ],
-                            "spans": sidebar_spans_right
-                        })
-                    continue
+                if main_spans_right and sidebar_spans_right:
+                    gutter = sidebar_spans_right[0]["bbox"][0] - main_spans_right[-1]["bbox"][2]
+                    t_side_test = " ".join(s["text"].strip() for s in sidebar_spans_right).strip()
+                    if gutter >= 12.0 and METADATA_CONTENT_REGEX.search(t_side_test):
+                        t_main = " ".join(s["text"].strip() for s in main_spans_right).strip()
+                        if t_main:
+                            raw_lines.append({
+                                "text": t_main,
+                                "bbox": [
+                                    min(s["bbox"][0] for s in main_spans_right),
+                                    min(s["bbox"][1] for s in main_spans_right),
+                                    max(s["bbox"][2] for s in main_spans_right),
+                                    max(s["bbox"][3] for s in main_spans_right)
+                                ],
+                                "spans": main_spans_right
+                            })
+                        if t_side_test:
+                            raw_lines.append({
+                                "text": t_side_test,
+                                "bbox": [
+                                    min(s["bbox"][0] for s in sidebar_spans_right),
+                                    min(s["bbox"][1] for s in sidebar_spans_right),
+                                    max(s["bbox"][2] for s in sidebar_spans_right),
+                                    max(s["bbox"][3] for s in sidebar_spans_right)
+                                ],
+                                "spans": sidebar_spans_right
+                            })
+                        continue
 
             line_text = " ".join(s["text"].strip() for s in valid_spans)
             x0 = min(s["bbox"][0] for s in valid_spans)
@@ -605,10 +607,12 @@ def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0, pa
         curr_text = l["text"].strip()
         
         is_break = False
-        # 1. Structured header or main section title line always starts a new cluster
+        # 1. Structured header, subsection heading (e.g. 2.1, 2.2), or main section title line always starts a new cluster
         if is_structured_header_line(curr_text, prev_text):
             is_break = True
         elif detect_section_header(curr_text):
+            is_break = True
+        elif re.match(r'^\d+\.\d+(?:\.\d+)*\.?\s+[A-Z]', curr_text):
             is_break = True
         # 2. Substantial vertical leading gap with sentence-terminal punctuation
         elif vgap > paragraph_gap_threshold and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text):
@@ -740,6 +744,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     
     active_table_anchor = None
     active_table_page = 0
+    last_para_anchor: Optional[CoordinateAnchor] = None
     
     for page_idx, page in enumerate(doc):
         page_num = page_idx + 1
@@ -769,13 +774,18 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                     if clean_u == 'ABSTRACT' or clean_u == 'SUMMARY' or is_structured_header_line(line):
                         detected = 'Abstract'
                 if detected:
-                    current_section = detected
-                    active_table_anchor = None
-                    if len(lines) == 1:
+                    if detected != current_section:
+                        current_section = detected
+                        active_table_anchor = None
+                        if len(lines) == 1:
+                            block_text = ""
+                        elif l_idx == 0:
+                            block_text = "\n".join(lines[1:]).strip()
+                        break
+                    elif len(lines) == 1:
+                        # Standalone repeated section header line
                         block_text = ""
-                    elif l_idx == 0:
-                        block_text = "\n".join(lines[1:]).strip()
-                    break
+                        break
             
             if not block_text:
                 continue
@@ -864,6 +874,24 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
 
                 active_table_anchor = None
                 item_type = "para"
+
+                # Check if this paragraph is an overflow continuation of a previous paragraph cut across physical pages
+                if (
+                    last_para_anchor
+                    and last_para_anchor.section == current_section
+                    and page_num > last_para_anchor.page_number
+                    and not re.search(r'[\.\?!:]["\'\]\)]*$', last_para_anchor.text.strip())
+                    and len(last_para_anchor.text.strip()) > 60
+                    and block_text.strip()
+                    and block_text.strip()[0].islower()
+                    and not last_para_anchor.overflow_page
+                ):
+                    last_para_anchor.overflow_page = page_num
+                    last_para_anchor.overflow_bbox = [float(b[0]), float(b[1]), float(b[2]), float(b[3])]
+                    last_para_anchor.text = f"{last_para_anchor.text}\n{block_text}"
+                    indexed_doc.all_anchors[last_para_anchor.anchor_id] = last_para_anchor.text
+                    continue
+
                 if current_section not in section_para_counters:
                     section_para_counters[current_section] = 0
                 section_para_counters[current_section] += 1
@@ -887,25 +915,9 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             if current_section not in indexed_doc.sections:
                 indexed_doc.sections[current_section] = []
             indexed_doc.sections[current_section].append(anchor)
+            if item_type == "para":
+                last_para_anchor = anchor
 
-    # Overflow stitching for sentences cut across physical page breaks
-    for p_idx in range(len(doc) - 1):
-        p_curr = p_idx + 1
-        p_next = p_idx + 2
-        anchors_on_curr = [a for a in indexed_doc.anchor_metadata.values() if a.page_number == p_curr and a.item_type == "para"]
-        if not anchors_on_curr:
-            continue
-        last_para = anchors_on_curr[-1]
-        t = last_para.text.strip()
-        if not re.search(r'[\.\?!:]["\'\]\)]*$', t) and len(t) > 60:
-            anchors_on_next = [a for a in indexed_doc.anchor_metadata.values() if a.page_number == p_next and a.item_type == "para"]
-            if anchors_on_next:
-                first_next_para = anchors_on_next[0]
-                t_next = first_next_para.text.strip()
-                if t_next and t_next[0].islower():
-                    last_para.overflow_page = p_next
-                    last_para.overflow_bbox = first_next_para.bbox
-                    
     indexed_doc.raw_text = "\n\n".join(full_text_accumulator)
     doc.close()
     return indexed_doc
