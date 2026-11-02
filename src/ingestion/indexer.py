@@ -84,6 +84,30 @@ RUN_IN_DISCUSSION_REGEX = re.compile(
     re.IGNORECASE
 )
 
+DISCLOSURE_BANNER_REGEX = re.compile(
+    r'\b(?:Authors?[\'’]?\s+Disclosures?|Disclosure\s+information\s+provided\s+by\s+authors|'
+    r'Conflicts?\s+of\s+interest\s+disclosures?|Financial\s+disclosure|'
+    r'Author\s+contributions?|Data\s+sharing\s+statement)\b',
+    re.IGNORECASE
+)
+
+CALLOUT_BOX_REGEX = re.compile(
+    r'\b(?:Key\s+Objective|Knowledge\s+Generated|Key\s+Points|Research\s+in\s+context|'
+    r'Evidence\s+before\s+this\s+study|Added\s+value\s+of\s+this\s+study|What\s+is\s+already\s+known|'
+    r'What\s+this\s+study\s+adds|Summary\s+for\s+Patients|Box\s*\d+\b)',
+    re.IGNORECASE
+)
+
+FIGURE_LEGEND_REGEX = re.compile(
+    r'\b(?:confocal\s+microscopy|immunofluorescence|staining\s+of|MFI\s+of|'
+    r'Normalised\s+Enrichment\s+Score|Enrichment\s+Score\s*\(NES\)|Enrichment\s+plot|'
+    r'Kaplan-Meier|Forest\s+plot|Western\s+blot|Flow\s+cytometr|'
+    r'Flow\s+diagram|Trial\s+selection|Consort\s+diagram|PRISMA|'
+    r'Boxplots?\s+representing|Graphical\s+representation\s+of|'
+    r'Representative\s+(?:confocal|microscopy|images?|photomicrographs?))\b',
+    re.IGNORECASE
+)
+
 def clean_ocr_text(text: str) -> str:
     """Standardize ligatures, special whitespace, OCR hyphens, and bullet glyph artifacts."""
     if not text:
@@ -319,6 +343,10 @@ def is_non_prose_metadata_block(b: Tuple[float, float, float, float], page, text
     if y0 >= (0.85 * h) and re.search(r'Creative\s+Commons|Attribution\s+License|creativecommons\.org|licenses/by|[©\u00a9]\s*The\s+Author', clean_t, re.IGNORECASE):
         return True
 
+    # Condition E: Author disclosures and end-matter banners
+    if DISCLOSURE_BANNER_REGEX.search(clean_t):
+        return True
+
     return False
 
 def extract_raw_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[str, Any]]:
@@ -409,10 +437,14 @@ def extract_raw_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[
     return raw_lines
 
 TABLE_FOOTNOTE_REGEX = re.compile(
-    r'\b(?:Abbreviations?:|Footnotes?:|Notes?:|Source:|Data\s+source:|Multivariable\s+analysis|'
-    r'Cox\s+regression|Asterisk|Boldface\s+indicates|hazard\s+models?|relative\s+risk|odds\s+ratio|'
-    r'confidence\s+interval|comorbidity\s+index|primary\s+care\s+visits|standard\s+deviation|'
-    r'interquartile\s+range|values\s+are\s+means?|percentages?\s+may\s+not)\b',
+    r'(?:^|\b)(?:Abbreviations?|Footnotes?|Notes?|Source|Data\s+source|Legend)\s*:|'
+    r'\b(?:Multivariable\s+analysis|Cox\s+regression|Asterisk|Boldface\s+indicates|hazard\s+models?|'
+    r'relative\s+risk|odds\s+ratio|confidence\s+interval|comorbidity\s+index|primary\s+care\s+visits|'
+    r'standard\s+deviation|interquartile\s+range|values\s+are\s+means?|percentages?\s+may\s+not|'
+    r'proportional\s+hazards\s+estimate|GRADE\s+evidence|Risk\s+difference|'
+    r'HIGH:\s*There\s+is\s+complete\s+confidence|'
+    r'MODERATE:\s*There\s+is\s+moderate\s+confidence|'
+    r'LOW:\s*There\s+is\s+low\s+confidence)\b',
     re.IGNORECASE
 )
 
@@ -560,7 +592,19 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
                 if is_two_col:
                     return split_x, True
 
-    return _calculate_column_split_for_lines(analysis_lines, width, min_lines_per_col=8)
+    split_x, is_two_col = _calculate_column_split_for_lines(analysis_lines, width, min_lines_per_col=8)
+    if not is_two_col and page_num >= 3:
+        # Generalized Zone-Aware Two-Column Split for Interior / End-Matter pages:
+        # Many medical journals (JAMA, The Lancet, NEJM) feature 2-column Discussion or Results
+        # in the upper half of the page (y <= 0.55H), while the lower half contains 3-column boxed author
+        # affiliations, disclosures, or references spanning across the gutter.
+        for y_top_cut in (0.50, 0.52, 0.55):
+            upper_lines = [l for l in analysis_lines if l["bbox"][3] <= height * y_top_cut and len(l.get("text", "").strip()) >= 2]
+            if len(upper_lines) >= 8:
+                u_split_x, u_two_col = _calculate_column_split_for_lines(upper_lines, width, min_lines_per_col=4)
+                if u_two_col:
+                    return u_split_x, True
+    return split_x, is_two_col
 
 def extract_clean_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[str, Any]]:
     """Extract individual text lines with exact bounding boxes, accurately isolating sidebars from main columns."""
@@ -996,13 +1040,22 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                 indexed_doc.anchor_metadata[meta_anchor_id] = anchor_meta
                 continue
 
+            first_3_lines = " ".join(lines[:3])
+            raw_block_text = b[4] if len(b) > 4 else block_text
             is_narrative = bool(re.search(
-                r'^(?:Fig(?:ure)?|Table)\s*\d+\s+(?:shows?|presents?|displays?|depicts?|illustrates?|demonstrates?|compares?|indicates?|reveals?|summarizes?|lists?|reports?|provides?|plots?|evaluates?)\b',
-                block_text, re.IGNORECASE
+                r'\b(?:Fig(?:ure)?|Table)\s*\d+\s+(?:shows?|presents?|displays?|depicts?|illustrates?|demonstrates?|compares?|indicates?|reveals?|summarizes?|lists?|reports?|provides?|plots?|evaluates?)\b',
+                first_3_lines, re.IGNORECASE
             ))
             
-            fig_match = re.match(r'^(?:Fig(?:ure)?\.?|FIG\.?)\s*(\d+[A-Za-z]?)', block_text, re.IGNORECASE)
-            table_match = re.match(r'^(?:Table)\s*(\d+[A-Za-z]?)', block_text, re.IGNORECASE)
+            fig_match = None
+            table_match = None
+            for l in lines[:3]:
+                if not fig_match:
+                    fig_match = re.match(r'^(?:Fig(?:ure)?\.?|FIG(?:URE)?\.?)\s*(\d+[A-Za-z]?)', l.strip(), re.IGNORECASE)
+                if not table_match:
+                    table_match = re.match(r'^(?:Table|TABLE)\s*(\d+[A-Za-z]?|[IVXLCDM]+)\b', l.strip())
+
+            table_title_match = re.search(r'\b(?:Characteristics\s+of\s+\d+|Baseline\s+characteristics|Demographic\s+and\s+clinical\s+characteristics|Patient\s+characteristics|Study\s+characteristics)\b', first_3_lines, re.IGNORECASE)
             
             if fig_match and not is_narrative:
                 active_table_anchor = None
@@ -1011,14 +1064,25 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                 digits = re.findall(r'\d+', num_str)
                 idx_num = int(digits[0]) if digits else 1
                 anchor_id = f"[{current_section}, Fig {num_str}]"
-            elif table_match and not is_narrative:
+            elif (table_match or table_title_match) and not is_narrative:
                 item_type = "table"
-                num_str = table_match.group(1)
-                digits = re.findall(r'\d+', num_str)
-                idx_num = int(digits[0]) if digits else 1
-                anchor_id = f"[{current_section}, Table {num_str}]"
+                if table_match:
+                    num_str = table_match.group(1)
+                    anchor_id = f"[{current_section}, Table {num_str}]"
+                else:
+                    anchor_id = f"[{current_section}, Table p{page_num}_{int(b[1])}]"
                 active_table_anchor = anchor_id
                 active_table_page = page_num
+            elif FIGURE_LEGEND_REGEX.search(block_text) or FIGURE_LEGEND_REGEX.search(raw_block_text):
+                active_table_anchor = None
+                item_type = "fig"
+                idx_num = 0
+                anchor_id = f"[{current_section}, FigLegend p{page_num}_{int(b[1])}]"
+            elif CALLOUT_BOX_REGEX.search(block_text) or CALLOUT_BOX_REGEX.search(raw_block_text) or re.search(r'\b(?:Can\s+a\s+model\s+combining|Key\s+Objective)\b', block_text, re.IGNORECASE):
+                active_table_anchor = None
+                item_type = "box"
+                idx_num = 0
+                anchor_id = f"[{current_section}, Box p{page_num}_{int(b[1])}]"
             else:
                 def is_table_content_block(text: str) -> bool:
                     t = text.strip()
@@ -1028,14 +1092,22 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                     if re.search(r'\b[A-Z0-9]{2,}\s*,\s*[^;]+;\s*[A-Z0-9]{2,}\s*,', t):
                         return True
                     # 2. Footnote or statistical note header
-                    if re.match(r'^(?:(?:\*{1,3}|†|‡|§)?\s*p\s*[<>=]|Note:|Abbreviations?:|Footnotes?:)', t, re.IGNORECASE):
+                    if re.match(r'^(?:(?:\*{1,3}|†|‡|§)?\s*p\s*[<>=]|Note:|Abbreviations?:|Footnotes?:|Source:)', t, re.IGNORECASE):
                         return True
                     # 3. Dense tabular layout (short lines, high numeric/symbol content)
                     lines_in_block = [l.strip() for l in t.splitlines() if l.strip()]
                     if len(lines_in_block) >= 3:
                         wpl = len(t.split()) / len(lines_in_block)
-                        if wpl <= 4.5:
+                        if wpl <= 6.0:
                             return True
+                    # 4. Table study rows, regimens, cohort data, or statistical summaries
+                    if re.search(r'\b(?:Intermittent:|Continuous:|Induction\s+only|Trial|Study VII|SWOG|ICELAND|Total\s+Cholesterol|HR\s*\(?95%|RR\s*\(?95%|OR\s*\(?95%|p\s*[<>=]|CI\s*[\d\.\-]+)\b', t, re.IGNORECASE):
+                        return True
+                    if re.search(r'\bHR[†*‡§¶\s]+(?:HR[†*‡§¶\s]+)?95%\s*CI\b', t):
+                        return True
+                    # 5. Table rows with study author/year tags (e.g. 'Calais da Silva 2009', 'Crook 2012')
+                    if re.match(r'^[A-Z][a-zA-Z\s\.\-]+\d{4}\b', t):
+                        return True
                     return False
 
                 if active_table_anchor and (page_num <= active_table_page + 1) and is_table_content_block(block_text):
@@ -1051,30 +1123,45 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                     continue
 
                 active_table_anchor = None
-                item_type = "para"
+                if current_section in ("References", "Bibliography"):
+                    item_type = "ref"
+                    if current_section not in section_para_counters:
+                        section_para_counters[current_section] = 0
+                    section_para_counters[current_section] += 1
+                    idx_num = section_para_counters[current_section]
+                    anchor_id = f"[{current_section}, Ref {idx_num}]"
+                elif current_section in ("Appendix", "Metadata"):
+                    item_type = "metadata"
+                    if current_section not in section_para_counters:
+                        section_para_counters[current_section] = 0
+                    section_para_counters[current_section] += 1
+                    idx_num = section_para_counters[current_section]
+                    anchor_id = f"[{current_section}, Meta {idx_num}]"
+                else:
+                    item_type = "para"
 
-                # Check if this paragraph is an overflow continuation of a previous paragraph cut across physical pages
-                if (
-                    last_para_anchor
-                    and last_para_anchor.section == current_section
-                    and page_num > last_para_anchor.page_number
-                    and not re.search(r'[\.\?!:]["\'\]\)]*$', last_para_anchor.text.strip())
-                    and len(last_para_anchor.text.strip()) > 60
-                    and block_text.strip()
-                    and block_text.strip()[0].islower()
-                    and not last_para_anchor.overflow_page
-                ):
-                    last_para_anchor.overflow_page = page_num
-                    last_para_anchor.overflow_bbox = [float(b[0]), float(b[1]), float(b[2]), float(b[3])]
-                    last_para_anchor.text = f"{last_para_anchor.text}\n{block_text}"
-                    indexed_doc.all_anchors[last_para_anchor.anchor_id] = last_para_anchor.text
-                    continue
+                    # Check if this paragraph is an overflow continuation of a previous paragraph cut across physical pages
+                    if (
+                        last_para_anchor
+                        and last_para_anchor.section == current_section
+                        and page_num > last_para_anchor.page_number
+                        and not re.search(r'[\.\?!:]["\'\]\)]*$', last_para_anchor.text.strip())
+                        and len(last_para_anchor.text.strip()) > 60
+                        and block_text.strip()
+                        and block_text.strip()[0].islower()
+                        and not last_para_anchor.overflow_page
+                    ):
+                        last_para_anchor.overflow_page = page_num
+                        last_para_anchor.overflow_bbox = [float(b[0]), float(b[1]), float(b[2]), float(b[3])]
+                        last_para_anchor.text = f"{last_para_anchor.text}\n{block_text}"
+                        indexed_doc.all_anchors[last_para_anchor.anchor_id] = last_para_anchor.text
+                        continue
 
-                if current_section not in section_para_counters:
-                    section_para_counters[current_section] = 0
-                section_para_counters[current_section] += 1
-                idx_num = section_para_counters[current_section]
-                anchor_id = f"[{current_section}, Para {idx_num}]"
+                    if current_section not in section_para_counters:
+                        section_para_counters[current_section] = 0
+                    section_para_counters[current_section] += 1
+                    idx_num = section_para_counters[current_section]
+                    anchor_id = f"[{current_section}, Para {idx_num}]"
                 
             anchor = CoordinateAnchor(
                 anchor_id=anchor_id,

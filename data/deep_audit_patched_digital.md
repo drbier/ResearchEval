@@ -1,32 +1,32 @@
 # WonkProject Corpus Deep Indexer Invariant Audit Report
 
-**Execution Timestamp**: 2026-11-01 20:50:32
+**Execution Timestamp**: 2026-11-02 07:19:14
 **Total Papers Audited**: 235
-**Total Audit Runtime**: 791.5s (Average: 3.37s/paper)
+**Total Audit Runtime**: 499.6s (Average: 2.13s/paper)
 
 ## Executive Health Summary
 
 | Metric | Count | Percentage | Status |
 |---|---|---|---|
-| **Fully Compliant Papers** | 10 / 235 | 4.3% | ⚠️ ANOMALIES FOUND |
-| **Critical Failures** (Column Bleeds / Trapped Sections) | 81 / 235 | 34.5% | ❌ REQUIRES FIX |
-| **Cross-Column Bounding Box Bleeds** | 79 | 33.6% | ❌ HIGH PRIORITY |
+| **Fully Compliant Papers** | 12 / 235 | 5.1% | ⚠️ ANOMALIES FOUND |
+| **Critical Failures** (Column Bleeds / Trapped Sections) | 64 / 235 | 27.2% | ❌ REQUIRES FIX |
+| **Cross-Column Bounding Box Bleeds** | 60 | 25.5% | ❌ HIGH PRIORITY |
 | **Missing Discussion Section Voids** | 16 | 6.8% | ❌ HIGH PRIORITY |
 | **Abstract Page 2+ Leakage** | 96 | 40.9% | ⚠️ MEDIUM |
-| **Mega-Paragraphs (Swallowed Subsections)** | 151 | 64.3% | ⚠️ MEDIUM |
-| **Table Footnote / Glossary Pollution** | 1 | 0.4% | ℹ️ LOW |
+| **Mega-Paragraphs (Swallowed Subsections)** | 143 | 60.9% | ⚠️ MEDIUM |
+| **Table Footnote / Glossary Pollution** | 2 | 0.9% | ℹ️ LOW |
 
 ## Publisher Vulnerability Breakdown
 
 | Publisher Family | Total Papers | Papers with Invariant Failures | Failure Rate |
 |---|---|---|---|
-| **Unknown** | 130 | 123 | 94.6% |
+| **Unknown** | 130 | 122 | 93.8% |
 | **MDPI** | 48 | 46 | 95.8% |
 | **Springer/Nature/BMC** | 13 | 13 | 100.0% |
 | **Elsevier** | 8 | 8 | 100.0% |
 | **JAMA** | 8 | 8 | 100.0% |
 | **BMJ** | 6 | 6 | 100.0% |
-| **The Lancet** | 5 | 4 | 80.0% |
+| **The Lancet** | 5 | 3 | 60.0% |
 | **Wiley** | 5 | 5 | 100.0% |
 | **NEJM** | 5 | 5 | 100.0% |
 | **PLOS** | 3 | 3 | 100.0% |
@@ -38,83 +38,34 @@
 
 The following papers exhibited structural column bleeds or missing section transitions:
 
-### 📄 `Attenuation of malignant phenotype of glioblastoma following a short course of the pro-oxidant combination of Resveratrol and Copper.pdf`
-- **Publisher**: Unknown | **Pages**: 7 | **Total Anchors**: 115
-  - ❌ **Cross-Column Bleed**: `[Results, Para 11]` on Page 3 stretches from $x_0=60.8$ to $x_1=549.9$ (Width: 595.3).
-    > *Excerpt*: "Representative confocal microscopy images of tumour sections to detect cfChPs in TME, and Immuno ﬂ uorescence results of Ki-67,"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 12]` on Page 3 stretches from $x_0=35.9$ to $x_1=550.0$ (Width: 595.3).
-    > *Excerpt*: "Graphical representation of MFI of extra-nuclear cfChPs (right hand image). The nuclei were gated and MFI of yellow ﬂ uorescent signals in ﬁ"
-  - ❌ **Cross-Column Bleed**: `[Discussion, Para 4]` on Page 5 stretches from $x_0=35.9$ to $x_1=549.9$ (Width: 595.3).
-    > *Excerpt*: "respectively in R-Cu treated samples. For each gene set, Normalised Enrichment Score (NES), nominal p -value, and False Discovery Rate (FDR)"
-
-### 📄 `Report of the Conference on Low Blood Cholesterol Mortality Associations.pdf`
-- **Publisher**: MDPI | **Pages**: 15 | **Total Anchors**: 142
-  - ❌ **Cross-Column Bleed**: `[Results, Para 10]` on Page 5 stretches from $x_0=53.5$ to $x_1=530.2$ (Width: 579.8).
-    > *Excerpt*: "did not have enough observations at the total cholesterol level to make a proportional hazards estimate. t is the number of standard"
-
-### 📄 `Total Cholesterol and Cancer Risk in a Large Prospective Study in Korea.pdf`
-- **Publisher**: Unknown | **Pages**: 7 | **Total Anchors**: 74
-  - ❌ **Cross-Column Bleed**: `[Results, Para 12]` on Page 3 stretches from $x_0=129.5$ to $x_1=508.2$ (Width: 585.0).
-    > *Excerpt*: "180-199 mg/dL HR† HR† 95% CI HR† 95% CI HR† 95% CI HR† 95% CI"
-
-### 📄 `A meta-analysis of cardiovascular events in intermittent androgen-deprivation therapy versus continuous androgen-deprivation.pdf`
-- **Publisher**: Unknown | **Pages**: 8 | **Total Anchors**: 87
-  - ❌ **Cross-Column Bleed**: `[Results, Para 13]` on Page 5 stretches from $x_0=52.3$ to $x_1=552.5$ (Width: 595.3).
-    > *Excerpt*: "Treatment regimens in the included studies Intermittent: induction only (8 mo): LHRHa injections plus a non-steroidal anti-androgen, with Cr"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 14]` on Page 5 stretches from $x_0=52.3$ to $x_1=539.0$ (Width: 595.3).
-    > *Excerpt*: "Intermittent: induction only (3 mo): CPA 200 mg for 2 weeks followed by monthly depot Calais da Silva 2009 (SEUG 9401 Trial) 13 injections o"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 16]` on Page 5 stretches from $x_0=52.3$ to $x_1=552.5$ (Width: 595.3).
-    > *Excerpt*: "Intermittent: induction only (6 mo): goserelin acetate (3.6 mg) SC every 28 days. The CPA was Salonen 2012/2013 (FinnProstate Study VII) 14 "
-  - ❌ **Section Void**: Paper has 8 pages and 37 Results anchors, but Discussion has 0 anchors (Discussion trapped in Results).
-
-### 📄 `Intermittent androgen-deprivation therapy in prostate cancer a critical review focused on phase 3 trials.pdf`
-- **Publisher**: Elsevier | **Pages**: 9 | **Total Anchors**: 117
-  - ❌ **Cross-Column Bleed**: `[Introduction, Para 63]` on Page 7 stretches from $x_0=57.8$ to $x_1=424.1$ (Width: 595.3).
-    > *Excerpt*: "E U R O P E A N U R O L O G Y X X X ( 2 0 1 3 ) X X X – X X X Table 5 – Comparison of international guidelines on indications for intermitte"
-
-### 📄 `Intermittent vs Continuous Androgen Deprivation Therapy for Prostate Cancer A Systematic Review and Meta-analysis.pdf`
-- **Publisher**: Unknown | **Pages**: 9 | **Total Anchors**: 136
-  - ❌ **Cross-Column Bleed**: `[References, Para 23]` on Page 8 stretches from $x_0=67.4$ to $x_1=534.6$ (Width: 612.0).
-    > *Excerpt*: "ing pooled analyses. In addition, the high risk of bias and the systematic method of evaluation of adverse effects in the inlow methodologic"
-  - ❌ **Cross-Column Bleed**: `[Conclusions, Para 1]` on Page 8 stretches from $x_0=67.4$ to $x_1=534.4$ (Width: 612.0).
-    > *Excerpt*: "sive literature search using multiple databases, including both In our systematic review, we observed that intermittent anscientific and gra"
-  - ❌ **Cross-Column Bleed**: `[Conclusions, Para 2]` on Page 8 stretches from $x_0=67.4$ to $x_1=534.4$ (Width: 612.0).
-    > *Excerpt*: "vival. No major difference in quality of life was observed beWe also examined the effect of the intervention on several tween groups, althou"
-  - ❌ **Cross-Column Bleed**: `[Conclusions, Para 3]` on Page 8 stretches from $x_0=67.4$ to $x_1=534.5$ (Width: 612.0).
-    > *Excerpt*: "ered as an alternative therapeutic option in patients with prosOur systematic review was limited by the available data, tate cancer. However"
-
-### 📄 `Treatment of prostate cancer with intermittent versus continuous androgen deprivation- a systematic review of randomized tri.pdf`
-- **Publisher**: Unknown | **Pages**: 9 | **Total Anchors**: 117
-  - ❌ **Cross-Column Bleed**: `[Results, Para 8]` on Page 3 stretches from $x_0=56.5$ to $x_1=381.5$ (Width: 585.0).
-    > *Excerpt*: "PSA above an acceptable level or Note: acceptable level of PSA needed to stop or start ADT depends on physicians’/patients’ preference"
-
-### 📄 `Antioxidant supplementation and breast cancer prognosis in postmenopausal women undergoing chemotherapy and radiation therapy.pdf`
-- **Publisher**: Unknown | **Pages**: 10 | **Total Anchors**: 112
-  - ❌ **Cross-Column Bleed**: `[Methods, Para 15]` on Page 3 stretches from $x_0=41.7$ to $x_1=543.8$ (Width: 585.0).
-    > *Excerpt*: "Flow diagram of exclusion and inclusion criteria for participants of the Mamma Carcinoma Risk Factor Investigation study for analyses relati"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 9]` on Page 5 stretches from $x_0=80.9$ to $x_1=428.3$ (Width: 585.0).
-    > *Excerpt*: "Antioxidants, chemo/radiotherapy in breast cancer Characteristics of 2223 breast cancer patients overall and according to postdiagnosis diet"
-
-### 📄 `Association Between Precautionary Behaviors and Breast Cancer-Related Lymphedema in Patients Undergoing Bilateral Surgery.pdf`
-- **Publisher**: Unknown | **Pages**: 9 | **Total Anchors**: 97
-  - ❌ **Cross-Column Bleed**: `[Results, Para 21]` on Page 9 stretches from $x_0=37.1$ to $x_1=550.1$ (Width: 585.0).
-    > *Excerpt*: "The following represents disclosure information provided by authors of this manuscript. All relationships are considered compensated. Relati"
+### 📄 `Total cholesterol and all-cause mortality by sex and age a prospective cohort study among 12.8 million adults.pdf`
+- **Publisher**: Springer/Nature/BMC | **Pages**: 10 | **Total Anchors**: 47
+  - ❌ **Cross-Column Bleed**: `[References, Para 4]` on Page 8 stretches from $x_0=155.6$ to $x_1=556.7$ (Width: 595.3).
+    > *Excerpt*: "In conclusion, U-curve relationships between TC and mortality were found, regardless of sex and age. TC ranges associated with the lowest mo"
+  - ❌ **Cross-Column Bleed**: `[References, Para 5]` on Page 8 stretches from $x_0=155.6$ to $x_1=554.6$ (Width: 595.3).
+    > *Excerpt*: "2. US Department of Health and Human Services. Healthy People 2020. 2020 Topics & Objective: Heart Disease and Stroke. https:// www.healthyp"
 
 ### 📄 `Association between Dietary Indices and Dietary Patterns and Mortality and Cancer Recurrence among Cancer Survivors An Updated Systematic Review and Meta-Analysis of Cohort Studies.pdf`
-- **Publisher**: MDPI | **Pages**: 19 | **Total Anchors**: 215
-  - ❌ **Cross-Column Bleed**: `[Results, Para 7]` on Page 6 stretches from $x_0=187.7$ to $x_1=559.3$ (Width: 595.3).
+- **Publisher**: MDPI | **Pages**: 19 | **Total Anchors**: 232
+  - ❌ **Cross-Column Bleed**: `[Methods, Para 3]` on Page 3 stretches from $x_0=166.4$ to $x_1=559.3$ (Width: 595.3).
+    > *Excerpt*: "and (6) study population restricted to adults only ( ≥ 18 years). PICOS criteria for eligible"
+  - ❌ **Cross-Column Bleed**: `[Methods, Para 14]` on Page 3 stretches from $x_0=166.1$ to $x_1=560.9$ (Width: 595.3).
+    > *Excerpt*: "Data extraction from the included studies was carried out as follows: (1) name of the ﬁrst author and year of publication; (2) country; (3) "
+  - ❌ **Cross-Column Bleed**: `[Methods, Para 15]` on Page 3 stretches from $x_0=166.1$ to $x_1=560.9$ (Width: 595.3).
+    > *Excerpt*: "An adjusted version of the Cochrane Risk of Bias in Nonrandomized Studies of Interventions (ROBINS-I) tool was used to evaluate the risk of "
+  - ❌ **Cross-Column Bleed**: `[Results, Para 6]` on Page 6 stretches from $x_0=187.7$ to $x_1=559.3$ (Width: 595.3).
     > *Excerpt*: "Overall mortality was reported in 36 studies. Two studies [ 27 , 28 ] did not report this"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 9]` on Page 6 stretches from $x_0=166.4$ to $x_1=560.5$ (Width: 595.3).
+  - ❌ **Cross-Column Bleed**: `[Results, Para 8]` on Page 6 stretches from $x_0=166.4$ to $x_1=560.5$ (Width: 595.3).
     > *Excerpt*: "Twenty-six of the included studies were conducted in the United States. Seven studies Portugal, and one from the Netherlands. One cohort stu"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 10]` on Page 6 stretches from $x_0=166.4$ to $x_1=559.3$ (Width: 595.3).
+  - ❌ **Cross-Column Bleed**: `[Results, Para 9]` on Page 6 stretches from $x_0=166.4$ to $x_1=559.3$ (Width: 595.3).
     > *Excerpt*: "Supplementary Material Tables S6–S8 summarize the included studies with respect to diet-quality indices and/or dietary patterns investigated"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 11]` on Page 6 stretches from $x_0=166.4$ to $x_1=561.0$ (Width: 595.3).
+  - ❌ **Cross-Column Bleed**: `[Results, Para 10]` on Page 6 stretches from $x_0=166.4$ to $x_1=561.0$ (Width: 595.3).
     > *Excerpt*: "The potential risk of bias was assessed using an adjusted version of the ROBINS-I tool. Supplementary Material Table S9 provides comprehensi"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 22]` on Page 6 stretches from $x_0=166.0$ to $x_1=560.5$ (Width: 595.3).
+  - ❌ **Cross-Column Bleed**: `[Results, Para 21]` on Page 6 stretches from $x_0=166.0$ to $x_1=560.5$ (Width: 595.3).
     > *Excerpt*: "high risk only in one domain (bias due to confounding). Another 18 studies were assessed with moderate potential risk of bias. Three studies"
 
 ### 📄 `Benefits-and-harms-of-breast-cancer-mammography-screening-for-women-at-average-risk-of-breast_optimize.pdf`
-- **Publisher**: Unknown | **Pages**: 16 | **Total Anchors**: 180
+- **Publisher**: Unknown | **Pages**: 16 | **Total Anchors**: 179
   - ❌ **Cross-Column Bleed**: `[Abstract, Para 17]` on Page 10 stretches from $x_0=131.0$ to $x_1=488.4$ (Width: 595.3).
     > *Excerpt*: "⨁⨁  b,c,d ⨁⨁  b,j ⨁⨁  b,j ⨁⨁  c,i evidence LOW LOW LOW LOW Downgraded due to indirectness Downgraded due to indirectness Downgraded "
   - ❌ **Cross-Column Bleed**: `[Abstract, Para 28]` on Page 12 stretches from $x_0=103.1$ to $x_1=501.6$ (Width: 595.3).
@@ -124,10 +75,6 @@ The following papers exhibited structural column bleeds or missing section trans
 - **Publisher**: JAMA | **Pages**: 34 | **Total Anchors**: 165
   - ❌ **Cross-Column Bleed**: `[Methods, Para 5]` on Page 7 stretches from $x_0=118.9$ to $x_1=587.6$ (Width: 612.0).
     > *Excerpt*: "Breast Cancer Screening Strategies for Women With ATM, CHEK2, and PALB2 Pathogenic Variants: A Comparative Modeling Ana…"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 17]` on Page 13 stretches from $x_0=41.2$ to $x_1=567.2$ (Width: 612.0).
-    > *Excerpt*: "Abbreviation: MRI, magnetic resonance imaging. a Results are shown as mean values of cumulative lifetime outcomes per 1000 women screened ac"
-  - ❌ **Cross-Column Bleed**: `[Results, Para 39]` on Page 20 stretches from $x_0=41.2$ to $x_1=571.2$ (Width: 612.0).
-    > *Excerpt*: "Abbreviation: MRI, magnetic resonance imaging. a Results are shown as model mean values of cumulative lifetime outcomes per 1000 women scree"
 
 ### 📄 `Breast cancer patients enrolled in the Swiss mammography screening program “donna” demonstrate prolonged survival.pdf`
 - **Publisher**: Unknown | **Pages**: 13 | **Total Anchors**: 101
@@ -140,7 +87,7 @@ The following papers exhibited structural column bleeds or missing section trans
     > *Excerpt*: "Conclusion: These findings emphasise the need for careful management of concomitant medications in breast cancer care and support ongoing re"
 
 ### 📄 `Dietary Supplement Use During Chemotherapy and Survival Outcomes of Patients With Breast Cancer Enrolled in a Cooperative Group Clinical Trial (SWOG S0221).pdf`
-- **Publisher**: Unknown | **Pages**: 17 | **Total Anchors**: 155
+- **Publisher**: Unknown | **Pages**: 17 | **Total Anchors**: 158
   - ❌ **Cross-Column Bleed**: `[Discussion, Para 17]` on Page 8 stretches from $x_0=37.0$ to $x_1=548.1$ (Width: 585.0).
     > *Excerpt*: "† Strati ﬁ ed on treatment assignment and adjusted for age, tumor characteristics (estrogen receptor, progesterone receptor, human epidermal"
   - ❌ **Cross-Column Bleed**: `[References, Para 9]` on Page 10 stretches from $x_0=93.5$ to $x_1=548.0$ (Width: 585.0).
@@ -149,3 +96,73 @@ The following papers exhibited structural column bleeds or missing section trans
     > *Excerpt*: "TABLE A2. Prevalence of Use of Dietary Supplements Before and During Chemotherapy for High-Risk Breast Cancer in S0221: DELCaP Study Partici"
   - ❌ **Cross-Column Bleed**: `[Appendix, Para 7]` on Page 15 stretches from $x_0=77.8$ to $x_1=548.0$ (Width: 585.0).
     > *Excerpt*: "Ambrosone et al TABLE A2. Prevalence of Use of Dietary Supplements Before and During Chemotherapy for High-Risk Breast Cancer in S0221: DELC"
+
+### 📄 `Dietary flaxseed alters tumor biological markers in postmenopausal breast cancer.pdf`
+- **Publisher**: Unknown | **Pages**: 8 | **Total Anchors**: 126
+  - ❌ **Cross-Column Bleed**: `[References, Para 37]` on Page 7 stretches from $x_0=46.2$ to $x_1=549.3$ (Width: 585.0).
+    > *Excerpt*: "seed enhances the inhibitory effect of tamoxifen on Anderson E. Effect of tamoxifen on Ki67 labeling 90^100."
+  - ❌ **Cross-Column Bleed**: `[References, Para 38]` on Page 7 stretches from $x_0=41.2$ to $x_1=549.3$ (Width: 585.0).
+    > *Excerpt*: "the growth of estrogen-dependent human breast index in human breast tumors and its relationship to 16. Adlercreutz H, MousaviY, ClarkJ, et a"
+  - ❌ **Cross-Column Bleed**: `[References, Para 40]` on Page 7 stretches from $x_0=41.2$ to $x_1=549.4$ (Width: 585.0).
+    > *Excerpt*: "34. Chen J, Stavro M,Thompson LU. Dietary flaxseed 51. Robertson JF, Nicholson RI, Bundred NJ, et al. 17. Saarinen NM,Warri A, Makela SI, et"
+  - ❌ **Cross-Column Bleed**: `[References, Para 41]` on Page 7 stretches from $x_0=213.6$ to $x_1=549.3$ (Width: 585.0).
+    > *Excerpt*: "tamoxifen in postmenopausal women with primary 35. Dabrosin C, Chen J, Wang L, Thompson LU."
+  - ❌ **Cross-Column Bleed**: `[References, Para 43]` on Page 7 stretches from $x_0=46.2$ to $x_1=549.4$ (Width: 585.0).
+    > *Excerpt*: "Flaxseed inhibits metastasis and decreases extracelluAntioxidant activity of the flaxseed lignan secoisolari52. Harper-Wynne CL, Sacks NP, S"
+  - ❌ **Cross-Column Bleed**: `[References, Para 44]` on Page 7 stretches from $x_0=46.2$ to $x_1=549.4$ (Width: 585.0).
+    > *Excerpt*: "lar vascular endothelial growth factor in human breast ciresinol diglycoside and its mammalian lignan Comparison of the systemic and intratu"
+  - ❌ **Cross-Column Bleed**: `[References, Para 46]` on Page 7 stretches from $x_0=41.2$ to $x_1=549.4$ (Width: 585.0).
+    > *Excerpt*: "36. Thompson LU, Seidl M, Rickard S, Orchson LJ, JClin Oncol 2002;20:1026^35. 19. Prasad K. Hydroxyl radical- scavenging property of Fong HH"
+  - ❌ **Cross-Column Bleed**: `[References, Para 48]` on Page 7 stretches from $x_0=41.2$ to $x_1=549.4$ (Width: 585.0).
+    > *Excerpt*: "Pilot study of dietary fat restriction and flaxseed sup37. Miller WR, Dixon JM, Macfarlane L, Cameron D, plementation in men with prostate c"
+
+### 📄 `Electroacupuncture frequency for chemotherapy-induced neuropathy in breast cancer a randomized controlled trial .pdf`
+- **Publisher**: Unknown | **Pages**: 11 | **Total Anchors**: 109
+  - ❌ **Cross-Column Bleed**: `[Discussion, Para 3]` on Page 9 stretches from $x_0=48.2$ to $x_1=550.2$ (Width: 595.3).
+    > *Excerpt*: "• In the 2 Hz EA group, 13 patients experienced one adverse event, 4 patients experienced two adverse events, and 1 patient experienced four"
+
+### 📄 `Impact of Ipsilateral Blood Draws, Injections, Blood Pressure Measurements, and Air Travel on the Risk of Lymphedema for Patients Treated for Breast Cancer.pdf`
+- **Publisher**: Unknown | **Pages**: 9 | **Total Anchors**: 89
+  - ❌ **Cross-Column Bleed**: `[References, Para 5]` on Page 7 stretches from $x_0=34.9$ to $x_1=424.5$ (Width: 585.0).
+    > *Excerpt*: "strategies for investigation and treatment: A review. Delayed breast cellulitis: An evolving complication of Plast Surg Nurs 32:173-177, 201"
+  - ❌ **Cross-Column Bleed**: `[References, Para 6]` on Page 7 stretches from $x_0=34.9$ to $x_1=547.9$ (Width: 585.0).
+    > *Excerpt*: "19. Hayes SB, Freedman GM, Li T, et al: Does 37. Smith J: The practice of venepuncture in 1339-1346, 2006 axillary boost increase lymphedema"
+  - ❌ **Cross-Column Bleed**: `[References, Para 8]` on Page 7 stretches from $x_0=34.9$ to $x_1=547.9$ (Width: 585.0).
+    > *Excerpt*: "Breast Cancer Res Treat 142:59-67, 2013 40. Brennan MJ, Weitz J: Lymphedema 30 years org/pdfDocs/PP_Lymphedema_BC_Supplement.pdf 21. Ahmed R"
+  - ❌ **Cross-Column Bleed**: `[References, Para 9]` on Page 7 stretches from $x_0=34.9$ to $x_1=434.1$ (Width: 585.0).
+    > *Excerpt*: "Position AR: Risk factors for lymphedema in breast cancer 71:12-14, 1992 statement of the National Lymphedema Network:"
+  - ❌ **Cross-Column Bleed**: `[References, Para 10]` on Page 7 stretches from $x_0=34.9$ to $x_1=547.9$ (Width: 585.0).
+    > *Excerpt*: "survivors, the Iowa Women ’ s Health Study. Breast 41. Clark B, Sitzia J, Harlow W: Incidence and risk Lymphedema risk reduction practices. "
+  - ❌ **Cross-Column Bleed**: `[References, Para 11]` on Page 7 stretches from $x_0=34.9$ to $x_1=547.9$ (Width: 585.0).
+    > *Excerpt*: "Cancer Res Treat 130:981-991, 2011 of arm oedema following treatment for breast cancer: lymphnet.org/pdfDocs/nlnriskreduction.pdf A three-ye"
+  - ❌ **Cross-Column Bleed**: `[References, Para 13]` on Page 7 stretches from $x_0=34.9$ to $x_1=547.9$ (Width: 585.0).
+    > *Excerpt*: "42. Cemal Y, Pusic A, Mehrara BJ: Preventative Prevalence of lymphedema in women with breast Trends in risk reduction practices for the prev"
+
+### 📄 `Improved survival in patients with end-stage cancer treated with coenzyme Q(10) and other antioxidants a pilot study.pdf`
+- **Publisher**: MDPI | **Pages**: 11 | **Total Anchors**: 95
+  - ❌ **Cross-Column Bleed**: `[References, Para 9]` on Page 9 stretches from $x_0=70.1$ to $x_1=406.2$ (Width: 476.2).
+    > *Excerpt*: "• Received for publication 1 June 2009 • Accepted subject to revision 4 June 2009 • Revised accepted 13 October 2009 Copyright © 2009 Field "
+
+### 📄 `Intl Journal of Cancer - 2024 - Chan - Post‐diagnosis dietary factors  supplement use and colorectal cancer prognosis  A.pdf`
+- **Publisher**: Unknown | **Pages**: 26 | **Total Anchors**: 271
+  - ❌ **Cross-Column Bleed**: `[Results, Para 48]` on Page 9 stretches from $x_0=98.8$ to $x_1=540.7$ (Width: 595.3).
+    > *Excerpt*: "An overview of summary relative risks from linear dose – response meta-analyses of observational studies and the corresponding associations,"
+
+### 📄 `Efficacy and safety of metronomic chemotherapy in maintenance therapy for metastatic colorectal cancer A systematic review of randomized controlled trials.pdf`
+- **Publisher**: Unknown | **Pages**: 7 | **Total Anchors**: 68
+  - ❌ **Cross-Column Bleed**: `[Results, Para 3]` on Page 3 stretches from $x_0=51.0$ to $x_1=560.5$ (Width: 594.0).
+    > *Excerpt*: "3.4. The effectiveness of MC in mCRC MT All 4 selected studies included RCTs and had reported on the mPFS and mOS of the participants. Geng "
+
+### 📄 `Metronomic Capecitabine Plus Aromatase Inhibitor as Initial Therapy in Patients With Hormone Receptor-Positive, Human Epidermal Growth Factor Receptor 2-Negative Metastatic Breast Cancer.pdf`
+- **Publisher**: Unknown | **Pages**: 13 | **Total Anchors**: 125
+  - ❌ **Cross-Column Bleed**: `[Introduction, Para 1]` on Page 2 stretches from $x_0=51.9$ to $x_1=536.0$ (Width: 585.0).
+    > *Excerpt*: "citabine plus an aromatase inhibitor (AI) signi ﬁ cantly prolonged median progression-free survival to 20.9 months compared with 11.9 months"
+
+### 📄 `Metronomic Chemotherapy for Metastatic Breast Cancer Treatment Clinical and Preclinical Data between Lights and Shadows.pdf`
+- **Publisher**: MDPI | **Pages**: 18 | **Total Anchors**: 218
+  - ❌ **Cross-Column Bleed**: `[Results, Para 65]` on Page 12 stretches from $x_0=166.1$ to $x_1=559.3$ (Width: 595.3).
+    > *Excerpt*: "proﬁle is associated with well-documented clinical activity in various types of cancer and In a recently published systematic literature ana"
+  - ❌ **Cross-Column Bleed**: `[Results, Para 66]` on Page 12 stretches from $x_0=166.0$ to $x_1=560.5$ (Width: 595.3).
+    > *Excerpt*: "event reporting were noted. Most of the studies used the NCI-CTCAE (any version) criteria, while seven used the WHO criteria. The authors em"
+  - ❌ **Cross-Column Bleed**: `[Results, Para 67]` on Page 12 stretches from $x_0=166.4$ to $x_1=560.5$ (Width: 595.3).
+    > *Excerpt*: "different regimens and schedules applied, even when the same drugs are used, the small number of patients enrolled in the different trials, "

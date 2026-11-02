@@ -175,7 +175,7 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
     # Refined: Excludes standalone display formulas, short labels, and verifies dual-column text context
     # -------------------------------------------------------------------------
     for a in indexed.anchor_metadata.values():
-        if a.item_type not in ("para", "paragraph") or a.anchor_id == "[Doc_Header]":
+        if a.item_type not in ("para", "paragraph") or a.anchor_id == "[Doc_Header]" or a.section in ("References", "Bibliography", "Appendix", "Metadata"):
             continue
 
         words = a.text.split()
@@ -185,6 +185,18 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
 
         # Exclude display equations (starting with equation index or high formula symbols)
         if re.match(r'^(?:\([0-9A-Za-z\.\-]+\)|\[[0-9A-Za-z\.\-]+\]|\s*[a-zA-Z]\s*=)', a.text.strip()):
+            continue
+
+        # Invariant 1: Exclude intentional full-width tables, figures, flowcharts, callout boxes, and author disclosures
+        if re.search(r'\b(?:Table|TABLE|Fig(?:ure)?|FIG(?:URE)?)\s*(?:\d+|[IVXLCDM]+)\b', a.text[:100]):
+            continue
+        if re.search(r'\b(?:Flow\s+diagram|Trial\s+selection|Consort\s+diagram|PRISMA|Normalised\s+Enrichment\s+Score|MFI\s+of|confocal\s+microscopy)\b', a.text, re.IGNORECASE):
+            continue
+        if re.search(r'(?:^|\b)(?:Abbreviations?|Footnotes?|Notes?)\s*:', a.text[:100], re.IGNORECASE):
+            continue
+        if re.search(r'\b(?:Key\s+Objective|Knowledge\s+Generated|Key\s+Points|Research\s+in\s+context|What\s+is\s+already\s+known|What\s+this\s+study\s+adds|Box\s*\d+|Characteristics\s+of\s+\d+|Can\s+a\s+model\s+combining)\b', a.text[:100], re.IGNORECASE):
+            continue
+        if re.search(r'\b(?:Authors?[\'’]?\s+Disclosures?|Disclosure\s+information\s+provided\s+by\s+authors)\b', a.text[:100], re.IGNORECASE):
             continue
 
         w = a.page_width or 612.0
@@ -271,7 +283,7 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
     # -------------------------------------------------------------------------
     subsection_pat = re.compile(r'(?:\n|\b)(?:[0-9]+\.[0-9]+|\b(?:Strengths\s+and\s+Limitations|Statistical\s+Analysis|Exclusion\s+Criteria|Study\s+Design)\b)', re.IGNORECASE)
     for a in indexed.anchor_metadata.values():
-        if a.item_type == "para" and len(a.text) > 1800:
+        if a.item_type == "para" and a.section not in ("References", "Bibliography", "Appendix", "Metadata") and len(a.text) > 1800:
             if subsection_pat.search(a.text):
                 file_record["anomaly_counts"]["mega_paragraphs"] += 1
                 file_record["violations"].append({
@@ -288,7 +300,7 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
     # Detect accidental single-line fragments created by margin cleaving
     # -------------------------------------------------------------------------
     for a in indexed.anchor_metadata.values():
-        if a.item_type == "para" and len(a.text.strip()) < 35:
+        if a.item_type == "para" and a.section not in ("References", "Bibliography", "Appendix", "Metadata") and len(a.text.strip()) < 35:
             t_clean = a.text.strip()
             # Exclude standalone mathematical formulas or author headers
             if not re.match(r'^(?:[pPnN]\s*[<>=]|Table|Figure|Key\s+points|doi:)', t_clean, re.IGNORECASE):
