@@ -1,7 +1,7 @@
 {
-  "timestamp": 1793579356.0109603,
+  "timestamp": 1793584232.3428237,
   "total_audited": 235,
-  "elapsed_seconds": 492.3199622631073,
+  "elapsed_seconds": 791.537321805954,
   "results": [
     {
       "filename": "A National Study Exploring the Association between Fasting Duration and Mortality among the Elderly.pdf",
@@ -71,7 +71,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.81
+      "indexing_seconds": 0.84
     },
     {
       "filename": "A statistical error in the estimation of the recommended dietary allowance for vitamin D.pdf",
@@ -95,7 +95,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.26
+      "indexing_seconds": 0.25
     },
     {
       "filename": "A systematic review of elastography, electrical impedance scanning, and digital infrared thermography for breast cancer screening and diagnosis.pdf",
@@ -151,7 +151,7 @@
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 0.76
+      "indexing_seconds": 0.75
     },
     {
       "filename": "Abstract 4371606_ Effect of Long-term Melatonin Supplementation on Incidence of Heart Failure in Patients with Insomnia _ Circulation.pdf",
@@ -327,69 +327,24 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 1.25
+      "indexing_seconds": 1.2
     },
     {
       "filename": "Attenuation of malignant phenotype of glioblastoma following a short course of the pro-oxidant combination of Resveratrol and Copper.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Attenuation of malignant phenotype of glioblastoma following a short course of the pro-oxidant combination of Resveratrol and Copper.pdf",
       "is_scanned": false,
       "page_count": 7,
-      "total_anchors": 105,
+      "total_anchors": 115,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 9,
-        "Introduction": 5,
+        "Abstract": 11,
+        "Introduction": 13,
         "Methods": 10,
         "Results": 39,
         "Discussion": 12,
         "References": 29
       },
       "violations": [
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 5]",
-          "page": 1,
-          "bbox": [
-            47.8,
-            380.1,
-            538.0,
-            411.0
-          ],
-          "page_width": 595.3,
-          "word_count": 50,
-          "text_excerpt": "CONCLUSIONS: These results suggest that a simple, non-toxic and inexpensive combination of the commonly used nutraceuticals Resveratrol and "
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Introduction, Para 1]",
-          "page": 1,
-          "bbox": [
-            35.9,
-            486.8,
-            550.0,
-            595.4
-          ],
-          "page_width": 595.3,
-          "word_count": 208,
-          "text_excerpt": "tion can be abrogated by concurrent treatment with a combinaGlioblastoma (GBM) is a highly aggressive tumour with poor tion of the nutraceut"
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Introduction, Para 2]",
-          "page": 1,
-          "bbox": [
-            35.9,
-            586.4,
-            549.9,
-            725.7
-          ],
-          "page_width": 595.3,
-          "word_count": 218,
-          "text_excerpt": "Given that the concurrent induction of DNA damage and in \ufb02 ammation is a the stomach, which are readily absorbed and have systemic effects i"
-        },
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
@@ -450,6 +405,30 @@
           "page": 6,
           "char_length": 1808,
           "text_excerpt": "https://doi.org/10.1016/j.ccr.2005.02.013 . 5. Kirolikar S, Prasannan P, Raghuram GV, Pancholi N, Saha T, Tidke P, et al. Prevention of radi"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 4]",
+          "page": 1,
+          "char_length": 12,
+          "text_excerpt": "ARTICLE\nOPEN"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 2]",
+          "page": 1,
+          "char_length": 26,
+          "text_excerpt": "combination of Resveratrol"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 6]",
+          "page": 1,
+          "char_length": 28,
+          "text_excerpt": "to adopt a benign phenotype."
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -541,17 +520,17 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 6,
+        "cross_column_bleeds": 3,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 2,
-        "micro_fragments": 11,
+        "micro_fragments": 14,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 1.05
+      "indexing_seconds": 1.01
     },
     {
       "filename": "Blood biomarker profiles and exceptional longevity.pdf",
@@ -613,7 +592,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.44
+      "indexing_seconds": 0.59
     },
     {
       "filename": "A nonlinear association of total cholesterol with all-cause and cause-specific mortality.pdf",
@@ -669,7 +648,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.65
+      "indexing_seconds": 0.97
     },
     {
       "filename": "A six-year longitudinal study identifies a statin-independent association between low LDL-cholesterol and risk of type 2 diabetes.pdf",
@@ -748,7 +727,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.79
+      "indexing_seconds": 1.01
     },
     {
       "filename": "Accelerated vascular ageing after COVID-19.pdf",
@@ -828,7 +807,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 3.56
+      "indexing_seconds": 4.52
     },
     {
       "filename": "Association Between Low-Density Lipoprotein Cholesterol\u2013Lowering Genetic Variants and Risk of Type 2 Diabetes.pdf",
@@ -891,18 +870,18 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.31
+      "indexing_seconds": 0.42
     },
     {
       "filename": "Associations of habitual fish oil supplementation withcardiovascular outcomes and all cause mortality evidence from a large population based cohort study.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\CVD\\Associations of habitual fish oil supplementation withcardiovascular outcomes and all cause mortality evidence from a large population based cohort study.pdf",
       "is_scanned": false,
       "page_count": 9,
-      "total_anchors": 85,
+      "total_anchors": 86,
       "sections_detected": {
         "Header": 1,
         "Abstract": 8,
-        "Introduction": 8,
+        "Introduction": 9,
         "Discussion": 30,
         "Methods": 8,
         "Results": 7,
@@ -969,18 +948,18 @@
       },
       "publisher_family": "BMJ",
       "has_critical_failure": false,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.59
     },
     {
       "filename": "Cholesterol and all-cause mortality in elderly people from the Honolulu Heart Program a cohort study.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\CVD\\Cholesterol and all-cause mortality in elderly people from the Honolulu Heart Program a cohort study.pdf",
       "is_scanned": false,
       "page_count": 5,
-      "total_anchors": 60,
+      "total_anchors": 59,
       "sections_detected": {
         "Header": 1,
         "Abstract": 6,
-        "Introduction": 5,
+        "Introduction": 4,
         "Methods": 14,
         "Results": 14,
         "Discussion": 10,
@@ -998,7 +977,7 @@
       },
       "publisher_family": "The Lancet",
       "has_critical_failure": false,
-      "indexing_seconds": 0.23
+      "indexing_seconds": 0.32
     },
     {
       "filename": "Evaluating the Association Between Low-Density Lipoprotein Cholesterol Reduction and Relative and Absolute Effects of Statin Treatment.pdf",
@@ -1043,7 +1022,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.53
     },
     {
       "filename": "Is the use of cholesterol in mortality risk algorithms in clinical guidelines valid Ten years prospective data from the Norwegian HUNT 2 study.pdf",
@@ -1153,19 +1132,19 @@
       },
       "publisher_family": "Wiley",
       "has_critical_failure": false,
-      "indexing_seconds": 0.39
+      "indexing_seconds": 0.64
     },
     {
       "filename": "Lack of an association or an inverse association between low-density-lipoprotein cholesterol and mortality in the elderly a systematic review.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\CVD\\Lack of an association or an inverse association between low-density-lipoprotein cholesterol and mortality in the elderly a systematic review.pdf",
       "is_scanned": false,
       "page_count": 8,
-      "total_anchors": 97,
+      "total_anchors": 98,
       "sections_detected": {
         "Header": 1,
         "Abstract": 7,
         "Introduction": 3,
-        "Discussion": 15,
+        "Discussion": 16,
         "Methods": 4,
         "Results": 18,
         "Conclusions": 3,
@@ -1216,7 +1195,7 @@
       },
       "publisher_family": "BMJ",
       "has_critical_failure": false,
-      "indexing_seconds": 0.59
+      "indexing_seconds": 0.85
     },
     {
       "filename": "Report of the Conference on Low Blood Cholesterol Mortality Associations.pdf",
@@ -1252,7 +1231,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 4]",
+          "anchor_id": "[Abstract, Para 3]",
           "page": 2,
           "text_excerpt": "Jacobs et al who observed the ecological association of high rates of cerebral hemorrhage with low average blood cholest"
         },
@@ -1324,7 +1303,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 5.86
+      "indexing_seconds": 10.7
     },
     {
       "filename": "Supplemental Digital Contents-Total cholesterol and all-cause mortality by sex and age a prospective cohort study among 12.8 million adults.pdf",
@@ -1347,7 +1326,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.45
+      "indexing_seconds": 0.85
     },
     {
       "filename": "Total Cholesterol and Cancer Risk in a Large Prospective Study in Korea.pdf",
@@ -1423,7 +1402,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.29
+      "indexing_seconds": 0.57
     },
     {
       "filename": "Total cholesterol and all-cause mortality by sex and age a prospective cohort study among 12.8 million adults.pdf",
@@ -1479,7 +1458,7 @@
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 0.73
+      "indexing_seconds": 1.12
     },
     {
       "filename": "Total cholesterol and risk of mortality in the oldest old.pdf",
@@ -1517,7 +1496,7 @@
       },
       "publisher_family": "The Lancet",
       "has_critical_failure": false,
-      "indexing_seconds": 0.19
+      "indexing_seconds": 0.38
     },
     {
       "filename": "extent_of_low_density_lipoprotein_cholesterol.6.pdf",
@@ -1571,7 +1550,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.36
+      "indexing_seconds": 0.66
     },
     {
       "filename": "A meta-analysis of cardiovascular events in intermittent androgen-deprivation therapy versus continuous androgen-deprivation.pdf",
@@ -1722,7 +1701,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.36
+      "indexing_seconds": 0.58
     },
     {
       "filename": "Intermittent androgen-deprivation therapy in prostate cancer a critical review focused on phase 3 trials.pdf",
@@ -1741,36 +1720,6 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 2]",
-          "page": 1,
-          "bbox": [
-            51.9,
-            384.6,
-            548.0,
-            415.5
-          ],
-          "page_width": 595.3,
-          "word_count": 40,
-          "text_excerpt": "Context: Intermittent androgen deprivation (IAD) in prostate cancer (PCa) patients has Accepted April 10, 2013 been proposed to delay develo"
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 3]",
-          "page": 1,
-          "bbox": [
-            51.9,
-            413.1,
-            548.1,
-            582.1
-          ],
-          "page_width": 595.3,
-          "word_count": 228,
-          "text_excerpt": "Objective: This review analyzes (1) the oncologic and quality of life (QoL) results from print on April 19, 2013 randomized phase 3 trials c"
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
           "anchor_id": "[Introduction, Para 63]",
           "page": 7,
           "bbox": [
@@ -1786,7 +1735,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "text_excerpt": "E U R O P E A N U R O L O G Y X X X ( 2 0 1 3 ) X X X \u2013 X X X"
         },
@@ -1832,7 +1781,7 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 3,
+        "cross_column_bleeds": 1,
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 0,
@@ -1842,7 +1791,7 @@
       },
       "publisher_family": "Elsevier",
       "has_critical_failure": true,
-      "indexing_seconds": 0.36
+      "indexing_seconds": 0.69
     },
     {
       "filename": "Intermittent versus continuous androgen deprivation for locally advanced, recurrent or metastatic prostate cancer- a systema.pdf",
@@ -1977,7 +1926,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.65
+      "indexing_seconds": 0.94
     },
     {
       "filename": "Intermittent vs Continuous Androgen Deprivation Therapy for Prostate Cancer A Systematic Review and Meta-analysis.pdf",
@@ -2059,7 +2008,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 10]",
+          "anchor_id": "[Abstract, Para 9]",
           "page": 2,
           "text_excerpt": "Research Original Investigation P rostate cancer is the second most common cancer and the fifth leading cause of death f"
         },
@@ -2155,7 +2104,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.37
+      "indexing_seconds": 0.64
     },
     {
       "filename": "Treatment of prostate cancer with intermittent versus continuous androgen deprivation- a systematic review of randomized tri.pdf",
@@ -2281,7 +2230,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.35
+      "indexing_seconds": 0.6
     },
     {
       "filename": "Abstract - Supervised exercise improves strength and physical performance in patients with advanced breast cancer.pdf",
@@ -2313,33 +2262,28 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.09
+      "indexing_seconds": 0.14
     },
     {
       "filename": "Actigraphy-Measured Sleep Disruption as a predictor of Survival among Women with Advanced Breast Cancer.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Actigraphy-Measured Sleep Disruption as a predictor of Survival among Women with Advanced Breast Cancer.pdf",
       "is_scanned": false,
       "page_count": 6,
-      "total_anchors": 48,
+      "total_anchors": 57,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 5,
-        "Introduction": 12,
+        "Abstract": 8,
+        "Introduction": 5,
+        "Methods": 13,
         "Results": 9,
         "Discussion": 10,
         "Conclusions": 1,
         "References": 10
       },
-      "violations": [
-        {
-          "type": "MISSING_METHODS_SECTION",
-          "severity": "HIGH",
-          "details": "Paper has 6 pages but Methods has 0 anchors (Unnumbered heading transition missed)."
-        }
-      ],
+      "violations": [],
       "anomaly_counts": {
         "cross_column_bleeds": 0,
-        "section_voids": 1,
+        "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 0,
         "micro_fragments": 0,
@@ -2348,7 +2292,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.39
+      "indexing_seconds": 0.62
     },
     {
       "filename": "Aging represses oncogenic KRAS-driven lung tumorigenesis and alters tumor suppression.pdf",
@@ -2538,7 +2482,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 6.84
+      "indexing_seconds": 9.26
     },
     {
       "filename": "Antioxidant supplementation and breast cancer prognosis in postmenopausal women undergoing chemotherapy and radiation therapy.pdf",
@@ -2622,7 +2566,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.4
+      "indexing_seconds": 0.66
     },
     {
       "filename": "Association Between Precautionary Behaviors and Breast Cancer-Related Lymphedema in Patients Undergoing Bilateral Surgery.pdf",
@@ -2691,7 +2635,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.48
+      "indexing_seconds": 0.67
     },
     {
       "filename": "Association between Dietary Indices and Dietary Patterns and Mortality and Cancer Recurrence among Cancer Survivors An Updated Systematic Review and Meta-Analysis of Cohort Studies.pdf",
@@ -2972,7 +2916,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.73
+      "indexing_seconds": 1.06
     },
     {
       "filename": "Benefits-and-harms-of-breast-cancer-mammography-screening-for-women-at-average-risk-of-breast_optimize.pdf",
@@ -2994,7 +2938,7 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 18]",
+          "anchor_id": "[Abstract, Para 17]",
           "page": 10,
           "bbox": [
             131.0,
@@ -3009,7 +2953,7 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 29]",
+          "anchor_id": "[Abstract, Para 28]",
           "page": 12,
           "bbox": [
             103.1,
@@ -3024,7 +2968,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 9,
           "text_excerpt": "Relative effect RR 0.77 (0.54\u2013 RR 0.88 (0.76\u2013 RR 0.77 (0.66\u2013 Table 2. Summary of available evidence on desirable effects"
         },
@@ -3047,6 +2991,14 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
+          "anchor_id": "[Abstract, Para 12]",
+          "page": 9,
+          "char_length": 10,
+          "text_excerpt": "(serious)."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
           "anchor_id": "[Abstract, Para 13]",
           "page": 9,
           "char_length": 10,
@@ -3055,8 +3007,8 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 14]",
-          "page": 9,
+          "anchor_id": "[Abstract, Para 18]",
+          "page": 10,
           "char_length": 10,
           "text_excerpt": "(serious)."
         },
@@ -3079,14 +3031,6 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 21]",
-          "page": 10,
-          "char_length": 10,
-          "text_excerpt": "(serious)."
-        },
-        {
-          "type": "MICRO_PARAGRAPH_FRAGMENT",
-          "severity": "LOW",
           "anchor_id": "[Discussion, Para 5]",
           "page": 11,
           "char_length": 20,
@@ -3095,7 +3039,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 28]",
+          "anchor_id": "[Abstract, Para 27]",
           "page": 12,
           "char_length": 23,
           "text_excerpt": "Relative effect\n(95%CI)"
@@ -3103,7 +3047,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 32]",
+          "anchor_id": "[Abstract, Para 31]",
           "page": 12,
           "char_length": 31,
           "text_excerpt": "of the evidence\nof the evidence"
@@ -3120,7 +3064,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.54
+      "indexing_seconds": 0.77
     },
     {
       "filename": "Breast Cancer Screening Strategies for Women With ATM, CHEK2, and PALB2 Pathogenic Variants_ A Comparative Modeling Analysis - PMC.pdf",
@@ -3547,18 +3491,18 @@
       },
       "publisher_family": "JAMA",
       "has_critical_failure": true,
-      "indexing_seconds": 2.38
+      "indexing_seconds": 2.75
     },
     {
       "filename": "Breast cancer patients enrolled in the Swiss mammography screening program \u201cdonna\u201d demonstrate prolonged survival.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Breast cancer patients enrolled in the Swiss mammography screening program \u201cdonna\u201d demonstrate prolonged survival.pdf",
       "is_scanned": false,
       "page_count": 13,
-      "total_anchors": 100,
+      "total_anchors": 101,
       "sections_detected": {
         "Header": 1,
         "Abstract": 4,
-        "Introduction": 2,
+        "Introduction": 3,
         "Methods": 20,
         "Results": 21,
         "Discussion": 24,
@@ -3617,7 +3561,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.56
+      "indexing_seconds": 0.81
     },
     {
       "filename": "Cancer Medicine - 2025 - Modi - Associations of Commonly Used Concomitant Medications With Survival and Adverse Event.pdf",
@@ -3635,7 +3579,7 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 2,
           "bbox": [
             53.6,
@@ -3650,7 +3594,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 2,
           "text_excerpt": "Conclusion: These findings emphasise the need for careful management of concomitant medications in breast cancer care an"
         },
@@ -3682,18 +3626,17 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.65
+      "indexing_seconds": 1.04
     },
     {
       "filename": "Dietary Supplement Use During Chemotherapy and Survival Outcomes of Patients With Breast Cancer Enrolled in a Cooperative Group Clinical Trial (SWOG S0221).pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Chemo\\Dietary Supplement Use During Chemotherapy and Survival Outcomes of Patients With Breast Cancer Enrolled in a Cooperative Group Clinical Trial (SWOG S0221).pdf",
       "is_scanned": false,
       "page_count": 17,
-      "total_anchors": 143,
+      "total_anchors": 155,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 5,
-        "Introduction": 4,
+        "Abstract": 21,
         "Methods": 13,
         "Results": 22,
         "Discussion": 35,
@@ -3762,12 +3705,35 @@
           "text_excerpt": "Ambrosone et al TABLE A2. Prevalence of Use of Dietary Supplements Before and During Chemotherapy for High-Risk Breast Cancer in S0221: DELC"
         },
         {
+          "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
+          "severity": "HIGH",
+          "anchor_id": "[Abstract, Para 19]",
+          "page": 2,
+          "text_excerpt": "Supplement Use During there was reduced risk of CIPN with use of multivitamins before diagnosis and, to a lesser extent,"
+        },
+        {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
           "anchor_id": "[Results, Para 1]",
           "page": 3,
           "char_length": 2103,
           "text_excerpt": "Characteristics of the 1,340 patients who completed Q1 are listed in Table 1 . Patients who experienced recurrence (n = 310) or died (n = 22"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 6]",
+          "page": 1,
+          "char_length": 7,
+          "text_excerpt": "CONTENT"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 16]",
+          "page": 1,
+          "char_length": 20,
+          "text_excerpt": "during chemotherapy."
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -3893,25 +3859,25 @@
       "anomaly_counts": {
         "cross_column_bleeds": 4,
         "section_voids": 0,
-        "abstract_leakage": 0,
+        "abstract_leakage": 1,
         "mega_paragraphs": 1,
-        "micro_fragments": 15,
+        "micro_fragments": 17,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.67
+      "indexing_seconds": 1.03
     },
     {
       "filename": "Therapeutic controversies over use of antioxidant supplements during cancer treatment a scoping review.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Chemo\\Therapeutic controversies over use of antioxidant supplements during cancer treatment a scoping review.pdf",
       "is_scanned": false,
       "page_count": 15,
-      "total_anchors": 230,
+      "total_anchors": 231,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 8,
+        "Abstract": 9,
         "Introduction": 13,
         "Methods": 80,
         "Results": 107,
@@ -4219,18 +4185,18 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.61
+      "indexing_seconds": 0.95
     },
     {
       "filename": "Comprehensive Breast Cancer Risk Assessment for CHEK2 and ATM Pathogenic Variant Carriers Incorporating a Polygenic Risk Score and the Tyrer-Cuzick Model.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Comprehensive Breast Cancer Risk Assessment for CHEK2 and ATM Pathogenic Variant Carriers Incorporating a Polygenic Risk Score and the Tyrer-Cuzick Model.pdf",
       "is_scanned": false,
       "page_count": 9,
-      "total_anchors": 103,
+      "total_anchors": 118,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 4,
-        "Introduction": 10,
+        "Abstract": 11,
+        "Introduction": 18,
         "Methods": 4,
         "Results": 36,
         "Discussion": 48
@@ -4239,7 +4205,22 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Introduction, Para 4]",
+          "anchor_id": "[Introduction, Para 11]",
+          "page": 1,
+          "bbox": [
+            114.7,
+            464.1,
+            548.0,
+            473.6
+          ],
+          "page_width": 585.0,
+          "word_count": 16,
+          "text_excerpt": "CONCLUSION In CHEK2 and ATM PV carriers, risk assessment including PRS, Tyrer-Cuzick, and PV status has"
+        },
+        {
+          "type": "CROSS_COLUMN_BBOX_BLEED",
+          "severity": "CRITICAL",
+          "anchor_id": "[Introduction, Para 12]",
           "page": 2,
           "bbox": [
             48.9,
@@ -4266,6 +4247,22 @@
           "page": 3,
           "char_length": 2435,
           "text_excerpt": "and the Tyrer-Cuzick Model missense PV carriers (OR 2.09; 95% CI, 1.76 to 2.48), 2,407 CHEK2 1100delC carriers (OR 2.01; 95% CI, 1.83 to 2.2"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 5]",
+          "page": 1,
+          "char_length": 19,
+          "text_excerpt": "clinical variables."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 9]",
+          "page": 1,
+          "char_length": 31,
+          "text_excerpt": "prevention strategies.\nOncology"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -4333,27 +4330,27 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 1,
+        "cross_column_bleeds": 2,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 2,
-        "micro_fragments": 8,
+        "micro_fragments": 10,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.35
+      "indexing_seconds": 0.56
     },
     {
       "filename": "Dietary flaxseed alters tumor biological markers in postmenopausal breast cancer.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Dietary flaxseed alters tumor biological markers in postmenopausal breast cancer.pdf",
       "is_scanned": false,
       "page_count": 8,
-      "total_anchors": 123,
+      "total_anchors": 128,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 14,
+        "Abstract": 19,
         "Methods": 22,
         "Results": 7,
         "Discussion": 20,
@@ -4483,9 +4480,25 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 9]",
+          "anchor_id": "[Abstract, Para 14]",
           "page": 2,
-          "text_excerpt": "shown in animal and epidemiologic studies to be protective against breast cancer (28). Based on all these data, it is hy"
+          "text_excerpt": "The ability to inhibit tumor growth kinetics in a neoadjuvant setting has previously been used as a measure of an agent\u2019"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 2]",
+          "page": 1,
+          "char_length": 8,
+          "text_excerpt": "Abstract"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 8]",
+          "page": 1,
+          "char_length": 20,
+          "text_excerpt": "2 and Paul E. Goss 3"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -4541,30 +4554,38 @@
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 0,
-        "micro_fragments": 6,
+        "micro_fragments": 8,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.32
+      "indexing_seconds": 0.5
     },
     {
       "filename": "Digital infrared thermal imaging (DITI) of breast lesions sensitivity and specificity of detection of primary breast cancers.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Digital infrared thermal imaging (DITI) of breast lesions sensitivity and specificity of detection of primary breast cancers.pdf",
       "is_scanned": false,
       "page_count": 4,
-      "total_anchors": 42,
+      "total_anchors": 52,
       "sections_detected": {
         "Header": 1,
         "Abstract": 5,
-        "Introduction": 6,
+        "Introduction": 16,
         "Methods": 11,
         "Results": 6,
         "Discussion": 9,
         "References": 4
       },
       "violations": [
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 4]",
+          "page": 1,
+          "char_length": 25,
+          "text_excerpt": "(DITI) of breast lesions:"
+        },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
@@ -4579,13 +4600,13 @@
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 0,
-        "micro_fragments": 1,
+        "micro_fragments": 2,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.23
+      "indexing_seconds": 0.33
     },
     {
       "filename": "Electroacupuncture frequency for chemotherapy-induced neuropathy in breast cancer a randomized controlled trial .pdf",
@@ -4656,7 +4677,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.94
+      "indexing_seconds": 1.3
     },
     {
       "filename": "Epigenetic modifications of metastasis suppressor genes in colon cancer metastasis.pdf",
@@ -4690,7 +4711,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.56
+      "indexing_seconds": 2.84
     },
     {
       "filename": "Estimated Lifetime Gained With Cancer Screening Tests A Meta-Analysis of Randomized Clinical Trials.pdf",
@@ -4711,7 +4732,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 2,
           "text_excerpt": "Estimated Lifetime Gained With Cancer Screening Tests S ince the US National Cancer Act was launched in 1971, cancer scr"
         },
@@ -4735,7 +4756,7 @@
       },
       "publisher_family": "JAMA",
       "has_critical_failure": false,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.56
     },
     {
       "filename": "Estimates of all cause mortality and cause specific mortality associated with proton pump inhibitors among US veterans cohort study.pdf",
@@ -4893,7 +4914,7 @@
       },
       "publisher_family": "BMJ",
       "has_critical_failure": false,
-      "indexing_seconds": 0.45
+      "indexing_seconds": 0.74
     },
     {
       "filename": "Extending the duration of endocrine treatment for early breast cancer patient-level meta-analysis of 12 randomised trials of aromatase inhibitors in 22\u2008031 postmenopausal women already treated with at least 5 years of en.pdf",
@@ -4955,7 +4976,7 @@
       },
       "publisher_family": "The Lancet",
       "has_critical_failure": false,
-      "indexing_seconds": 0.44
+      "indexing_seconds": 0.72
     },
     {
       "filename": "Fifteen-Year Outcomes after Monitoring, Surgery, or Radiotherapy for Prostate Cancer.pdf",
@@ -5098,7 +5119,7 @@
       },
       "publisher_family": "NEJM",
       "has_critical_failure": false,
-      "indexing_seconds": 0.43
+      "indexing_seconds": 0.63
     },
     {
       "filename": "Fructose and glucose from sugary drinks enhance colorectal cancer metastasis via SORD.pdf",
@@ -5222,7 +5243,7 @@
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 16.89
+      "indexing_seconds": 19.89
     },
     {
       "filename": "High Prevalence of Vitamin D Deficiency Despite Supplementation in Premenopausal Women With Breast Cancer Undergoing Adjuvant Chemotherapy.pdf",
@@ -5268,7 +5289,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.25
+      "indexing_seconds": 0.4
     },
     {
       "filename": "High prevalence of vitamin D deficiency despite supplementation in premenopausal women with breast cancer undergoing adjuvant chemotherap.pdf",
@@ -5314,7 +5335,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.24
+      "indexing_seconds": 0.43
     },
     {
       "filename": "Hyperglycemia and Chemoresistance in Breast Cancer From Cellular Mechanisms to Treatment Response.pdf",
@@ -5349,7 +5370,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.26
+      "indexing_seconds": 2.0
     },
     {
       "filename": "Hyperglycemia during Adjuvant Chemotherapy as a Prognostic Factor in Breast Cancer Patients without Diabetes.pdf",
@@ -5417,7 +5438,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.56
+      "indexing_seconds": 0.73
     },
     {
       "filename": "Impact of Ipsilateral Blood Draws, Injections, Blood Pressure Measurements, and Air Travel on the Risk of Lymphedema for Patients Treated for Breast Cancer.pdf",
@@ -5567,17 +5588,17 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.44
+      "indexing_seconds": 0.63
     },
     {
       "filename": "Impact of Screening Mammography on Breast Cancer Outcomes in Women Aged 80 Years and Over.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Impact of Screening Mammography on Breast Cancer Outcomes in Women Aged 80 Years and Over.pdf",
       "is_scanned": false,
       "page_count": 9,
-      "total_anchors": 75,
+      "total_anchors": 77,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 8,
+        "Abstract": 10,
         "Methods": 7,
         "Results": 10,
         "Discussion": 30,
@@ -5588,17 +5609,25 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 8]",
           "page": 2,
           "text_excerpt": "Given the limited data regarding the benefit of screening mammography in elderly women, and if or when they can safely c"
         },
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Abstract, Para 6]",
+          "anchor_id": "[Abstract, Para 7]",
           "page": 1,
-          "char_length": 2443,
-          "text_excerpt": "Results. Of 174 patients, 98 were screened and 76 were Between 2010 and 2020, the population of adults aged unscreened. Median age was 83 ye"
+          "char_length": 1945,
+          "text_excerpt": "Between 2010 and 2020, the population of adults aged 65 years and older in the United States (US) experienced the fastest growth rate in ove"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 3]",
+          "page": 1,
+          "char_length": 34,
+          "text_excerpt": "a screening mammogram with OS/DFS."
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -5630,13 +5659,13 @@
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 1,
-        "micro_fragments": 3,
+        "micro_fragments": 4,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.37
+      "indexing_seconds": 0.55
     },
     {
       "filename": "Impact of antioxidant supplementation on chemotherapeutic efficacy a systematic review of the evidence from randomized controlled trials.pdf",
@@ -5738,7 +5767,7 @@
       },
       "publisher_family": "Elsevier",
       "has_critical_failure": false,
-      "indexing_seconds": 0.35
+      "indexing_seconds": 0.58
     },
     {
       "filename": "Improved survival in patients with end-stage cancer treated with coenzyme Q(10) and other antioxidants a pilot study.pdf",
@@ -5838,7 +5867,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.3
+      "indexing_seconds": 0.52
     },
     {
       "filename": "Incorporation of IsoPSA Into Clinical Practice in the Management of Elevated Prostate-Specific Antigen Based on Current Guidelines.pdf",
@@ -5857,7 +5886,7 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Introduction, Para 14]",
+          "anchor_id": "[Introduction, Para 13]",
           "page": 4,
           "bbox": [
             54.0,
@@ -5872,15 +5901,15 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 2]",
+          "anchor_id": "[Introduction, Para 1]",
           "page": 1,
-          "char_length": 2445,
-          "text_excerpt": "Citation: Kennedy A, Hafron J. Incorporation of IsoPSA into clinical practice in the management of elevated prostate-specific antigen based "
+          "char_length": 3405,
+          "text_excerpt": "P rostate cancer ranks as the fourth-most diagnosed cancer globally and the second-most diagnosed cancer in men. 1 Early detection and surve"
         },
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 3]",
+          "anchor_id": "[Introduction, Para 2]",
           "page": 2,
           "char_length": 1854,
           "text_excerpt": "ABBREVIATIONS AUA American Urological Association BPH benign prostatic hyperplasia MRI magnetic resonance imaging NCCN National Comprehensiv"
@@ -5888,7 +5917,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 6]",
+          "anchor_id": "[Introduction, Para 5]",
           "page": 3,
           "char_length": 24,
           "text_excerpt": "B ) any prostate cancer."
@@ -5896,7 +5925,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 9]",
+          "anchor_id": "[Introduction, Para 8]",
           "page": 4,
           "char_length": 33,
           "text_excerpt": "PI-RADS 1-2\nPI-RADS 3\nPI-RADS 4-5"
@@ -5904,7 +5933,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 12]",
+          "anchor_id": "[Introduction, Para 11]",
           "page": 4,
           "char_length": 28,
           "text_excerpt": "Journal of Clinical Oncology"
@@ -5912,7 +5941,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 13]",
+          "anchor_id": "[Introduction, Para 12]",
           "page": 4,
           "char_length": 10,
           "text_excerpt": "IsoPSA \u2264 6"
@@ -5920,7 +5949,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 20]",
+          "anchor_id": "[Introduction, Para 19]",
           "page": 6,
           "char_length": 15,
           "text_excerpt": "IsoPSA Index \u22646"
@@ -5928,7 +5957,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 22]",
+          "anchor_id": "[Introduction, Para 21]",
           "page": 6,
           "char_length": 15,
           "text_excerpt": "IsoPSA Index >6"
@@ -5936,7 +5965,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 23]",
+          "anchor_id": "[Introduction, Para 22]",
           "page": 6,
           "char_length": 15,
           "text_excerpt": "Prostate\nbiopsy"
@@ -5944,7 +5973,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 24]",
+          "anchor_id": "[Introduction, Para 23]",
           "page": 6,
           "char_length": 11,
           "text_excerpt": "Monitor PSA"
@@ -5952,7 +5981,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 27]",
+          "anchor_id": "[Introduction, Para 26]",
           "page": 6,
           "char_length": 27,
           "text_excerpt": "PI-RADS 1-2\nConsider biopsy"
@@ -5960,7 +5989,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 28]",
+          "anchor_id": "[Introduction, Para 27]",
           "page": 6,
           "char_length": 23,
           "text_excerpt": "PI-RADS 3\nShould biopsy"
@@ -5985,17 +6014,17 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.27
+      "indexing_seconds": 0.39
     },
     {
       "filename": "Increased prevalence of vitamin D insufficiency in patients with breast cancer after neoadjuvant chemotherapy.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Increased prevalence of vitamin D insufficiency in patients with breast cancer after neoadjuvant chemotherapy.pdf",
       "is_scanned": false,
       "page_count": 9,
-      "total_anchors": 71,
+      "total_anchors": 72,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 5,
+        "Abstract": 6,
         "Introduction": 15,
         "Methods": 6,
         "Results": 8,
@@ -6014,6 +6043,14 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
+          "anchor_id": "[Abstract, Para 4]",
+          "page": 1,
+          "char_length": 10,
+          "text_excerpt": "6 May 2012"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
           "anchor_id": "[References, Para 12]",
           "page": 8,
           "char_length": 20,
@@ -6025,13 +6062,13 @@
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 0,
-        "micro_fragments": 2,
+        "micro_fragments": 3,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 0.36
+      "indexing_seconds": 0.54
     },
     {
       "filename": "Intermittent Androgen-deprivation Therapy in Prostate Cancer.pdf",
@@ -6050,36 +6087,6 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 2]",
-          "page": 1,
-          "bbox": [
-            51.9,
-            384.6,
-            548.0,
-            415.5
-          ],
-          "page_width": 595.3,
-          "word_count": 40,
-          "text_excerpt": "Context: Intermittent androgen deprivation (IAD) in prostate cancer (PCa) patients has Accepted April 10, 2013 been proposed to delay develo"
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 3]",
-          "page": 1,
-          "bbox": [
-            51.9,
-            413.1,
-            548.1,
-            582.1
-          ],
-          "page_width": 595.3,
-          "word_count": 228,
-          "text_excerpt": "Objective: This review analyzes (1) the oncologic and quality of life (QoL) results from print on April 19, 2013 randomized phase 3 trials c"
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
           "anchor_id": "[Introduction, Para 63]",
           "page": 7,
           "bbox": [
@@ -6095,7 +6102,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "text_excerpt": "E U R O P E A N U R O L O G Y X X X ( 2 0 1 3 ) X X X \u2013 X X X"
         },
@@ -6141,7 +6148,7 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 3,
+        "cross_column_bleeds": 1,
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 0,
@@ -6151,7 +6158,7 @@
       },
       "publisher_family": "Elsevier",
       "has_critical_failure": true,
-      "indexing_seconds": 0.37
+      "indexing_seconds": 0.6
     },
     {
       "filename": "Intl Journal of Cancer - 2024 - Chan - Post\u2010diagnosis dietary factors  supplement use and colorectal cancer prognosis  A.pdf",
@@ -6372,17 +6379,17 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 1.13
+      "indexing_seconds": 1.74
     },
     {
       "filename": "Jacotetal.-2012-IncreasedprevalenceofvitaminDinsufficiencyin.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Jacotetal.-2012-IncreasedprevalenceofvitaminDinsufficiencyin.pdf",
       "is_scanned": false,
       "page_count": 9,
-      "total_anchors": 71,
+      "total_anchors": 72,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 5,
+        "Abstract": 6,
         "Introduction": 15,
         "Methods": 6,
         "Results": 8,
@@ -6401,6 +6408,14 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
+          "anchor_id": "[Abstract, Para 4]",
+          "page": 1,
+          "char_length": 10,
+          "text_excerpt": "6 May 2012"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
           "anchor_id": "[References, Para 12]",
           "page": 8,
           "char_length": 20,
@@ -6412,13 +6427,13 @@
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 0,
-        "micro_fragments": 2,
+        "micro_fragments": 3,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.57
     },
     {
       "filename": "Lead-Time Corrected Effect on Breast Cancer Survival in Germany by Mode of Detection.pdf",
@@ -6456,7 +6471,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.92
+      "indexing_seconds": 1.56
     },
     {
       "filename": "Medical Imaging and Pediatric and Adolescent Hematologic Malignancy Risk.pdf",
@@ -6574,7 +6589,7 @@
       },
       "publisher_family": "NEJM",
       "has_critical_failure": false,
-      "indexing_seconds": 0.46
+      "indexing_seconds": 0.82
     },
     {
       "filename": "Meta-analysis of risk factors for cutaneous melanoma.pdf",
@@ -6629,7 +6644,7 @@
       },
       "publisher_family": "Elsevier",
       "has_critical_failure": false,
-      "indexing_seconds": 0.78
+      "indexing_seconds": 1.34
     },
     {
       "filename": "Metformin for the treatment of breast cancer a scoping review of randomized clinical trials.pdf",
@@ -7845,17 +7860,17 @@
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 2.15
+      "indexing_seconds": 3.24
     },
     {
       "filename": "Efficacy and safety of metronomic chemotherapy in maintenance therapy for metastatic colorectal cancer A systematic review of randomized controlled trials.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Metronomic\\Efficacy and safety of metronomic chemotherapy in maintenance therapy for metastatic colorectal cancer A systematic review of randomized controlled trials.pdf",
       "is_scanned": false,
       "page_count": 7,
-      "total_anchors": 63,
+      "total_anchors": 68,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 5,
+        "Abstract": 10,
         "Introduction": 6,
         "Methods": 7,
         "Results": 22,
@@ -7864,51 +7879,6 @@
         "References": 11
       },
       "violations": [
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Introduction, Para 1]",
-          "page": 1,
-          "bbox": [
-            51.0,
-            484.2,
-            560.5,
-            573.3
-          ],
-          "page_width": 594.0,
-          "word_count": 137,
-          "text_excerpt": "chance of surgical intervention), and the 5-year survival rate is only 14%. [2] Currently, the treatment of metastatic colorecAccording to t"
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Introduction, Para 3]",
-          "page": 1,
-          "bbox": [
-            51.0,
-            596.3,
-            538.1,
-            616.5
-          ],
-          "page_width": 594.0,
-          "word_count": 31,
-          "text_excerpt": "College and The First Affiliated Hospital of Chengdu Medical College, 278 The authors have no funding and conflicts of interest to disclose."
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Introduction, Para 4]",
-          "page": 1,
-          "bbox": [
-            51.0,
-            614.3,
-            532.7,
-            637.5
-          ],
-          "page_width": 594.0,
-          "word_count": 30,
-          "text_excerpt": "tingjiangtina@163.com). Data sharing not applicable to this article as no datasets were generated or analyzed during the current study. Copy"
-        },
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
@@ -7931,20 +7901,68 @@
           "page": 5,
           "char_length": 2643,
           "text_excerpt": "the immune response as well. [20\u201322] To verify the effectiveness of cyclophosphamide MC in enhancing the immune response generated by MVA-5T"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 5]",
+          "page": 1,
+          "char_length": 6,
+          "text_excerpt": "cancer"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 7]",
+          "page": 1,
+          "char_length": 8,
+          "text_excerpt": "Abstract"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 8]",
+          "page": 1,
+          "char_length": 29,
+          "text_excerpt": "related to AEs were reported."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 9]",
+          "page": 1,
+          "char_length": 30,
+          "text_excerpt": "verify its long-term efficacy."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 10]",
+          "page": 1,
+          "char_length": 29,
+          "text_excerpt": "randomized controlled trials."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 2]",
+          "page": 1,
+          "char_length": 25,
+          "text_excerpt": "d, *, Ting Jiang, MM c, *"
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 4,
+        "cross_column_bleeds": 1,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 1,
-        "micro_fragments": 0,
+        "micro_fragments": 6,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.54
     },
     {
       "filename": "Metronomic Capecitabine Plus Aromatase Inhibitor as Initial Therapy in Patients With Hormone Receptor-Positive, Human Epidermal Growth Factor Receptor 2-Negative Metastatic Breast Cancer.pdf",
@@ -8061,7 +8079,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.42
+      "indexing_seconds": 0.64
     },
     {
       "filename": "Metronomic Chemotherapy for Metastatic Breast Cancer Treatment Clinical and Preclinical Data between Lights and Shadows.pdf",
@@ -8131,7 +8149,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.61
+      "indexing_seconds": 0.88
     },
     {
       "filename": "Metronomic Chemotherapy in Triple-Negative Metastatic Breast Cancer The Future Is Now.pdf",
@@ -8300,7 +8318,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.25
+      "indexing_seconds": 0.38
     },
     {
       "filename": "Metronomic chemotherapy for non-metastatic triple negative breast cancer Selection is the key.pdf",
@@ -8486,7 +8504,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.49
+      "indexing_seconds": 0.76
     },
     {
       "filename": "Metronomic chemotherapy with oral vinorelbine (mVNR) and capecitabine (mCAPE) in advanced HER2-negative breast cancer patients is it a way to optimize disease control Final results of the VICTOR-2 study.pdf",
@@ -8509,10 +8527,18 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 1,
           "char_length": 23,
-          "text_excerpt": "online: 17 October 2016"
+          "text_excerpt": "13 \u2022 L. Legramandi 14 \u2022"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 7]",
+          "page": 1,
+          "char_length": 15,
+          "text_excerpt": "17 October 2016"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -8560,24 +8586,24 @@
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 0,
-        "micro_fragments": 6,
+        "micro_fragments": 7,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 0.67
+      "indexing_seconds": 0.89
     },
     {
       "filename": "Oral tegafur-uracil as metronomic therapy following intravenous FOLFOX for stage III colon cancer.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Metronomic\\Oral tegafur-uracil as metronomic therapy following intravenous FOLFOX for stage III colon cancer.pdf",
       "is_scanned": false,
       "page_count": 11,
-      "total_anchors": 73,
+      "total_anchors": 74,
       "sections_detected": {
         "Header": 1,
         "Abstract": 2,
-        "Introduction": 2,
+        "Introduction": 3,
         "References": 45,
         "Methods": 5,
         "Results": 6,
@@ -8621,30 +8647,40 @@
       },
       "publisher_family": "PLOS",
       "has_critical_failure": false,
-      "indexing_seconds": 0.69
+      "indexing_seconds": 0.89
     },
     {
       "filename": "gvazava-et-al-2025-standard-dose-vs-fixed-dose-capecitabine-in-patients-with-advanced-gastrointestinal-and-metastatic.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Metronomic\\gvazava-et-al-2025-standard-dose-vs-fixed-dose-capecitabine-in-patients-with-advanced-gastrointestinal-and-metastatic.pdf",
       "is_scanned": false,
       "page_count": 1,
-      "total_anchors": 1,
+      "total_anchors": 13,
       "sections_detected": {
-        "Header": 1
+        "Header": 1,
+        "Abstract": 12
       },
-      "violations": [],
+      "violations": [
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 10]",
+          "page": 1,
+          "char_length": 15,
+          "text_excerpt": "adverse events."
+        }
+      ],
       "anomaly_counts": {
         "cross_column_bleeds": 0,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 0,
-        "micro_fragments": 0,
+        "micro_fragments": 1,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.06
+      "indexing_seconds": 0.09
     },
     {
       "filename": "NSAID_analgesic_ketorolac_used_periopera.pdf",
@@ -8705,7 +8741,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.57
+      "indexing_seconds": 0.85
     },
     {
       "filename": "NSAIDs and Breast Cancer Recurrence in a Prospective Cohort Study.pdf",
@@ -8767,7 +8803,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.16
+      "indexing_seconds": 0.29
     },
     {
       "filename": "Occupational sun exposure and risk of melanoma according to anatomical site.pdf",
@@ -8837,7 +8873,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.18
+      "indexing_seconds": 0.3
     },
     {
       "filename": "Overall Survival with Palbociclib and Fulvestrant in Advanced Breast Cancer..pdf",
@@ -8978,7 +9014,7 @@
       },
       "publisher_family": "NEJM",
       "has_critical_failure": true,
-      "indexing_seconds": 0.43
+      "indexing_seconds": 0.7
     },
     {
       "filename": "Patient-Reported Outcomes 12 Years after localized prostate cancer treatment.pdf",
@@ -9191,18 +9227,18 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.5
+      "indexing_seconds": 0.76
     },
     {
       "filename": "Perioperative NSAIDs and Long-Term Outcomes After cancer Surgery a Systematic Review and Meta-analysis.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Perioperative NSAIDs and Long-Term Outcomes After cancer Surgery a Systematic Review and Meta-analysis.pdf",
       "is_scanned": false,
       "page_count": 20,
-      "total_anchors": 153,
+      "total_anchors": 155,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 2,
-        "Introduction": 4,
+        "Abstract": 1,
+        "Introduction": 7,
         "Methods": 35,
         "Results": 9,
         "Discussion": 23,
@@ -9222,6 +9258,14 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
+          "anchor_id": "[Abstract, Para 1]",
+          "page": 1,
+          "char_length": 8,
+          "text_excerpt": "Findings"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
           "anchor_id": "[Methods, Para 34]",
           "page": 7,
           "char_length": 33,
@@ -9233,13 +9277,13 @@
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 1,
-        "micro_fragments": 1,
+        "micro_fragments": 2,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 1.06
+      "indexing_seconds": 1.34
     },
     {
       "filename": "Post-diagnosis supplement use and breast cancer prognosis in the After Breast Cancer Pooling Project.pdf",
@@ -9533,7 +9577,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.27
+      "indexing_seconds": 0.36
     },
     {
       "filename": "Postmastectomy Radiation Therapy An ASTRO-ASCO-SSO Clinical Practice Guideline.pdf",
@@ -9730,7 +9774,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 1.2
+      "indexing_seconds": 1.86
     },
     {
       "filename": "Preventive Effect of Neuromuscular Training on Chemotherapy-Induced Neuropathy_ A Randomized Clinical Trial - PMC.pdf",
@@ -10072,7 +10116,7 @@
       },
       "publisher_family": "JAMA",
       "has_critical_failure": false,
-      "indexing_seconds": 1.27
+      "indexing_seconds": 1.46
     },
     {
       "filename": "Proton Pump Inhibitor Use and Survival in Patients with newly dx glioblastoma.pdf",
@@ -10275,7 +10319,7 @@
       },
       "publisher_family": "JAMA",
       "has_critical_failure": true,
-      "indexing_seconds": 0.44
+      "indexing_seconds": 0.67
     },
     {
       "filename": "Breast-Conserving Surgery with or without Irradiation in Early Breast Cancer.pdf",
@@ -10377,7 +10421,7 @@
       },
       "publisher_family": "NEJM",
       "has_critical_failure": false,
-      "indexing_seconds": 0.42
+      "indexing_seconds": 0.58
     },
     {
       "filename": "Post-mastectomy radiotherapy for women with early breast cancer and one to three positive lymph nodes.pdf",
@@ -10921,7 +10965,7 @@
       },
       "publisher_family": "Wiley",
       "has_critical_failure": true,
-      "indexing_seconds": 0.82
+      "indexing_seconds": 1.25
     },
     {
       "filename": "Postmastectomy radiation therapy can improve survival for.pdf",
@@ -11127,7 +11171,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.7
+      "indexing_seconds": 1.09
     },
     {
       "filename": "Real-world impact of postmastectomy radiotherapy in T1\u20132 breast cancer with one to three positive lymph nodes.pdf",
@@ -11164,14 +11208,14 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "text_excerpt": "Page 2 of 10"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "char_length": 12,
           "text_excerpt": "Page 2 of 10"
@@ -11252,7 +11296,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.36
+      "indexing_seconds": 0.54
     },
     {
       "filename": "Receptor Conversion in Distant Breast Cancer Metastases A Systematic Review and Meta-analysis.pdf",
@@ -11272,7 +11316,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 8]",
+          "anchor_id": "[Abstract, Para 7]",
           "page": 2,
           "text_excerpt": "3%\u201354% for ER a , 5%\u201378% for PR, and 0%\u201334% for HER2 (7\u20139). This change of hormone receptor and/or HER2 status between p"
         },
@@ -11328,18 +11372,18 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.74
+      "indexing_seconds": 1.09
     },
     {
       "filename": "Receptor conversion in metastatic breast cancer analysis of 390 cases from a single institution.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Receptor conversion in metastatic breast cancer analysis of 390 cases from a single institution.pdf",
       "is_scanned": false,
       "page_count": 8,
-      "total_anchors": 53,
+      "total_anchors": 66,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 1,
-        "Introduction": 3,
+        "Abstract": 4,
+        "Introduction": 13,
         "Methods": 4,
         "Results": 18,
         "Discussion": 17,
@@ -11347,12 +11391,20 @@
       },
       "violations": [
         {
-          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
-          "severity": "MEDIUM",
-          "anchor_id": "[Abstract, Para 1]",
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 2]",
           "page": 1,
-          "char_length": 2065,
-          "text_excerpt": "Estrogen receptor (ER), progesterone receptor (PR), and human epidermal growth factor receptor-2 (HER2) status provide clinical utility in g"
+          "char_length": 23,
+          "text_excerpt": "cancer: analysis of 390"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 7]",
+          "page": 1,
+          "char_length": 34,
+          "text_excerpt": "the pursuit of precision medicine."
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -11383,14 +11435,14 @@
         "cross_column_bleeds": 0,
         "section_voids": 0,
         "abstract_leakage": 0,
-        "mega_paragraphs": 1,
-        "micro_fragments": 3,
+        "mega_paragraphs": 0,
+        "micro_fragments": 5,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.52
+      "indexing_seconds": 0.82
     },
     {
       "filename": "Relationship between sun exposure and melanoma risk for tumours in different body sites in a large case-control study in a temperate climate.pdf",
@@ -11461,7 +11513,7 @@
       },
       "publisher_family": "Elsevier",
       "has_critical_failure": false,
-      "indexing_seconds": 0.3
+      "indexing_seconds": 0.48
     },
     {
       "filename": "A phase 2a clinical study on the safety and efficacy of individualized dosed mebendazole in patients with advanced gastrointestinal cancer .pdf",
@@ -11497,7 +11549,7 @@
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 0.45
+      "indexing_seconds": 0.63
     },
     {
       "filename": "Anti-cancer effect of fenbendazole-incorporated PLGA nanoparticles in ovarian cancer.pdf",
@@ -11621,7 +11673,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.26
+      "indexing_seconds": 1.73
     },
     {
       "filename": "Mebendazole and temozolomide in patients with newly diagnosed high-grade gliomas results of a phase 1 clinical trial.pdf",
@@ -11710,7 +11762,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.3
+      "indexing_seconds": 0.48
     },
     {
       "filename": "Metformin for the treatment of breast cancer a scoping review of randomized clinical trials.pdf",
@@ -12926,17 +12978,17 @@
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": false,
-      "indexing_seconds": 2.11
+      "indexing_seconds": 3.19
     },
     {
       "filename": "Unexpected Antitumorigenic Effect of Fenbendazole when Combined with Supplementary Vitamins.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Repurposed Drigs\\Unexpected Antitumorigenic Effect of Fenbendazole when Combined with Supplementary Vitamins.pdf",
       "is_scanned": false,
       "page_count": 4,
-      "total_anchors": 25,
+      "total_anchors": 27,
       "sections_detected": {
         "Header": 1,
-        "Methods": 2,
+        "Methods": 4,
         "Results": 1,
         "Discussion": 8,
         "References": 13
@@ -13030,7 +13082,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.64
+      "indexing_seconds": 1.01
     },
     {
       "filename": "Respiratory viral infections awaken metastatic breast cancer cells in lungs_optimize.pdf",
@@ -13198,7 +13250,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 1.59
+      "indexing_seconds": 2.22
     },
     {
       "filename": "Review the impacts of circulating 25-hydroxyvitamin D levels on cancer patient outcomes a systematic review and meta-analysis.pdf",
@@ -13242,7 +13294,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.4
+      "indexing_seconds": 0.6
     },
     {
       "filename": "Risk-Based vs Annual Breast Cancer Screening_ The WISDOM Randomized Clinical Trial _ Breast Cancer _ JAMA _ JAMA Network.pdf",
@@ -13264,7 +13316,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 2]",
+          "anchor_id": "[Abstract, Para 1]",
           "page": 2,
           "text_excerpt": "12/13/25, 4:35 PM Risk-Based vs Annual Breast Cancer Screening: The WISDOM Randomized Clinical Trial | Breast Cancer | J"
         },
@@ -13328,7 +13380,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 2.09
+      "indexing_seconds": 2.93
     },
     {
       "filename": "ScreeningforBreastCancer EvidenceReportandSystematicReview fortheUSPreventiveServicesTaskForce.pdf",
@@ -13477,7 +13529,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.56
+      "indexing_seconds": 0.95
     },
     {
       "filename": "Should_Supplemental_Antioxidant_Administ.pdf",
@@ -13572,7 +13624,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.51
+      "indexing_seconds": 0.78
     },
     {
       "filename": "Simple sugar intake and cancer incidence, cancer mortality and all-cause mortality A cohort study from the PREDIMED trial.pdf",
@@ -13593,7 +13645,7 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 3]",
+          "anchor_id": "[Abstract, Para 2]",
           "page": 2,
           "bbox": [
             202.0,
@@ -13613,7 +13665,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 3]",
+          "anchor_id": "[Abstract, Para 2]",
           "page": 2,
           "text_excerpt": "Conclusions: Simple sugar intake in drinks and fruit juice was associated with an increased risk of overall"
         },
@@ -13661,7 +13713,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.49
+      "indexing_seconds": 0.7
     },
     {
       "filename": "Sucralose consumption ablates cancer immunotherapy response.pdf",
@@ -13729,7 +13781,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 7.04
+      "indexing_seconds": 11.52
     },
     {
       "filename": "Sun Exposure and Melanoma Survival A GEM Study.pdf",
@@ -13751,7 +13803,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 3]",
+          "anchor_id": "[Abstract, Para 2]",
           "page": 2,
           "text_excerpt": "Page 2 was associated with greater survival in a larger, international population-based study with more detailed exposur"
         },
@@ -13791,7 +13843,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.2
+      "indexing_seconds": 0.32
     },
     {
       "filename": "Synergistic effect of fasting-mimicking diet and vitamin C against KRAS mutated cancers.pdf",
@@ -13913,18 +13965,18 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.62
+      "indexing_seconds": 1.04
     },
     {
       "filename": "The Effect of Integrative Naturopathic Oncology Including Modulated Electrohyperthermia on Survival Outcome among Glioblastoma Multiforme Patients-  A Retrospective Study.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\The Effect of Integrative Naturopathic Oncology Including Modulated Electrohyperthermia on Survival Outcome among Glioblastoma Multiforme Patients-  A Retrospective Study.pdf",
       "is_scanned": false,
       "page_count": 12,
-      "total_anchors": 111,
+      "total_anchors": 122,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 4,
-        "Introduction": 8,
+        "Abstract": 9,
+        "Introduction": 14,
         "Methods": 24,
         "Results": 30,
         "Discussion": 21,
@@ -13933,9 +13985,24 @@
       },
       "violations": [
         {
+          "type": "CROSS_COLUMN_BBOX_BLEED",
+          "severity": "CRITICAL",
+          "anchor_id": "[Introduction, Para 4]",
+          "page": 1,
+          "bbox": [
+            63.0,
+            465.0,
+            557.8,
+            488.6
+          ],
+          "page_width": 603.0,
+          "word_count": 33,
+          "text_excerpt": "outcomes in GBM patients. Patients initiating integrative treatment earlier experienced a greater survival benefit, as did patients under 50"
+        },
+        {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 4]",
+          "anchor_id": "[Introduction, Para 8]",
           "page": 2,
           "char_length": 2444,
           "text_excerpt": "GBM is a treatment-resistant malignancy with poor prognosis and limited survival, even with the current standard of care. 6 Given these chal"
@@ -13947,20 +14014,52 @@
           "page": 3,
           "char_length": 1828,
           "text_excerpt": "It is assumed that SEER patients did not receive mEHT, as the treatment is not available in the U.S. Although several FDA-approved hyperther"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 3]",
+          "page": 1,
+          "char_length": 21,
+          "text_excerpt": "A Retrospective Study"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 5]",
+          "page": 1,
+          "char_length": 8,
+          "text_excerpt": "Abstract"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 6]",
+          "page": 1,
+          "char_length": 31,
+          "text_excerpt": "diagnosis) and age on survival."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 3]",
+          "page": 1,
+          "char_length": 17,
+          "text_excerpt": "P -value\u2009=\u2009.009)."
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 0,
+        "cross_column_bleeds": 1,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 2,
-        "micro_fragments": 0,
+        "micro_fragments": 4,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
-      "has_critical_failure": false,
-      "indexing_seconds": 0.28
+      "has_critical_failure": true,
+      "indexing_seconds": 0.48
     },
     {
       "filename": "The Effect of Vitamin C (Ascorbic Acid) in the Treatment of Patients with Cancer A Systematic Review.pdf",
@@ -14192,17 +14291,17 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.41
+      "indexing_seconds": 0.67
     },
     {
       "filename": "The multitargeted drug ivermectin from an antiparasitic agent to a repositioned cancer drug.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\The multitargeted drug ivermectin from an antiparasitic agent to a repositioned cancer drug.pdf",
       "is_scanned": false,
       "page_count": 15,
-      "total_anchors": 101,
+      "total_anchors": 104,
       "sections_detected": {
         "Header": 1,
-        "Introduction": 16,
+        "Introduction": 19,
         "References": 49,
         "Results": 34,
         "Conclusions": 1
@@ -14221,7 +14320,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 6]",
+          "anchor_id": "[Introduction, Para 9]",
           "page": 3,
           "char_length": 2237,
           "text_excerpt": "Current use and dosage as an antiparasitic drug In humans, the most used dose of ivermectin for onchocerciasis, strongyloidiasis and entero\u00ad"
@@ -14229,7 +14328,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 7]",
+          "anchor_id": "[Introduction, Para 10]",
           "page": 3,
           "char_length": 2274,
           "text_excerpt": "poisoning (14 on suicidal attempt). In this retro\u00ad spective review, among 18 patients exposed to abamectin and one to ivermectin, 15 were po"
@@ -14237,7 +14336,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 9]",
+          "anchor_id": "[Introduction, Para 12]",
           "page": 4,
           "char_length": 1999,
           "text_excerpt": "sited subjects Doses C max Condition Route T max (h) (mg/kg) (ng/mL) Parasitic infection 0.1-0.2 Oral 52.0 5.2 Healthy 0.35-0.6 Oral 87.0 4."
@@ -14245,7 +14344,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 10]",
+          "anchor_id": "[Introduction, Para 13]",
           "page": 4,
           "char_length": 2343,
           "text_excerpt": "ment. Therefore, drug repurposing has the potential to reduce the whole process up to 3-12 years, AUC (\u00b5g/h/mL) and consequently, the potent"
@@ -14269,7 +14368,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 14]",
+          "anchor_id": "[Introduction, Para 17]",
           "page": 6,
           "char_length": 13,
           "text_excerpt": "Target\nEffect"
@@ -14302,7 +14401,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.49
+      "indexing_seconds": 0.84
     },
     {
       "filename": "Vitamin C intake and colorectal cancer survival according to KRAS and BRAF mutation a prospective study in two US cohorts.pdf",
@@ -14320,36 +14419,6 @@
         "References": 32
       },
       "violations": [
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 4]",
-          "page": 1,
-          "bbox": [
-            47.8,
-            312.3,
-            538.0,
-            378.1
-          ],
-          "page_width": 595.3,
-          "word_count": 123,
-          "text_excerpt": "RESULTS: During an average of 12.0 years of follow-up, we documented 2,096 CRC cases, of which 703 cases had KRAS and BRAF mutation data. Th"
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 5]",
-          "page": 1,
-          "bbox": [
-            47.8,
-            378.1,
-            538.0,
-            400.0
-          ],
-          "page_width": 595.3,
-          "word_count": 26,
-          "text_excerpt": "CONCLUSION: Our \ufb01 ndings support the laboratory evidence for a potential bene \ufb01 t of vitamin C for CRC patients with KRAS or BRAF mutated tu"
-        },
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
@@ -14461,7 +14530,7 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 5,
+        "cross_column_bleeds": 3,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 1,
@@ -14471,7 +14540,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.53
+      "indexing_seconds": 0.9
     },
     {
       "filename": "Why cancer screening has never been shown to save lives--and what we can do about it.pdf",
@@ -14495,7 +14564,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.72
+      "indexing_seconds": 1.37
     },
     {
       "filename": "honokiol__treatment_for_malignant_peripheral_nerve.74.pdf",
@@ -14528,24 +14597,39 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.13
+      "indexing_seconds": 0.18
     },
     {
       "filename": "Clinical Cardiology - 2025 - Daliri - Melatonin as a Novel Drug to Improve Cardiac Function and Quality of Life in Heart (2).pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Clinical Cardiology - 2025 - Daliri - Melatonin as a Novel Drug to Improve Cardiac Function and Quality of Life in Heart (2).pdf",
       "is_scanned": false,
       "page_count": 9,
-      "total_anchors": 61,
+      "total_anchors": 70,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 6,
-        "Introduction": 4,
+        "Abstract": 8,
+        "Introduction": 11,
         "Methods": 30,
         "Discussion": 9,
         "Conclusions": 1,
         "References": 10
       },
       "violations": [
+        {
+          "type": "CROSS_COLUMN_BBOX_BLEED",
+          "severity": "CRITICAL",
+          "anchor_id": "[Introduction, Para 7]",
+          "page": 1,
+          "bbox": [
+            54.4,
+            504.8,
+            540.9,
+            513.8
+          ],
+          "page_width": 595.3,
+          "word_count": 18,
+          "text_excerpt": "Conclusion: Thus, melatonin, by increasing psychologic parameters and cardiac potency, could be advised as a novel drug for"
+        },
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
@@ -14572,14 +14656,14 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 1]",
+          "anchor_id": "[Abstract, Para 2]",
           "page": 1,
-          "char_length": 8,
-          "text_excerpt": "ABSTRACT"
+          "char_length": 16,
+          "text_excerpt": "CLINICAL ARTICLE"
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 1,
+        "cross_column_bleeds": 2,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 1,
@@ -14589,7 +14673,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.42
+      "indexing_seconds": 0.62
     },
     {
       "filename": "Clinical Validation of MyProstateScore 2.0 Testing Using First-Catch, Non\u2013Digital Rectal Examination Urine.pdf",
@@ -14824,7 +14908,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.39
+      "indexing_seconds": 0.55
     },
     {
       "filename": "Associations of a healthy beverage pattern with all-cause and cause-specific mortality among US adults a nationwide cohort study.pdf",
@@ -14904,7 +14988,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.69
+      "indexing_seconds": 0.99
     },
     {
       "filename": "Coffee drinking timing and mortality in US adults .pdf",
@@ -14994,18 +15078,18 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 1.35
+      "indexing_seconds": 1.76
     },
     {
       "filename": "Coffee intake is associated with telomere length in severe mental disorders.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Coffee-Tea\\Coffee intake is associated with telomere length in severe mental disorders.pdf",
       "is_scanned": false,
       "page_count": 6,
-      "total_anchors": 64,
+      "total_anchors": 65,
       "sections_detected": {
         "Header": 1,
         "Abstract": 5,
-        "Introduction": 13,
+        "Introduction": 14,
         "Methods": 8,
         "Results": 14,
         "Discussion": 9,
@@ -15033,7 +15117,7 @@
       },
       "publisher_family": "BMJ",
       "has_critical_failure": false,
-      "indexing_seconds": 0.36
+      "indexing_seconds": 0.6
     },
     {
       "filename": "Coffee_Consumption_and_Mortality_Among_US_Adults_A.pdf",
@@ -15073,7 +15157,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.1
+      "indexing_seconds": 0.14
     },
     {
       "filename": "Intl Journal of Cancer - 2024 - Oyelere - Coffee consumption is associated with a reduced risk of colorectal cancer.pdf",
@@ -15211,7 +15295,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.4
+      "indexing_seconds": 0.76
     },
     {
       "filename": "association-between-coffee-consumption-and-life-expectancy-a-prospective-cohort-study-from-nhanes-2001-2018.pdf",
@@ -15311,7 +15395,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.74
+      "indexing_seconds": 1.43
     },
     {
       "filename": "association-of-caffeine-green-tea-and-coffee-consumption-with-mortality-and-disability-among-older-adults.pdf",
@@ -15381,7 +15465,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.43
+      "indexing_seconds": 0.7
     },
     {
       "filename": "relative-associations-of-coffee-tea-and-plain-water-with-all-cause-and-cause-specific-mortality-a-prospective-cohort-study.pdf",
@@ -15428,7 +15512,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.77
+      "indexing_seconds": 1.15
     },
     {
       "filename": "Copyright-and-Artificial-Intelligence-Part-2-Copyrightability-Report.pdf",
@@ -15478,7 +15562,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.01
+      "indexing_seconds": 1.66
     },
     {
       "filename": "Cracks in the Estrogen Carcinogenesis of Breast Cancer.pdf",
@@ -15526,7 +15610,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.35
+      "indexing_seconds": 0.61
     },
     {
       "filename": "Development and Validation of an 18-Gene Urine Test for High-Grade Prostate Cancer.pdf",
@@ -15547,7 +15631,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 9]",
+          "anchor_id": "[Abstract, Para 7]",
           "page": 2,
           "text_excerpt": "Development and Validation of an 18-Gene Urine Test for High-Grade Prostate Cancer"
         },
@@ -15587,18 +15671,18 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.43
+      "indexing_seconds": 0.79
     },
     {
       "filename": "Animal and plant protein usual intakes are not adverselyassociated with all-cause, cardiovascular disease, or cancer-related mortality risk-  an NHANES III analysis.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Diet\\Animal and plant protein usual intakes are not adverselyassociated with all-cause, cardiovascular disease, or cancer-related mortality risk-  an NHANES III analysis.pdf",
       "is_scanned": false,
       "page_count": 8,
-      "total_anchors": 111,
+      "total_anchors": 118,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 1,
-        "Introduction": 5,
+        "Abstract": 2,
+        "Introduction": 11,
         "Methods": 12,
         "Results": 26,
         "Discussion": 15,
@@ -15619,6 +15703,14 @@
           "page_width": 612.0,
           "word_count": 18,
           "text_excerpt": "mortality N = 862; adults \u2265 19 years old. HR\u2014\u2014hazard ratio (per 10 g increase). LCL\u2014\u2014lower 95% con\ufb01dence"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 2]",
+          "page": 1,
+          "char_length": 30,
+          "text_excerpt": "OPEN ACCESS | Research Article"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -15674,13 +15766,13 @@
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 0,
-        "micro_fragments": 6,
+        "micro_fragments": 7,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.36
+      "indexing_seconds": 0.66
     },
     {
       "filename": "Animal and plant protein usual intakes supplemental material.pdf",
@@ -15703,7 +15795,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.08
+      "indexing_seconds": 0.14
     },
     {
       "filename": "Are Nuts Safe in Diverticulosis A Mixed-Methods Systematic Review of Available Evidence.pdf",
@@ -15939,7 +16031,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 1.13
+      "indexing_seconds": 1.76
     },
     {
       "filename": "Association of Skipping Breakfast with Metabolic Syndrome and Its Components A Systematic Review and Meta-Analysis of Observational Studies.pdf",
@@ -16001,7 +16093,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.74
+      "indexing_seconds": 1.12
     },
     {
       "filename": "Diet and Risk for Incident Diverticulitis in Women - A Prospective Cohort Study.pdf",
@@ -16023,7 +16115,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 9]",
+          "anchor_id": "[Abstract, Para 8]",
           "page": 2,
           "text_excerpt": "Page 2 seeds (aHR:1.06, 95% CI 0.90\u20131.24) was not associated with incident diverticulitis. There was a reduced risk of i"
         },
@@ -16070,7 +16162,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 8]",
+          "anchor_id": "[Abstract, Para 7]",
           "page": 1,
           "char_length": 26,
           "text_excerpt": "Conflicts of interest\nNone"
@@ -16111,7 +16203,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.24
+      "indexing_seconds": 0.48
     },
     {
       "filename": "Tryptophan Intake in the US Adult Population.pdf",
@@ -16181,7 +16273,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.58
     },
     {
       "filename": "Dietary omega-3 polyunsaturated fatty acids as a protective factor of myopia the Hong Kong Children Eye Study.pdf",
@@ -16228,7 +16320,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.3
+      "indexing_seconds": 0.53
     },
     {
       "filename": "Early Treatment of Acute Myocardial Infarction with Melatonin Effects on MMP-9 and Adverse Cardiac Events.pdf",
@@ -16264,7 +16356,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.47
+      "indexing_seconds": 0.69
     },
     {
       "filename": "Effect of High-Dose vs Standard-Dose Vitamin D3 Supplementation on Progression-Free Survival Among Patients With Advanced or Metastatic Colorectal Cancer.pdf",
@@ -16285,14 +16377,14 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 11]",
+          "anchor_id": "[Abstract, Para 10]",
           "page": 2,
           "text_excerpt": "Effect of High- vs Standard-Dose Vitamin D 3 on Progression-Free Survival of Colorectal Cancer"
         },
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Abstract, Para 12]",
+          "anchor_id": "[Abstract, Para 11]",
           "page": 2,
           "char_length": 1960,
           "text_excerpt": "E xperimental evidence indicates that vitamin D has antineoplastic activity. Binding of vitamin D to its target, the vitamin D receptor, lea"
@@ -16308,7 +16400,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 10]",
+          "anchor_id": "[Abstract, Para 9]",
           "page": 1,
           "char_length": 14,
           "text_excerpt": "harvard.edu )."
@@ -16333,7 +16425,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.39
+      "indexing_seconds": 0.72
     },
     {
       "filename": "Effect of Vitamin D2 Supplementation on 25-Hydroxyvitamin D3 Status.pdf",
@@ -16452,7 +16544,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.82
+      "indexing_seconds": 1.17
     },
     {
       "filename": "Effects_of_melatonin_on_left_ventricular_ejection_.pdf",
@@ -16529,7 +16621,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.22
+      "indexing_seconds": 0.36
     },
     {
       "filename": "Evidence for the Benefits of Melatonin in Cardiovascular Disease.pdf",
@@ -16977,7 +17069,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.89
+      "indexing_seconds": 3.4
     },
     {
       "filename": "Evidence for the Benefits of melatonin in CVD.pdf",
@@ -17425,7 +17517,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.86
+      "indexing_seconds": 2.97
     },
     {
       "filename": "Extending the duration of endocrine treatment for early breast cancer patient-level meta-analysis of 12 randomised trials of aromatase inhibitors in 22\u2008031 postmenopausal women already treated with at least 5 years of en.pdf",
@@ -17487,18 +17579,18 @@
       },
       "publisher_family": "The Lancet",
       "has_critical_failure": false,
-      "indexing_seconds": 0.42
+      "indexing_seconds": 0.71
     },
     {
       "filename": "Associations of habitual fish oil supplementation.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\FIsh Oil\\Associations of habitual fish oil supplementation.pdf",
       "is_scanned": false,
       "page_count": 9,
-      "total_anchors": 85,
+      "total_anchors": 86,
       "sections_detected": {
         "Header": 1,
         "Abstract": 8,
-        "Introduction": 8,
+        "Introduction": 9,
         "Discussion": 30,
         "Methods": 8,
         "Results": 7,
@@ -17565,7 +17657,7 @@
       },
       "publisher_family": "BMJ",
       "has_critical_failure": false,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.58
     },
     {
       "filename": "Fish Oil and Peri-operative Bleeding Insights from the Omega-3 Fatty Acids for Prevention of Postoperative Atrial Fibrillation (OPERA) Randomized Trial.pdf",
@@ -17586,7 +17678,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 2,
           "text_excerpt": "Akintoye et al; Fish Oil and Perioperative Bleeding"
         },
@@ -17634,7 +17726,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.33
+      "indexing_seconds": 0.57
     },
     {
       "filename": "Habitual fish oil supplementation and the risk of incident atrial fibrillation findings from a large prospective longitudinal cohort study.pdf",
@@ -17720,7 +17812,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.58
+      "indexing_seconds": 0.77
     },
     {
       "filename": "No impact of fish oil supplements on bleeding risk a systematic review.pdf",
@@ -17894,7 +17986,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.37
+      "indexing_seconds": 0.59
     },
     {
       "filename": "Omega 3, Atrial Fibrillation, and Cardiovascular Outcomes.pdf",
@@ -17918,7 +18010,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.06
+      "indexing_seconds": 0.09
     },
     {
       "filename": "Omega-3 Fatty Acid Biomarkers and Incident Atrial Fibrillation.pdf",
@@ -17954,7 +18046,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "text_excerpt": "J A C C V O L . 8 2 , N O . 4 , 2 0 2 3 337 Qian et al J U L Y 2 5 , 2 0 2 3 : 3 3 6 \u2013 3 4 9 Omega-3 Fatty Acids and Atr"
         },
@@ -18066,7 +18158,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.44
+      "indexing_seconds": 0.73
     },
     {
       "filename": "Omega-3 and Risk of atrial fibrillation Vagally-mediated double-edged sword.pdf",
@@ -18128,7 +18220,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.33
+      "indexing_seconds": 0.49
     },
     {
       "filename": "Grape seed powder improves renal failure of chronic kidney disease patients.pdf",
@@ -18162,7 +18254,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.26
+      "indexing_seconds": 0.41
     },
     {
       "filename": "A systematic review and meta-regression analysis to examine the 'timing hypothesis' of hormone replacement therapy on mortality, coronary heart disease, and stroke.pdf",
@@ -18216,7 +18308,7 @@
       },
       "publisher_family": "Elsevier",
       "has_critical_failure": false,
-      "indexing_seconds": 0.49
+      "indexing_seconds": 0.7
     },
     {
       "filename": "Asystematicreviewandmeta-regressionanalysistoexaminethe\u2018timing hypothesis\u2019 of hormone replacement therapy on mortality, coronary heart disease, and stroke.pdf",
@@ -18270,7 +18362,7 @@
       },
       "publisher_family": "Elsevier",
       "has_critical_failure": false,
-      "indexing_seconds": 0.48
+      "indexing_seconds": 0.69
     },
     {
       "filename": "Estrogen and breast cancer.pdf",
@@ -18409,7 +18501,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.01
+      "indexing_seconds": 1.48
     },
     {
       "filename": "Extending the duration of endocrine treatment for early breast cancer.pdf",
@@ -18471,7 +18563,7 @@
       },
       "publisher_family": "The Lancet",
       "has_critical_failure": false,
-      "indexing_seconds": 0.44
+      "indexing_seconds": 0.74
     },
     {
       "filename": "Hormonal Contraceptive Formulations and Breast Cancer Risk in Adolescents and Premenopausal Women.pdf",
@@ -18491,7 +18583,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "text_excerpt": "Hormonal Contraceptive Formulations and Breast Cancer Risk in Adolescents and Premenopausal Women"
         },
@@ -18531,7 +18623,7 @@
       },
       "publisher_family": "JAMA",
       "has_critical_failure": false,
-      "indexing_seconds": 0.43
+      "indexing_seconds": 0.64
     },
     {
       "filename": "The benefits and risks of menopause hormone therapy for the cardiovascular system in postmenopausal women- a systematic review and meta-analysis.pdf",
@@ -18680,17 +18772,17 @@
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": true,
-      "indexing_seconds": 0.82
+      "indexing_seconds": 1.26
     },
     {
       "filename": "The risk of ovarian cancer in hormone replacement therapy users- a systematic review and meta-analysis.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\HRT\\The risk of ovarian cancer in hormone replacement therapy users- a systematic review and meta-analysis.pdf",
       "is_scanned": false,
       "page_count": 16,
-      "total_anchors": 132,
+      "total_anchors": 133,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 9,
+        "Abstract": 10,
         "Introduction": 4,
         "Methods": 17,
         "Results": 55,
@@ -18797,7 +18889,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.93
+      "indexing_seconds": 1.4
     },
     {
       "filename": "How statistical deception created the appearance that statins are safe and effective in primary and secondary prevention of cardiovascular disease.pdf",
@@ -18839,7 +18931,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.51
+      "indexing_seconds": 0.74
     },
     {
       "filename": "Hypercalcemia, hypercalciuria, and kidney stones in long-term studies of vitamin D supplementation- a systematic review and meta-analysisS.pdf",
@@ -18913,7 +19005,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 7]",
+          "anchor_id": "[Introduction, Para 6]",
           "page": 1,
           "char_length": 18,
           "text_excerpt": "1039\nfor Nutrition"
@@ -18946,7 +19038,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.48
+      "indexing_seconds": 0.72
     },
     {
       "filename": "L-carnitine supplementation for the management of fatigue in patients with hypothyroidism on levothyroxine treatment- a randomized, double-blind, placebo-controlled trial.pdf",
@@ -19115,7 +19207,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.64
+      "indexing_seconds": 1.09
     },
     {
       "filename": "Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
@@ -19385,7 +19477,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 1.57
+      "indexing_seconds": 2.3
     },
     {
       "filename": "High-Sensitivity Cardiac Troponin I for Risk Stratification.pdf",
@@ -19455,7 +19547,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.26
+      "indexing_seconds": 0.41
     },
     {
       "filename": "High-sensitivity cardiac troponin I and risk of dementia the 25-year longitudinal Whitehall II study.pdf",
@@ -19594,7 +19686,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.78
+      "indexing_seconds": 1.08
     },
     {
       "filename": "Letter to Veugelers, P.J. and Ekwaru, J.P., A Statistical Error in the Estimation of the Recommended Dietary Allowance for Vitamin D. Nutrients 2014, 6, 4472\u20134475; doi10.3390nu6104472.pdf",
@@ -19627,24 +19719,69 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.1
+      "indexing_seconds": 0.17
     },
     {
       "filename": "Long-term effects of colonoscopy screening on colorectal cancer incidence and mortality- a multicountry, population-based randomised controlled trialS.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Long-term effects of colonoscopy screening on colorectal cancer incidence and mortality- a multicountry, population-based randomised controlled trialS.pdf",
       "is_scanned": false,
       "page_count": 9,
-      "total_anchors": 76,
+      "total_anchors": 77,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 10,
-        "Introduction": 11,
+        "Abstract": 6,
+        "Introduction": 4,
+        "Discussion": 27,
         "Methods": 12,
         "Results": 20,
-        "Discussion": 15,
         "References": 7
       },
       "violations": [
+        {
+          "type": "CROSS_COLUMN_BBOX_BLEED",
+          "severity": "CRITICAL",
+          "anchor_id": "[Introduction, Para 3]",
+          "page": 1,
+          "bbox": [
+            36.9,
+            468.2,
+            478.5,
+            478.9
+          ],
+          "page_width": 595.3,
+          "word_count": 18,
+          "text_excerpt": "mortality in the non-screening group (0\u00b747%) was substantially lower than expected at the time of designing the trial"
+        },
+        {
+          "type": "CROSS_COLUMN_BBOX_BLEED",
+          "severity": "CRITICAL",
+          "anchor_id": "[Discussion, Para 1]",
+          "page": 1,
+          "bbox": [
+            36.9,
+            500.6,
+            478.5,
+            522.9
+          ],
+          "page_width": 595.3,
+          "word_count": 28,
+          "text_excerpt": "One colonoscopy significantly reduced colorectal cancer incidence but not mortality over 13 years. Colorectal cancer mortality was lower in "
+        },
+        {
+          "type": "CROSS_COLUMN_BBOX_BLEED",
+          "severity": "CRITICAL",
+          "anchor_id": "[Discussion, Para 2]",
+          "page": 1,
+          "bbox": [
+            36.9,
+            533.6,
+            478.5,
+            577.9
+          ],
+          "page_width": 595.3,
+          "word_count": 35,
+          "text_excerpt": "Funding The Norwegian Research Council, the Nordic Cancer Union, the Norwegian Cancer Society, and the Health Copyright \u00a9 2026 Elsevier Ltd."
+        },
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
@@ -19656,7 +19793,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Discussion, Para 11]",
+          "anchor_id": "[Discussion, Para 15]",
           "page": 8,
           "char_length": 4762,
           "text_excerpt": "Differences in ascertainment of colorectal cancer mortality between the study groups are unlikely, firstly because the intervention (invitat"
@@ -19664,23 +19801,31 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 2]",
-          "page": 1,
-          "char_length": 11,
-          "text_excerpt": "May 5, 2026"
-        },
-        {
-          "type": "MICRO_PARAGRAPH_FRAGMENT",
-          "severity": "LOW",
           "anchor_id": "[Abstract, Para 4]",
           "page": 1,
-          "char_length": 23,
-          "text_excerpt": "Gastroenterology, Maria"
+          "char_length": 7,
+          "text_excerpt": "Summary"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Introduction, Para 2]",
+          "anchor_id": "[Abstract, Para 5]",
+          "page": 1,
+          "char_length": 26,
+          "text_excerpt": "Fund of South-East Norway."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 6]",
+          "page": 1,
+          "char_length": 13,
+          "text_excerpt": "technologies."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Discussion, Para 4]",
           "page": 2,
           "char_length": 27,
           "text_excerpt": "versus older than 60 years."
@@ -19720,7 +19865,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Discussion, Para 3]",
+          "anchor_id": "[Discussion, Para 7]",
           "page": 7,
           "char_length": 34,
           "text_excerpt": "Screening group\nNo-screening group"
@@ -19728,24 +19873,24 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Discussion, Para 4]",
+          "anchor_id": "[Discussion, Para 8]",
           "page": 7,
           "char_length": 26,
           "text_excerpt": "RR 0\u00b791 (95% CI 0\u00b771\u20131\u00b709)"
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 0,
+        "cross_column_bleeds": 3,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 2,
-        "micro_fragments": 9,
+        "micro_fragments": 10,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "MDPI",
-      "has_critical_failure": false,
-      "indexing_seconds": 0.42
+      "has_critical_failure": true,
+      "indexing_seconds": 0.67
     },
     {
       "filename": "Longer wavelengths in sunlight pass through the human body and have a systemic impact which improves vision.pdf",
@@ -19797,7 +19942,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.96
+      "indexing_seconds": 1.4
     },
     {
       "filename": "Low glycemic diets alter lipid metabolism to influence tumor growth.pdf",
@@ -19937,7 +20082,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.89
+      "indexing_seconds": 1.27
     },
     {
       "filename": "Menopausal hormone therapy and breast cancer risk a population-based cohort study of 1.3 million women in Norway.pdf",
@@ -20055,7 +20200,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.52
+      "indexing_seconds": 0.83
     },
     {
       "filename": "Menopausal hormone therapy and the female brain Leveraging neuroimaging and prescription registry data from the UK Biobank cohort.pdf",
@@ -20157,7 +20302,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.33
+      "indexing_seconds": 2.15
     },
     {
       "filename": "Multiple nutritional factors and the risk ofHashimoto\u2019s Thyroiditis.pdf",
@@ -20241,7 +20386,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.08
+      "indexing_seconds": 1.82
     },
     {
       "filename": "Natural daylight during office hours improves glucose control and whole-body substrate metabolism.pdf",
@@ -20323,14 +20468,14 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 2,
           "text_excerpt": "Article Natural daylight during office hours improves glucose control and whole-body substrate metabolism Jan-Frieder Ha"
         },
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 2,
           "char_length": 3083,
           "text_excerpt": "Article Natural daylight during office hours improves glucose control and whole-body substrate metabolism Jan-Frieder Harmsen, 1 , 2 , 3 , 1"
@@ -20426,7 +20571,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 3]",
+          "anchor_id": "[Abstract, Para 2]",
           "page": 1,
           "char_length": 18,
           "text_excerpt": "improves\nsubstrate"
@@ -20499,7 +20644,7 @@
       },
       "publisher_family": "Cell Press",
       "has_critical_failure": true,
-      "indexing_seconds": 3.4
+      "indexing_seconds": 4.57
     },
     {
       "filename": "Alzheimer s   Dementia - 2025 - Marino - Higher vitamin B12 from mid\u2010 to late life is related to slower rates of cognitive.pdf",
@@ -20639,7 +20784,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.49
+      "indexing_seconds": 0.8
     },
     {
       "filename": "Brain Abnormalities in Children Exposed Prenatally to the Pesticide Chlorpyrifos.pdf",
@@ -20674,7 +20819,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 9]",
+          "anchor_id": "[Abstract, Para 8]",
           "page": 2,
           "text_excerpt": "Research Original Investigation C hlorpyrifos (CPF) (0,0-diethyl-0-3,5,6-trichloro-2pyridyl phosphorothioate), a chlorin"
         },
@@ -20730,7 +20875,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 1.03
+      "indexing_seconds": 1.67
     },
     {
       "filename": "Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
@@ -20889,7 +21034,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 8]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "text_excerpt": "NUTS, CORN, AND POPCORN AND DIVERTICULAR DISEASE A total of 179 medical records from 84% or greater. Five questions pert"
         },
@@ -20977,7 +21122,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.31
+      "indexing_seconds": 0.5
     },
     {
       "filename": "ayers-et-al-2023-effectiveness-and-safety-of-treatments-to-prevent-fractures-in-people-with-low-bone-mass-or-primary.pdf",
@@ -21168,7 +21313,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.53
+      "indexing_seconds": 0.91
     },
     {
       "filename": "Plasma vitamin C levels are associated with brain structural networks on MRI A large cohort study.pdf",
@@ -21214,7 +21359,7 @@
       },
       "publisher_family": "PLOS",
       "has_critical_failure": false,
-      "indexing_seconds": 0.84
+      "indexing_seconds": 1.13
     },
     {
       "filename": "Platelet-Rich Plasma Injection for Thumb Carpometacarpal Joint Osteoarthritis.pdf",
@@ -21291,7 +21436,7 @@
       },
       "publisher_family": "Elsevier",
       "has_critical_failure": false,
-      "indexing_seconds": 0.31
+      "indexing_seconds": 0.43
     },
     {
       "filename": "Postdiagnosis supplement use and breast cancer prognosis in the After Breast Cancer Pooling Project.pdf",
@@ -21585,7 +21730,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.24
+      "indexing_seconds": 0.36
     },
     {
       "filename": "Preventive Effect of Neuromuscular Training on Chemotherapy-Induced Neuropathy_ A Randomized Clinical Trial - PMC.pdf",
@@ -21927,7 +22072,7 @@
       },
       "publisher_family": "JAMA",
       "has_critical_failure": false,
-      "indexing_seconds": 2.0
+      "indexing_seconds": 2.87
     },
     {
       "filename": "RSV Vaccine Effectiveness Against Hospitalization Among US Adults Aged 60 Years or Older During 2 Seasons.pdf",
@@ -21946,39 +22091,9 @@
       },
       "violations": [
         {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 6]",
-          "page": 1,
-          "bbox": [
-            84.3,
-            625.6,
-            535.7,
-            651.0
-          ],
-          "page_width": 612.0,
-          "word_count": 36,
-          "text_excerpt": "CONCLUSIONS AND RELEVANCE Respiratory syncytial virus vaccines prevented RSV-associated Investigating Respiratory Viruses in the Acutely Ill"
-        },
-        {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 9]",
-          "page": 1,
-          "bbox": [
-            84.3,
-            665.0,
-            538.3,
-            725.8
-          ],
-          "page_width": 612.0,
-          "word_count": 38,
-          "text_excerpt": "Surie, MD, Coronavirus and Other Respiratory Viruses Division, National Center for Immunization and Respiratory Diseases, Centers for Diseas"
-        },
-        {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 10]",
+          "anchor_id": "[Abstract, Para 9]",
           "page": 2,
           "text_excerpt": "RSV Vaccine Effectiveness Against Hospitalization Among US Adults Aged 60 Years or Older During 2 Seasons"
         },
@@ -22040,7 +22155,7 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 2,
+        "cross_column_bleeds": 0,
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 2,
@@ -22049,19 +22164,19 @@
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
-      "has_critical_failure": true,
-      "indexing_seconds": 0.41
+      "has_critical_failure": false,
+      "indexing_seconds": 0.67
     },
     {
       "filename": "A simple practice guide for dose conversion betweenanimals and human.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Research-Stats\\A simple practice guide for dose conversion betweenanimals and human.pdf",
       "is_scanned": false,
       "page_count": 5,
-      "total_anchors": 50,
+      "total_anchors": 49,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 3,
-        "Introduction": 25,
+        "Abstract": 1,
+        "Introduction": 26,
         "Conclusions": 2,
         "References": 19
       },
@@ -22092,7 +22207,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 2]",
+          "anchor_id": "[Abstract, Para 1]",
           "page": 1,
           "char_length": 10,
           "text_excerpt": "Key words:"
@@ -22125,7 +22240,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.54
     },
     {
       "filename": "Dose translation between laboratory animals and human in.pdf",
@@ -22177,7 +22292,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.39
+      "indexing_seconds": 0.62
     },
     {
       "filename": "Reporting of Clinical Trial Uncertainties With New Cancer Drugs in Journal Publications and Clinical Guidelines.pdf",
@@ -22220,7 +22335,7 @@
       },
       "publisher_family": "JAMA",
       "has_critical_failure": false,
-      "indexing_seconds": 0.17
+      "indexing_seconds": 0.25
     },
     {
       "filename": "Translating dosages from animal models to human clinical trials revisiting body.pdf",
@@ -22240,7 +22355,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 6]",
+          "anchor_id": "[Abstract, Para 5]",
           "page": 2,
           "text_excerpt": "BRIEF HISTORY OF BSA SCALING Reagan-Shaw \u2019 s advocacy for the use of BSA for conversion of pharmacologically active dose"
         },
@@ -22288,7 +22403,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.35
+      "indexing_seconds": 0.51
     },
     {
       "filename": "Safe, mild ultraviolet\u2010B exposure An essential human requirement for vitamin D and other vital bodily parameter adequacy A review.pdf",
@@ -22306,7 +22421,7 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 21]",
+          "anchor_id": "[Abstract, Para 20]",
           "page": 2,
           "bbox": [
             46.5,
@@ -22321,14 +22436,14 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "text_excerpt": "418 | It may also be obtained much less easily from the diet (particularly in cheese, fish, eggs and beef liver), if par"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 18]",
+          "anchor_id": "[Abstract, Para 17]",
           "page": 2,
           "char_length": 26,
           "text_excerpt": "UVR = ultraviolet radia on"
@@ -22369,24 +22484,39 @@
       },
       "publisher_family": "Wiley",
       "has_critical_failure": true,
-      "indexing_seconds": 0.4
+      "indexing_seconds": 0.62
     },
     {
       "filename": "A Review of the Clinical and Epidemiologic Evidence Relevant to the Impact of Postdiagnosis Isoflavone Intake on Breast Cancer Outcomes.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Soy\\Breast\\A Review of the Clinical and Epidemiologic Evidence Relevant to the Impact of Postdiagnosis Isoflavone Intake on Breast Cancer Outcomes.pdf",
       "is_scanned": false,
       "page_count": 29,
-      "total_anchors": 277,
+      "total_anchors": 282,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 8,
-        "Introduction": 49,
+        "Abstract": 9,
+        "Introduction": 53,
         "Discussion": 67,
         "Results": 58,
         "References": 44,
         "Methods": 50
       },
       "violations": [
+        {
+          "type": "CROSS_COLUMN_BBOX_BLEED",
+          "severity": "CRITICAL",
+          "anchor_id": "[Introduction, Para 4]",
+          "page": 1,
+          "bbox": [
+            51.0,
+            467.0,
+            461.9,
+            507.1
+          ],
+          "page_width": 595.3,
+          "word_count": 25,
+          "text_excerpt": "few population-based studies involved participants consuming more than this intake recommendation. Keywords Breast cancer \u00b7 Isoflavones \u00b7 So"
+        },
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
@@ -22405,7 +22535,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 2]",
+          "anchor_id": "[Abstract, Para 3]",
           "page": 7,
           "text_excerpt": "P\u2009=\u20090.64 Surgical menopause, ER\u2009+\u2009BCa patients ER\u2009+\u2009on P-value for mean difference/ SS \u2193 , no difference between vs \u22122.4"
         },
@@ -22440,6 +22570,22 @@
           "page": 22,
           "char_length": 1884,
           "text_excerpt": "Current Nutrition Reports (2025) 14:50 those adhering to plant-forward diets regularly consumed soy. Soy food consumption gained in populari"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 1]",
+          "page": 1,
+          "char_length": 17,
+          "text_excerpt": "for this disease."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 2]",
+          "page": 1,
+          "char_length": 21,
+          "text_excerpt": "aromatase inhibitors."
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -22627,17 +22773,17 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 1,
+        "cross_column_bleeds": 2,
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 4,
-        "micro_fragments": 23,
+        "micro_fragments": 25,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 1.0
+      "indexing_seconds": 1.51
     },
     {
       "filename": "Association between Soy Isoflavone Intake and Breast Cancer Risk for Pre- and Post-Menopausal Women.pdf",
@@ -22730,7 +22876,7 @@
       },
       "publisher_family": "PLOS",
       "has_critical_failure": false,
-      "indexing_seconds": 0.42
+      "indexing_seconds": 0.56
     },
     {
       "filename": "Dietary Isoflavone Intake and All-Cause Mortality in BreastCancer Survivors The Breast Cancer Family Registry.pdf",
@@ -22748,14 +22894,6 @@
         "References": 17
       },
       "violations": [
-        {
-          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
-          "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 2]",
-          "page": 1,
-          "char_length": 1859,
-          "text_excerpt": "Corresponding author: Fang Fang Zhang, MD, PhD, Friedman School of Nutrition Science and Policy, Tufts University, 150 Harrison Ave, Boston,"
-        },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
@@ -22793,14 +22931,14 @@
         "cross_column_bleeds": 0,
         "section_voids": 0,
         "abstract_leakage": 0,
-        "mega_paragraphs": 1,
+        "mega_paragraphs": 0,
         "micro_fragments": 4,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.32
+      "indexing_seconds": 0.58
     },
     {
       "filename": "Effect of soy isoflavones on breast cancer recurrence and death for patients receiving adjuvant endocrine therapy.pdf",
@@ -22826,7 +22964,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 9]",
+          "anchor_id": "[Abstract, Para 7]",
           "page": 2,
           "text_excerpt": "Total n = 524 Characteristic Age at diagnosis, yr < 45 104 (100) 45\u201354 197 (100) 55\u201364 156 (100) > 64 67 (100) Menopausa"
         },
@@ -22874,7 +23012,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.28
+      "indexing_seconds": 0.47
     },
     {
       "filename": "Phytonutrients and outcomes following breast cancer a systematic review and meta-analysis of observational studies.pdf",
@@ -23119,7 +23257,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 8]",
+          "anchor_id": "[Abstract, Para 7]",
           "page": 2,
           "text_excerpt": "2 | JNCI Cancer Spectrum , 2023, Vol. 8, No. 1 notably secoisolariciresinol diglucoside (SDG) in flaxseed. Isothiocyanat"
         },
@@ -24071,18 +24209,18 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 2.24
+      "indexing_seconds": 2.94
     },
     {
       "filename": "Positive Effects of Soy Isoflavone Food on Survival of BreastCancer Patients in China.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Soy\\Breast\\Positive Effects of Soy Isoflavone Food on Survival of BreastCancer Patients in China.pdf",
       "is_scanned": false,
       "page_count": 4,
-      "total_anchors": 28,
+      "total_anchors": 32,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 1,
-        "Introduction": 3,
+        "Abstract": 2,
+        "Introduction": 6,
         "Methods": 7,
         "Results": 4,
         "Discussion": 8,
@@ -24096,6 +24234,14 @@
           "page": 2,
           "char_length": 1896,
           "text_excerpt": "of intake was used as the reference for above 20th, 50th and 75th percentiles of intake. Menopausal status at study enrollment was defined a"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 1]",
+          "page": 1,
+          "char_length": 14,
+          "text_excerpt": "is now needed."
         }
       ],
       "anomaly_counts": {
@@ -24103,13 +24249,13 @@
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 1,
-        "micro_fragments": 0,
+        "micro_fragments": 1,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.37
+      "indexing_seconds": 0.51
     },
     {
       "filename": "Soy Food Intake and Breast Cancer Survival.pdf",
@@ -24178,17 +24324,17 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.62
+      "indexing_seconds": 1.05
     },
     {
       "filename": "Soy Isoflavones and Breast Cancer Risk A Meta-analysis.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Soy\\Breast\\Soy Isoflavones and Breast Cancer Risk A Meta-analysis.pdf",
       "is_scanned": false,
       "page_count": 7,
-      "total_anchors": 57,
+      "total_anchors": 58,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 7,
+        "Abstract": 8,
         "Methods": 9,
         "Results": 12,
         "Discussion": 12,
@@ -24199,9 +24345,9 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 6]",
+          "anchor_id": "[Abstract, Para 5]",
           "page": 2,
-          "text_excerpt": "The purpose of this study was to carry out a detailed and up-to-date review of the literature on soy consumption with em"
+          "text_excerpt": "reported that higher consumption of soy and, therefore, isoflavones post-diagnosis of breast cancer is associated with a"
         },
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
@@ -24231,7 +24377,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.54
+      "indexing_seconds": 0.84
     },
     {
       "filename": "Soy Isoflavones and Risk of Cancer Recurrence in a Cohort of Breast Cancer Survivors Life After Cancer Epidemiology (LACE) Study.pdf",
@@ -24310,17 +24456,17 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.35
+      "indexing_seconds": 0.52
     },
     {
       "filename": "dietary-isoflavone-intake-is-not-statistically-significantly-associated-with-breast-cancer-risk-in-the-multiethnic-cohort.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Soy\\Breast\\dietary-isoflavone-intake-is-not-statistically-significantly-associated-with-breast-cancer-risk-in-the-multiethnic-cohort.pdf",
       "is_scanned": false,
       "page_count": 8,
-      "total_anchors": 77,
+      "total_anchors": 84,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 4,
+        "Abstract": 11,
         "Methods": 8,
         "Results": 16,
         "Discussion": 13,
@@ -24330,7 +24476,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 2]",
+          "anchor_id": "[Abstract, Para 10]",
           "page": 2,
           "text_excerpt": "Dietary iso\ufb02avone risk in Asian women according to hormone receptor status, and some of these have suggested differentia"
         },
@@ -24341,6 +24487,14 @@
           "page": 6,
           "char_length": 1844,
           "text_excerpt": "https://doi.org/10.1017/S0007114514001780 Published online by Cambridge University Press Dietary iso\ufb02avone intake and breast cancer 981 * HR"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 3]",
+          "page": 1,
+          "char_length": 28,
+          "text_excerpt": "signi\ufb01cantly associated with"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -24380,13 +24534,13 @@
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 1,
-        "micro_fragments": 4,
+        "micro_fragments": 5,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.34
+      "indexing_seconds": 0.53
     },
     {
       "filename": "Effects of Soy Protein Containing of Isoflavones and Isoflavones Extract on Plasma Lipid Profile in Postmenopausal Women as a Potential Prevention Factor in Cardiovascular Diseases Systematic Review and Meta-Analysis of .pdf",
@@ -24512,7 +24666,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.89
+      "indexing_seconds": 1.37
     },
     {
       "filename": "Effect of Soy Protein Isolate Supplementation on Biochemical Recurrence of Prostate Cancer After Radical Prostatectomy.pdf",
@@ -24531,31 +24685,16 @@
       },
       "violations": [
         {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 9]",
-          "page": 1,
-          "bbox": [
-            79.4,
-            629.2,
-            533.1,
-            669.0
-          ],
-          "page_width": 612.0,
-          "word_count": 17,
-          "text_excerpt": "TRIAL REGISTRATION clinicaltrials.gov Identifier: NCT00765479 Author Affiliations: Author affiliations are listed at the end of this article"
-        },
-        {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 12]",
+          "anchor_id": "[Abstract, Para 10]",
           "page": 2,
           "text_excerpt": "Soy Protein Supplement and Prostate Cancer Recurrence P rostate cancer is the most frequently diagnosed malignancy and t"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 10]",
+          "anchor_id": "[Abstract, Para 9]",
           "page": 1,
           "char_length": 32,
           "text_excerpt": "Corresponding Author: Maarten C."
@@ -24642,7 +24781,7 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 1,
+        "cross_column_bleeds": 0,
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 0,
@@ -24651,8 +24790,8 @@
         "overflow_orphans": 0
       },
       "publisher_family": "JAMA",
-      "has_critical_failure": true,
-      "indexing_seconds": 0.32
+      "has_critical_failure": false,
+      "indexing_seconds": 0.52
     },
     {
       "filename": "Soy Consumption and the Risk of Prostate Cancer An Updated Systematic Review and Meta-Analysis.pdf",
@@ -25006,7 +25145,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.89
+      "indexing_seconds": 1.41
     },
     {
       "filename": "Soy and isoflavone consumption and subsequent risk of prostate cancer mortality the Japan Public Health Center-based Prospective Study.pdf",
@@ -25027,7 +25166,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 6]",
+          "anchor_id": "[Abstract, Para 5]",
           "page": 2,
           "text_excerpt": "Key Messages \u2022 The present data from the Japan Public Health ucts intake was associated with an increased risk of \u2022 Rega"
         },
@@ -25083,17 +25222,17 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.41
+      "indexing_seconds": 0.62
     },
     {
       "filename": "Soy Combined.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Soy\\Soy Combined.pdf",
       "is_scanned": false,
       "page_count": 185,
-      "total_anchors": 1853,
+      "total_anchors": 1860,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 88,
+        "Abstract": 95,
         "Methods": 493,
         "Results": 363,
         "Discussion": 270,
@@ -25436,7 +25575,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 2]",
+          "anchor_id": "[Abstract, Para 10]",
           "page": 2,
           "text_excerpt": "Dietary iso\ufb02avone risk in Asian women according to hormone receptor status, and some of these have suggested differentia"
         },
@@ -25647,6 +25786,14 @@
           "page": 176,
           "char_length": 1865,
           "text_excerpt": "Corresponding author: Fang Fang Zhang, MD, PhD, Friedman School of Nutrition Science and Policy, Tufts University, 150 Harrison Ave, Boston,"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 3]",
+          "page": 1,
+          "char_length": 28,
+          "text_excerpt": "signi\ufb01cantly associated with"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -27219,7 +27366,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 50]",
+          "anchor_id": "[Abstract, Para 58]",
           "page": 168,
           "char_length": 13,
           "text_excerpt": "to inclusion."
@@ -27278,13 +27425,13 @@
         "section_voids": 0,
         "abstract_leakage": 1,
         "mega_paragraphs": 26,
-        "micro_fragments": 203,
+        "micro_fragments": 204,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 6.36
+      "indexing_seconds": 9.82
     },
     {
       "filename": "Statins in Familial HypercholesterolemiaConsequences for Coronary Artery Disease andAll-Cause Mortality incl correction.pdf",
@@ -27304,7 +27451,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 6]",
+          "anchor_id": "[Abstract, Para 5]",
           "page": 2,
           "text_excerpt": "J A C C V O L . 6 8 , N O . 3 , 2 0 1 6 J U L Y 1 9 , 2 0 1 6 : 2 5 2 \u2013 6 0"
         },
@@ -27392,18 +27539,18 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.49
+      "indexing_seconds": 0.52
     },
     {
       "filename": "Tai chi or cognitive behavioural therapy for treating insomnia in middle aged and older adults randomised non-inferiority trial.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Tai chi or cognitive behavioural therapy for treating insomnia in middle aged and older adults randomised non-inferiority trial.pdf",
       "is_scanned": false,
       "page_count": 12,
-      "total_anchors": 104,
+      "total_anchors": 103,
       "sections_detected": {
         "Header": 1,
         "Abstract": 11,
-        "Introduction": 7,
+        "Introduction": 6,
         "Methods": 12,
         "Results": 43,
         "Discussion": 2,
@@ -27512,7 +27659,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Methods, Para 11]",
+          "anchor_id": "[Methods, Para 10]",
           "page": 2,
           "char_length": 6567,
           "text_excerpt": "mately 11 100 women had either been randomly assigned or had agreed to participate in the study. At that time, accrual was interrupted and w"
@@ -27520,7 +27667,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Methods, Para 18]",
+          "anchor_id": "[Methods, Para 17]",
           "page": 4,
           "char_length": 1814,
           "text_excerpt": "Almost one fourth (23.8%) of the participants had no firstdegree relatives with breast cancer. More than one half (56.8%) had one first-degr"
@@ -27528,7 +27675,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Methods, Para 26]",
+          "anchor_id": "[Methods, Para 25]",
           "page": 6,
           "char_length": 3065,
           "text_excerpt": "fen group. The rates of breast cancers presenting without nodal involvement were 4.48 and 2.31 per 1000 women in the placebo and tamoxifen g"
@@ -27536,7 +27683,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Methods, Para 27]",
+          "anchor_id": "[Methods, Para 26]",
           "page": 6,
           "char_length": 1945,
           "text_excerpt": "ischemic heart disease, 62 occurred in the placebo group (five in women aged \u00f8 49 years and 57 in women aged \u00f9 50 years); 71 events occurred"
@@ -27544,7 +27691,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Methods, Para 43]",
+          "anchor_id": "[Methods, Para 42]",
           "page": 9,
           "char_length": 3819,
           "text_excerpt": "The only symptomatic differences noted between the placebo and tamoxifen groups were related to hot flashes and vaginal discharge, both of w"
@@ -27552,7 +27699,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Methods, Para 47]",
+          "anchor_id": "[Methods, Para 46]",
           "page": 11,
           "char_length": 2376,
           "text_excerpt": "Although the findings indicating the extent to which the invasive cancer risk was reduced are compelling, the occurrence of a 50% reduction "
@@ -27584,7 +27731,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Methods, Para 24]",
+          "anchor_id": "[Methods, Para 23]",
           "page": 5,
           "char_length": 9,
           "text_excerpt": "Tamoxifen"
@@ -27625,7 +27772,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.65
+      "indexing_seconds": 0.66
     },
     {
       "filename": "The effect of aged garlic extract on the atherosclerotic process - a randomized double-blind placebo-controlled trialS.pdf",
@@ -27712,7 +27859,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.56
+      "indexing_seconds": 0.54
     },
     {
       "filename": "Therapeutic potential of castor oil in managing blepharitis, meibomian gland dysfunction and dry eye .pdf",
@@ -28601,7 +28748,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.39
+      "indexing_seconds": 0.38
     },
     {
       "filename": "Comparative Effectiveness of Levothyroxine, Desiccated Thyroid Extract, and Levothyroxine+Liothyronine in Hypothyroidism.pdf",
@@ -28621,7 +28768,7 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 2,
           "bbox": [
             54.6,
@@ -28636,7 +28783,7 @@
         {
           "type": "CROSS_COLUMN_BBOX_BLEED",
           "severity": "CRITICAL",
-          "anchor_id": "[Abstract, Para 6]",
+          "anchor_id": "[Abstract, Para 5]",
           "page": 2,
           "bbox": [
             54.6,
@@ -28666,7 +28813,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 5]",
+          "anchor_id": "[Abstract, Para 4]",
           "page": 2,
           "text_excerpt": "interferences of the etiology of hypothyroidism or Thr92Ala-DIO2 gene polymorphism in the outcomes. Subgroup analyses of"
         },
@@ -28698,7 +28845,7 @@
       },
       "publisher_family": "JCEM / Oxford",
       "has_critical_failure": true,
-      "indexing_seconds": 2.29
+      "indexing_seconds": 2.2
     },
     {
       "filename": "Desiccated_Thyroid_Extract_Compared_With.pdf",
@@ -28838,7 +28985,7 @@
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": true,
-      "indexing_seconds": 0.57
+      "indexing_seconds": 0.58
     },
     {
       "filename": "Individualized Therapy for Hypothyroidism Is T4 Enough for Everyone.pdf",
@@ -28897,17 +29044,17 @@
       },
       "publisher_family": "JCEM / Oxford",
       "has_critical_failure": false,
-      "indexing_seconds": 0.53
+      "indexing_seconds": 0.56
     },
     {
       "filename": "Liothyronine and Desiccated Thyroid Extract in the Treatment of Hypothyroidism.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\DTE\\Liothyronine and Desiccated Thyroid Extract in the Treatment of Hypothyroidism.pdf",
       "is_scanned": false,
       "page_count": 15,
-      "total_anchors": 119,
+      "total_anchors": 135,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 27,
+        "Abstract": 43,
         "Introduction": 34,
         "Discussion": 5,
         "Conclusions": 9,
@@ -28918,17 +29065,9 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 6]",
+          "anchor_id": "[Abstract, Para 18]",
           "page": 2,
           "text_excerpt": "1400 patients, including restoring its normal diurnal rhythmicity, provided a suitable slow-release or long-acting prepa"
-        },
-        {
-          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
-          "severity": "MEDIUM",
-          "anchor_id": "[Abstract, Para 4]",
-          "page": 1,
-          "char_length": 1949,
-          "text_excerpt": "Background and Statement of a Problem levels, usually between 1.5 and 1.8 l g/kg (9\u201311). H ypothyroidism is caused by a failure to produce T"
         },
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
@@ -28949,7 +29088,39 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 15]",
+          "anchor_id": "[Abstract, Para 2]",
+          "page": 1,
+          "char_length": 33,
+          "text_excerpt": "Liothyronine and\nin the Treatment"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 8]",
+          "page": 1,
+          "char_length": 30,
+          "text_excerpt": "Thyroid Extract\nHypothyroidism"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 9]",
+          "page": 1,
+          "char_length": 33,
+          "text_excerpt": "Maciel, 3 and Antonio C. Bianco 1"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 17]",
+          "page": 1,
+          "char_length": 29,
+          "text_excerpt": "Illinois, USA.\nPaulo, Brazil."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 27]",
           "page": 2,
           "char_length": 19,
           "text_excerpt": "N/A, not available."
@@ -28975,24 +29146,24 @@
         "cross_column_bleeds": 0,
         "section_voids": 0,
         "abstract_leakage": 1,
-        "mega_paragraphs": 3,
-        "micro_fragments": 3,
+        "mega_paragraphs": 2,
+        "micro_fragments": 7,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.49
+      "indexing_seconds": 0.48
     },
     {
       "filename": "Natural desiccated thyroid for the treatment of hypothyroidism.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\DTE\\Natural desiccated thyroid for the treatment of hypothyroidism.pdf",
       "is_scanned": false,
       "page_count": 6,
-      "total_anchors": 55,
+      "total_anchors": 56,
       "sections_detected": {
         "Header": 1,
-        "Introduction": 33,
+        "Introduction": 34,
         "Abstract": 8,
         "Conclusions": 2,
         "References": 11
@@ -29041,7 +29212,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.58
+      "indexing_seconds": 0.65
     },
     {
       "filename": "Thyroid Stimulating Hormone Stability in Patients Prescribed Synthetic or Desiccated Thyroid Products A Retrospective Study.pdf",
@@ -29079,7 +29250,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.17
+      "indexing_seconds": 0.24
     },
     {
       "filename": "Treatment Preferences in Patients With Hypothyroidism.pdf",
@@ -29099,7 +29270,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 7]",
+          "anchor_id": "[Abstract, Para 6]",
           "page": 2,
           "text_excerpt": "888 rubbed with a mixture of thyroid extract, ether, and lanolin ( 1 , 2 )."
         },
@@ -29131,7 +29302,7 @@
       },
       "publisher_family": "JCEM / Oxford",
       "has_critical_failure": false,
-      "indexing_seconds": 0.79
+      "indexing_seconds": 1.04
     },
     {
       "filename": "Exogenous Thyroid Hormone Is Associated with Shortened Survival and Upregulation of High-Risk Gene Expression Profiles in Steroid Receptor-Positive Breast Cancers - supp data.pdf",
@@ -29154,7 +29325,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 2.08
+      "indexing_seconds": 3.01
     },
     {
       "filename": "Exogenous Thyroid Hormone Is Associated with Shortened Survival and Upregulation of High-Risk Gene Expression Profiles in Steroid Receptor-Positive Breast Cancers - supp tables1.pdf",
@@ -29177,7 +29348,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.18
+      "indexing_seconds": 0.29
     },
     {
       "filename": "Exogenous Thyroid Hormone Is Associated with Shortened Survival and Upregulation of High-Risk Gene Expression Profiles in Steroid Receptor-Positive Breast Cancers.pdf",
@@ -29407,7 +29578,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.55
+      "indexing_seconds": 0.83
     },
     {
       "filename": "Impact of thyroid hormone replacement on the risk of second cancer after thyroidectomy a Korean National Cohort Study.pdf",
@@ -29451,18 +29622,18 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.41
+      "indexing_seconds": 0.56
     },
     {
       "filename": "Levothyroxine and lung cancer in females the importance of oxidative stress.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\Levothyroxine and lung cancer in females the importance of oxidative stress.pdf",
       "is_scanned": false,
       "page_count": 6,
-      "total_anchors": 77,
+      "total_anchors": 82,
       "sections_detected": {
         "Header": 1,
         "Abstract": 4,
-        "Introduction": 4,
+        "Introduction": 9,
         "Methods": 3,
         "Results": 6,
         "Discussion": 10,
@@ -29470,6 +29641,21 @@
         "References": 48
       },
       "violations": [
+        {
+          "type": "CROSS_COLUMN_BBOX_BLEED",
+          "severity": "CRITICAL",
+          "anchor_id": "[Introduction, Para 8]",
+          "page": 1,
+          "bbox": [
+            180.5,
+            719.4,
+            514.0,
+            734.2
+          ],
+          "page_width": 595.3,
+          "word_count": 21,
+          "text_excerpt": "Commons Attribution License (http://creativecommons.org/licenses/by/2.0), which permits unrestricted use, distribution, and reproduction in "
+        },
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
@@ -29481,6 +29667,14 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
+          "anchor_id": "[Introduction, Para 3]",
+          "page": 1,
+          "char_length": 11,
+          "text_excerpt": "Open Access"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
           "anchor_id": "[References, Para 3]",
           "page": 6,
           "char_length": 13,
@@ -29488,27 +29682,27 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 0,
+        "cross_column_bleeds": 1,
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 1,
-        "micro_fragments": 1,
+        "micro_fragments": 2,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "MDPI",
-      "has_critical_failure": false,
-      "indexing_seconds": 0.3
+      "has_critical_failure": true,
+      "indexing_seconds": 0.44
     },
     {
       "filename": "Levothyroxine use and the risk of breast cancer a nation\u2011wide population\u2011based case\u2013control study.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\Levothyroxine use and the risk of breast cancer a nation\u2011wide population\u2011based case\u2013control study.pdf",
       "is_scanned": false,
       "page_count": 8,
-      "total_anchors": 51,
+      "total_anchors": 59,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 5,
+        "Abstract": 13,
         "Introduction": 3,
         "Methods": 5,
         "Results": 6,
@@ -29535,6 +29729,14 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
+          "anchor_id": "[Abstract, Para 5]",
+          "page": 1,
+          "char_length": 8,
+          "text_excerpt": "Abstract"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
           "anchor_id": "[Discussion, Para 4]",
           "page": 5,
           "char_length": 22,
@@ -29554,13 +29756,13 @@
         "section_voids": 0,
         "abstract_leakage": 0,
         "mega_paragraphs": 0,
-        "micro_fragments": 2,
+        "micro_fragments": 3,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Springer/Nature/BMC",
       "has_critical_failure": true,
-      "indexing_seconds": 0.64
+      "indexing_seconds": 0.82
     },
     {
       "filename": "Malignant neoplasms in people with hypothyroidism in Spain A population-based analysis.pdf",
@@ -29645,7 +29847,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.57
+      "indexing_seconds": 0.84
     },
     {
       "filename": "Risk of Subsequent Primary Cancers in Thyroid Cancer Survivors according to the Dose of Levothyroxine A Nationwide Cohort Stud.pdf",
@@ -29666,7 +29868,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 4]",
+          "anchor_id": "[Abstract, Para 3]",
           "page": 2,
           "text_excerpt": "Levothyroxine Dose and Cancer Risk in TC"
         },
@@ -29714,7 +29916,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.38
+      "indexing_seconds": 0.61
     },
     {
       "filename": "Risk of cancer in long\u2010term levothyroxine users Retrospective population\u2010based study.pdf",
@@ -29732,14 +29934,14 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 4]",
+          "anchor_id": "[Abstract, Para 3]",
           "page": 2,
           "text_excerpt": "Owing to insufficient biological evidence and inconclusive results from epidemiological studies, we conducted a nationwi"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 3]",
+          "anchor_id": "[Abstract, Para 2]",
           "page": 1,
           "char_length": 34,
           "text_excerpt": "wileyonlinelibrary.com/journal/cas"
@@ -29780,7 +29982,7 @@
       },
       "publisher_family": "Wiley",
       "has_critical_failure": false,
-      "indexing_seconds": 0.33
+      "indexing_seconds": 0.53
     },
     {
       "filename": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
@@ -30341,7 +30543,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": true,
-      "indexing_seconds": 0.9
+      "indexing_seconds": 1.33
     },
     {
       "filename": "Thyroid & Cancer - All 2025-12-24.pdf",
@@ -30648,7 +30850,7 @@
         {
           "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
           "severity": "HIGH",
-          "anchor_id": "[Abstract, Para 4]",
+          "anchor_id": "[Abstract, Para 3]",
           "page": 2,
           "text_excerpt": "Owing to insufficient biological evidence and inconclusive results from epidemiological studies, we conducted a nationwi"
         },
@@ -30743,7 +30945,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 3]",
+          "anchor_id": "[Abstract, Para 2]",
           "page": 1,
           "char_length": 34,
           "text_excerpt": "wileyonlinelibrary.com/journal/cas"
@@ -31207,7 +31409,7 @@
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
           "severity": "LOW",
-          "anchor_id": "[Abstract, Para 22]",
+          "anchor_id": "[Abstract, Para 21]",
           "page": 111,
           "char_length": 11,
           "text_excerpt": "OPEN ACCESS"
@@ -31584,7 +31786,7 @@
       },
       "publisher_family": "Wiley",
       "has_critical_failure": true,
-      "indexing_seconds": 8.62
+      "indexing_seconds": 12.28
     },
     {
       "filename": "Exogenous Thyroid Hormone Is Associated with Shortened Survival and Upregulation of High-Risk Gene Expression Profiles in Steroid Receptor-Positive Breast Cancers-Combined.pdf",
@@ -31982,7 +32184,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 3.94
+      "indexing_seconds": 5.23
     },
     {
       "filename": "Influence of levothyroxine concomitant treatment on treatment responses and outcomes in patients with metastatic colorectal adenocarcinoma.pdf",
@@ -32005,7 +32207,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.05
+      "indexing_seconds": 0.07
     },
     {
       "filename": "Thyroid hormone enhances estrogen-mediated proliferation and cell cycle regulatory pathways in steroid receptor-positive breast Cancer.pdf",
@@ -32122,7 +32324,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 1.51
+      "indexing_seconds": 2.19
     },
     {
       "filename": "Thyroxine promotes lung cancer growth in an orthotopic mouse model.pdf",
@@ -32175,7 +32377,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 0.96
+      "indexing_seconds": 1.27
     },
     {
       "filename": "Effect of iodine intake on thyroid diseases in China.pdf",
@@ -32253,17 +32455,17 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.4
+      "indexing_seconds": 0.59
     },
     {
       "filename": "Excess iodine intake sources, assessment, and effects on thyroid function.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Iodine\\Excess iodine intake sources, assessment, and effects on thyroid function.pdf",
       "is_scanned": false,
       "page_count": 22,
-      "total_anchors": 209,
+      "total_anchors": 211,
       "sections_detected": {
         "Header": 1,
-        "Introduction": 1,
+        "Introduction": 3,
         "Methods": 3,
         "Results": 18,
         "Discussion": 46,
@@ -32355,7 +32557,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.65
+      "indexing_seconds": 1.19
     },
     {
       "filename": "Iodine Excess as an Environmental Risk Factor for Autoimmune Thyroid Disease.pdf",
@@ -32398,18 +32600,18 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.3
+      "indexing_seconds": 0.45
     },
     {
       "filename": "Time course study of different innate immune mediators produced by UV\u2010irradiated skin.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Time course study of different innate immune mediators produced by UV\u2010irradiated skin.pdf",
       "is_scanned": false,
       "page_count": 12,
-      "total_anchors": 104,
+      "total_anchors": 109,
       "sections_detected": {
         "Header": 1,
-        "Abstract": 5,
-        "Introduction": 7,
+        "Abstract": 4,
+        "Introduction": 13,
         "Methods": 18,
         "Results": 59,
         "Discussion": 3,
@@ -32516,7 +32718,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.48
+      "indexing_seconds": 0.77
     },
     {
       "filename": "Variation in PCSK9 and HMGCR and Risk of Cardiovascular Disease and Diabetes.pdf",
@@ -32537,7 +32739,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Conclusions, Para 3]",
+          "anchor_id": "[Conclusions, Para 2]",
           "page": 2,
           "char_length": 1803,
           "text_excerpt": "Variation in PCSK9 and M onoclonal antibodies and other therapies that inhibit proprotein convertase subtilisin\u2013kexin type 9 (PCSK9) have be"
@@ -32602,7 +32804,7 @@
       },
       "publisher_family": "NEJM",
       "has_critical_failure": false,
-      "indexing_seconds": 0.39
+      "indexing_seconds": 0.6
     },
     {
       "filename": "Vitamin B12 supports skeletal muscle oxidative phosphorylation capacity in male mice-preprintS.pdf",
@@ -32719,7 +32921,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 2.95
+      "indexing_seconds": 3.62
     },
     {
       "filename": "Vitamin D Supplements and Prevention of Cancer and Cardiovascular Disease.pdf",
@@ -32813,7 +33015,7 @@
       },
       "publisher_family": "MDPI",
       "has_critical_failure": false,
-      "indexing_seconds": 0.48
+      "indexing_seconds": 0.66
     },
     {
       "filename": "What are the optimal mind-body therapies for cancer-related pain.pdf",
@@ -33337,7 +33539,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 1.02
+      "indexing_seconds": 1.57
     },
     {
       "filename": "effect of melatonin on nocturnal blood pressure meta-analysis of randomized controlled trials.pdf",
@@ -33399,7 +33601,7 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": false,
-      "indexing_seconds": 0.28
+      "indexing_seconds": 0.47
     },
     {
       "filename": "mortstatsh_1900-1904 mortality Statistics (1)_optimize.pdf",
@@ -83457,49 +83659,26 @@
       },
       "publisher_family": "Unknown",
       "has_critical_failure": true,
-      "indexing_seconds": 248.63
+      "indexing_seconds": 449.18
     },
     {
       "filename": "nrcardio.2014.177.pdf",
       "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\nrcardio.2014.177.pdf",
       "is_scanned": false,
       "page_count": 8,
-      "total_anchors": 122,
+      "total_anchors": 124,
       "sections_detected": {
         "Header": 1,
-        "Introduction": 3,
-        "References": 25,
+        "Introduction": 2,
+        "References": 28,
         "Conclusions": 92,
         "Discussion": 1
       },
       "violations": [
         {
-          "type": "CROSS_COLUMN_BBOX_BLEED",
-          "severity": "CRITICAL",
-          "anchor_id": "[References, Para 1]",
-          "page": 1,
-          "bbox": [
-            41.8,
-            716.4,
-            552.8,
-            735.2
-          ],
-          "page_width": 595.3,
-          "word_count": 19,
-          "text_excerpt": "Y.\u2011X.Z. yxzhao@sdu.edu.cn from RCTs on the effects of TCM in patients with CVD. The authors declare no competing interests."
-        },
-        {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[Introduction, Para 2]",
-          "page": 1,
-          "char_length": 2383,
-          "text_excerpt": "complementary and alternative medicine practition\u00ad Traditional Chinese medication (TCM) has been ers in the previous 3 months. In addition, "
-        },
-        {
-          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
-          "severity": "MEDIUM",
-          "anchor_id": "[References, Para 6]",
+          "anchor_id": "[References, Para 8]",
           "page": 2,
           "char_length": 5701,
           "text_excerpt": "involved a total of 16,171 patients. 10 reports were con\u00ad cerned with hypertension, 19\u201328 31 with CHD, 13\u201315,29\u201356 14 with cardiac arrhythmi"
@@ -83507,7 +83686,7 @@
         {
           "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
           "severity": "MEDIUM",
-          "anchor_id": "[References, Para 7]",
+          "anchor_id": "[References, Para 9]",
           "page": 3,
           "char_length": 6461,
           "text_excerpt": "tall gastrodia and Uncaria tomentosa , but the incidence in the TCM group was significantly lower than that in captopril group. 27 Therefore"
@@ -83527,6 +83706,22 @@
           "page": 5,
           "char_length": 3323,
           "text_excerpt": "the improved survival of patients after acute coronary syn\u00ad dromes and expanding populations exposed to HF risks because of increasing age a"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[References, Para 1]",
+          "page": 1,
+          "char_length": 7,
+          "text_excerpt": "Y.\u2011X.Z."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[References, Para 3]",
+          "page": 1,
+          "char_length": 7,
+          "text_excerpt": "REVIEWS"
         },
         {
           "type": "MICRO_PARAGRAPH_FRAGMENT",
@@ -83554,17 +83749,17 @@
         }
       ],
       "anomaly_counts": {
-        "cross_column_bleeds": 1,
+        "cross_column_bleeds": 0,
         "section_voids": 0,
         "abstract_leakage": 0,
-        "mega_paragraphs": 5,
-        "micro_fragments": 3,
+        "mega_paragraphs": 4,
+        "micro_fragments": 5,
         "table_footnote_pollution": 0,
         "overflow_orphans": 0
       },
       "publisher_family": "Springer/Nature/BMC",
-      "has_critical_failure": true,
-      "indexing_seconds": 0.42
+      "has_critical_failure": false,
+      "indexing_seconds": 0.47
     }
   ]
 }

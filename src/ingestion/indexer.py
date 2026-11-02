@@ -115,6 +115,10 @@ def detect_section_header(line: str, current_section: Optional[str] = None, page
     # Strip leading numbers/roman numerals and section prefixes: e.g. "1.", "1 ", "1.1", "3 ", "Section 3:"
     stripped = re.sub(r'^(?:(?:section|part|sec)\.?\s*)?(?:[0-9]+(?:\.[0-9]+)*|[IVXLCDM]+)[\.\s\-:\)]+\s*', '', clean_line, flags=re.IGNORECASE).strip()
     upper = stripped.upper()
+
+    # Constraint 2: On Page 1, 'INTERPRETATION' is part of structured abstracts (e.g. The Lancet), not body Discussion
+    if page_num == 1 and upper in ('INTERPRETATION', 'INTERPRETATIONS'):
+        return None
     
     section_map = {
         'ABSTRACT': 'Abstract',
@@ -310,6 +314,10 @@ def is_non_prose_metadata_block(b: Tuple[float, float, float, float], page, text
         # Bottom affiliation/correspondence footnote on Page 1 (y0 >= 0.72 * H)
         if page_num == 1 and y0 >= (0.72 * h) and METADATA_CONTENT_REGEX.search(clean_t) and not is_structured_header_line(clean_t):
             return True
+
+    # Condition D: Creative Commons / Open Access license footers at bottom of page (y0 >= 0.85 * H)
+    if y0 >= (0.85 * h) and re.search(r'Creative\s+Commons|Attribution\s+License|creativecommons\.org|licenses/by|[©\u00a9]\s*The\s+Author', clean_t, re.IGNORECASE):
+        return True
 
     return False
 
@@ -542,14 +550,15 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
     # Separate Page 1 into an Upper Zone (y <= 0.50H) and Lower Zone (y > 0.45H)
     # before executing the column boundary calculation. In academic layouts (Nature, Elsevier, JAMA),
     # the Upper Zone contains a full-width title/abstract while the Lower Zone is dual-column.
-    # Evaluating the Lower Zone prevents the full-width abstract straddles from suppressing
-    # the column split calculation.
+    # Evaluating candidate Lower Zone thresholds (0.45H, 0.50H, 0.55H, 0.58H) prevents the full-width
+    # abstract straddles from suppressing the column split calculation.
     if page_num == 1:
-        lower_lines = [l for l in analysis_lines if l["bbox"][1] > height * 0.45]
-        if len(lower_lines) >= 10:
-            split_x, is_two_col = _calculate_column_split_for_lines(lower_lines, width, min_lines_per_col=5)
-            if is_two_col:
-                return split_x, True
+        for y_cut in (0.45, 0.50, 0.55, 0.58):
+            lower_lines = [l for l in analysis_lines if l["bbox"][1] > height * y_cut]
+            if len(lower_lines) >= 8:
+                split_x, is_two_col = _calculate_column_split_for_lines(lower_lines, width, min_lines_per_col=4)
+                if is_two_col:
+                    return split_x, True
 
     return _calculate_column_split_for_lines(analysis_lines, width, min_lines_per_col=8)
 
@@ -781,7 +790,7 @@ def decompose_page_into_blocks(page, textpage=None, page_num: int = 1) -> List[A
     is_two_column = len(col1_lines) >= 4 and len(col2_lines) >= 4
     result_blocks = []
     if is_two_column:
-        top_split_y = height * 0.58 if page_num == 1 else height * 0.35
+        top_split_y = height * 0.70 if page_num == 1 else height * 0.35
         top_full = cluster_column_lines([l for l in full_lines if l["bbox"][3] <= top_split_y], max_vgap=18.0, page_width=width)
         col1_blocks = cluster_column_lines(col1_lines, max_vgap=14.0, page_width=width)
         col2_blocks = cluster_column_lines(col2_lines, max_vgap=14.0, page_width=width)
@@ -901,11 +910,15 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             if lines and current_section in ('Results', 'Methods', 'Introduction'):
                 m_runin = RUN_IN_DISCUSSION_REGEX.match(lines[0])
                 if m_runin:
-                    current_section = 'Discussion'
-                    active_table_anchor = None
-                    remainder = m_runin.group(2).strip()
-                    lines[0] = remainder
-                    block_text = "\n".join(lines).strip()
+                    # Constraint 2: On Page 1, 'Interpretation' is an abstract conclusion, never a body Discussion transition
+                    if page_num == 1 and m_runin.group(1).upper() in ('INTERPRETATION', 'INTERPRETATIONS'):
+                        pass
+                    else:
+                        current_section = 'Discussion'
+                        active_table_anchor = None
+                        remainder = m_runin.group(2).strip()
+                        lines[0] = remainder
+                        block_text = "\n".join(lines).strip()
 
             for l_idx, line in enumerate(lines[:5]):
                 detected = detect_section_header(line, current_section, page_num=page_num)

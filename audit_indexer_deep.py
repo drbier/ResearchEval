@@ -193,11 +193,6 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
 
         # Anchor spans from left column (< 0.38 * W) across to right column (> 0.62 * W)
         if x0 < (w * 0.38) and x1 > (w * 0.62) and anchor_w > (w * 0.55):
-            page_h = a.page_height or 792.0
-            # Exclude Page 1 Top-Zone abstracts/headers from cross-column bleed check
-            if a.page_number == 1 and y1 <= (page_h * 0.58) and a.section in ("Abstract", "Header"):
-                continue
-
             page_anchors = anchors_by_page.get(a.page_number, [])
             # Check for parallel columns in the same vertical zone (y0 - 50 to y1 + 50) or across the page
             zone_left = [p for p in page_anchors if p.bbox[2] < (w * 0.50) and abs(p.bbox[1] - y0) < 150 and p.anchor_id != a.anchor_id]
@@ -205,8 +200,12 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
             page_left = [p for p in page_anchors if p.bbox[2] < (w * 0.50) and p.anchor_id != a.anchor_id]
             page_right = [p for p in page_anchors if p.bbox[0] > (w * 0.50) and p.anchor_id != a.anchor_id]
 
-            # On Page 1, hybrid layouts (full-width abstract above two-column body) require
-            # substantive parallel columns in the SAME vertical band to flag a bleed.
+            # Invariant 1: Exclude Page 1 Top-Zone abstracts/headers from cross-column bleed check
+            page_h = a.page_height or 792.0
+            if a.page_number == 1 and y0 <= (page_h * 0.70) and a.section in ("Abstract", "Header"):
+                continue
+
+            # On Page 1, hybrid layouts require substantive parallel columns in the SAME vertical band to flag a bleed.
             if a.page_number == 1 and not (len(zone_left) >= 1 and len(zone_right) >= 1):
                 continue
 

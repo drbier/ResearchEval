@@ -1,8 +1,8 @@
 # WonkProject Corpus Deep Indexer Invariant Audit Report
 
-**Execution Timestamp**: 2026-11-01 19:29:16
+**Execution Timestamp**: 2026-11-01 20:50:32
 **Total Papers Audited**: 235
-**Total Audit Runtime**: 492.3s (Average: 2.09s/paper)
+**Total Audit Runtime**: 791.5s (Average: 3.37s/paper)
 
 ## Executive Health Summary
 
@@ -11,9 +11,9 @@
 | **Fully Compliant Papers** | 10 / 235 | 4.3% | ⚠️ ANOMALIES FOUND |
 | **Critical Failures** (Column Bleeds / Trapped Sections) | 81 / 235 | 34.5% | ❌ REQUIRES FIX |
 | **Cross-Column Bounding Box Bleeds** | 79 | 33.6% | ❌ HIGH PRIORITY |
-| **Missing Discussion Section Voids** | 17 | 7.2% | ❌ HIGH PRIORITY |
-| **Abstract Page 2+ Leakage** | 95 | 40.4% | ⚠️ MEDIUM |
-| **Mega-Paragraphs (Swallowed Subsections)** | 153 | 65.1% | ⚠️ MEDIUM |
+| **Missing Discussion Section Voids** | 16 | 6.8% | ❌ HIGH PRIORITY |
+| **Abstract Page 2+ Leakage** | 96 | 40.9% | ⚠️ MEDIUM |
+| **Mega-Paragraphs (Swallowed Subsections)** | 151 | 64.3% | ⚠️ MEDIUM |
 | **Table Footnote / Glossary Pollution** | 1 | 0.4% | ℹ️ LOW |
 
 ## Publisher Vulnerability Breakdown
@@ -39,13 +39,7 @@
 The following papers exhibited structural column bleeds or missing section transitions:
 
 ### 📄 `Attenuation of malignant phenotype of glioblastoma following a short course of the pro-oxidant combination of Resveratrol and Copper.pdf`
-- **Publisher**: Unknown | **Pages**: 7 | **Total Anchors**: 105
-  - ❌ **Cross-Column Bleed**: `[Abstract, Para 5]` on Page 1 stretches from $x_0=47.8$ to $x_1=538.0$ (Width: 595.3).
-    > *Excerpt*: "CONCLUSIONS: These results suggest that a simple, non-toxic and inexpensive combination of the commonly used nutraceuticals Resveratrol and "
-  - ❌ **Cross-Column Bleed**: `[Introduction, Para 1]` on Page 1 stretches from $x_0=35.9$ to $x_1=550.0$ (Width: 595.3).
-    > *Excerpt*: "tion can be abrogated by concurrent treatment with a combinaGlioblastoma (GBM) is a highly aggressive tumour with poor tion of the nutraceut"
-  - ❌ **Cross-Column Bleed**: `[Introduction, Para 2]` on Page 1 stretches from $x_0=35.9$ to $x_1=549.9$ (Width: 595.3).
-    > *Excerpt*: "Given that the concurrent induction of DNA damage and in ﬂ ammation is a the stomach, which are readily absorbed and have systemic effects i"
+- **Publisher**: Unknown | **Pages**: 7 | **Total Anchors**: 115
   - ❌ **Cross-Column Bleed**: `[Results, Para 11]` on Page 3 stretches from $x_0=60.8$ to $x_1=549.9$ (Width: 595.3).
     > *Excerpt*: "Representative confocal microscopy images of tumour sections to detect cfChPs in TME, and Immuno ﬂ uorescence results of Ki-67,"
   - ❌ **Cross-Column Bleed**: `[Results, Para 12]` on Page 3 stretches from $x_0=35.9$ to $x_1=550.0$ (Width: 595.3).
@@ -75,10 +69,6 @@ The following papers exhibited structural column bleeds or missing section trans
 
 ### 📄 `Intermittent androgen-deprivation therapy in prostate cancer a critical review focused on phase 3 trials.pdf`
 - **Publisher**: Elsevier | **Pages**: 9 | **Total Anchors**: 117
-  - ❌ **Cross-Column Bleed**: `[Abstract, Para 2]` on Page 1 stretches from $x_0=51.9$ to $x_1=548.0$ (Width: 595.3).
-    > *Excerpt*: "Context: Intermittent androgen deprivation (IAD) in prostate cancer (PCa) patients has Accepted April 10, 2013 been proposed to delay develo"
-  - ❌ **Cross-Column Bleed**: `[Abstract, Para 3]` on Page 1 stretches from $x_0=51.9$ to $x_1=548.1$ (Width: 595.3).
-    > *Excerpt*: "Objective: This review analyzes (1) the oncologic and quality of life (QoL) results from print on April 19, 2013 randomized phase 3 trials c"
   - ❌ **Cross-Column Bleed**: `[Introduction, Para 63]` on Page 7 stretches from $x_0=57.8$ to $x_1=424.1$ (Width: 595.3).
     > *Excerpt*: "E U R O P E A N U R O L O G Y X X X ( 2 0 1 3 ) X X X – X X X Table 5 – Comparison of international guidelines on indications for intermitte"
 
@@ -125,9 +115,9 @@ The following papers exhibited structural column bleeds or missing section trans
 
 ### 📄 `Benefits-and-harms-of-breast-cancer-mammography-screening-for-women-at-average-risk-of-breast_optimize.pdf`
 - **Publisher**: Unknown | **Pages**: 16 | **Total Anchors**: 180
-  - ❌ **Cross-Column Bleed**: `[Abstract, Para 18]` on Page 10 stretches from $x_0=131.0$ to $x_1=488.4$ (Width: 595.3).
+  - ❌ **Cross-Column Bleed**: `[Abstract, Para 17]` on Page 10 stretches from $x_0=131.0$ to $x_1=488.4$ (Width: 595.3).
     > *Excerpt*: "⨁⨁  b,c,d ⨁⨁  b,j ⨁⨁  b,j ⨁⨁  c,i evidence LOW LOW LOW LOW Downgraded due to indirectness Downgraded due to indirectness Downgraded "
-  - ❌ **Cross-Column Bleed**: `[Abstract, Para 29]` on Page 12 stretches from $x_0=103.1$ to $x_1=501.6$ (Width: 595.3).
+  - ❌ **Cross-Column Bleed**: `[Abstract, Para 28]` on Page 12 stretches from $x_0=103.1$ to $x_1=501.6$ (Width: 595.3).
     > *Excerpt*: "Certainty of evidence ⨁⨁  h LOW f Chemotherapy protocols and indications have significantly changed (e.g. node status was not determined i"
 
 ### 📄 `Breast Cancer Screening Strategies for Women With ATM, CHEK2, and PALB2 Pathogenic Variants_ A Comparative Modeling Analysis - PMC.pdf`
@@ -140,17 +130,17 @@ The following papers exhibited structural column bleeds or missing section trans
     > *Excerpt*: "Abbreviation: MRI, magnetic resonance imaging. a Results are shown as model mean values of cumulative lifetime outcomes per 1000 women scree"
 
 ### 📄 `Breast cancer patients enrolled in the Swiss mammography screening program “donna” demonstrate prolonged survival.pdf`
-- **Publisher**: Unknown | **Pages**: 13 | **Total Anchors**: 100
+- **Publisher**: Unknown | **Pages**: 13 | **Total Anchors**: 101
   - ❌ **Cross-Column Bleed**: `[Results, Para 6]` on Page 5 stretches from $x_0=56.7$ to $x_1=411.6$ (Width: 595.3).
     > *Excerpt*: "Wilcoxon–Mann Whitney rank sum tests or student’s t-tests, as appropriate, were used to test for significance in differences is also true fo"
 
 ### 📄 `Cancer Medicine - 2025 - Modi - Associations of Commonly Used Concomitant Medications With Survival and Adverse Event.pdf`
 - **Publisher**: Unknown | **Pages**: 10 | **Total Anchors**: 42
-  - ❌ **Cross-Column Bleed**: `[Abstract, Para 5]` on Page 2 stretches from $x_0=53.6$ to $x_1=543.8$ (Width: 595.3).
+  - ❌ **Cross-Column Bleed**: `[Abstract, Para 4]` on Page 2 stretches from $x_0=53.6$ to $x_1=543.8$ (Width: 595.3).
     > *Excerpt*: "Conclusion: These findings emphasise the need for careful management of concomitant medications in breast cancer care and support ongoing re"
 
 ### 📄 `Dietary Supplement Use During Chemotherapy and Survival Outcomes of Patients With Breast Cancer Enrolled in a Cooperative Group Clinical Trial (SWOG S0221).pdf`
-- **Publisher**: Unknown | **Pages**: 17 | **Total Anchors**: 143
+- **Publisher**: Unknown | **Pages**: 17 | **Total Anchors**: 155
   - ❌ **Cross-Column Bleed**: `[Discussion, Para 17]` on Page 8 stretches from $x_0=37.0$ to $x_1=548.1$ (Width: 585.0).
     > *Excerpt*: "† Strati ﬁ ed on treatment assignment and adjusted for age, tumor characteristics (estrogen receptor, progesterone receptor, human epidermal"
   - ❌ **Cross-Column Bleed**: `[References, Para 9]` on Page 10 stretches from $x_0=93.5$ to $x_1=548.0$ (Width: 585.0).
