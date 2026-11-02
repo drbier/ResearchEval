@@ -38,9 +38,23 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
-DEFAULT_PAPERS_DIR = r"J:\My Drive\WonkProject\Research Reviews\Papers"
+DEFAULT_PAPERS_DIR = (
+    os.getenv("WONK_PAPERS_DIR") or (
+        r"J:\My Drive\WonkProject\Research Reviews\Papers"
+        if sys.platform == "win32"
+        else "/var/www/fast/data/papers"
+    )
+)
 DEFAULT_REPORT_JSON = os.path.join(PROJECT_ROOT, "data", "deep_indexer_audit_report.json")
 DEFAULT_SUMMARY_MD = os.path.join(PROJECT_ROOT, "data", "deep_indexer_audit_summary.md")
+
+# Pre-flight check for Tesseract OCR training data
+TESSDATA_LOCAL = os.path.join(PROJECT_ROOT, "data", "tessdata")
+HAS_TESSDATA = (
+    os.path.exists(os.path.join(TESSDATA_LOCAL, "eng.traineddata")) or
+    os.path.exists("/usr/share/tesseract-ocr/4.00/tessdata/eng.traineddata") or
+    os.path.exists("/usr/share/tessdata/eng.traineddata")
+)
 
 
 def is_scanned_or_outlined(pdf_path: str) -> bool:
@@ -120,6 +134,16 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
         file_record["has_critical_failure"] = True
         return file_record
 
+    is_scanned = is_scanned_or_outlined(pdf_path)
+    file_record["is_scanned"] = is_scanned
+    if is_scanned and not HAS_TESSDATA:
+        file_record["violations"].append({
+            "type": "OCR_TESSDATA_MISSING",
+            "severity": "WARNING",
+            "details": f"Scanned/outlined PDF requires Tesseract OCR, but eng.traineddata was not found in {TESSDATA_LOCAL}."
+        })
+        return file_record
+
     # Execute production indexing engine
     t0 = time.time()
     try:
@@ -148,26 +172,36 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
     # -------------------------------------------------------------------------
     # INVARIANT 1: Cross-Column Bounding Box Bleeds
     # On multi-column pages, a prose paragraph must NOT span across the center gutter
+    # Refined: Excludes standalone display formulas, short labels, and verifies dual-column text context
     # -------------------------------------------------------------------------
     for a in indexed.anchor_metadata.values():
-        if a.item_type not in ("para", "paragraph"):
+        if a.item_type not in ("para", "paragraph") or a.anchor_id == "[Doc_Header]":
             continue
-        if a.anchor_id == "[Doc_Header]":
+
+        words = a.text.split()
+        # Must be substantive prose (>= 15 words) to avoid false positives on centered formulas or labels
+        if len(words) < 15:
+            continue
+
+        # Exclude display equations (starting with equation index or high formula symbols)
+        if re.match(r'^(?:\([0-9A-Za-z\.\-]+\)|\[[0-9A-Za-z\.\-]+\]|\s*[a-zA-Z]\s*=)', a.text.strip()):
             continue
 
         w = a.page_width or 612.0
         x0, y0, x1, y1 = a.bbox
         anchor_w = x1 - x0
 
-        # Anchor spans from left column (< 0.40 * W) across to right column (> 0.60 * W)
+        # Anchor spans from left column (< 0.38 * W) across to right column (> 0.62 * W)
         if x0 < (w * 0.38) and x1 > (w * 0.62) and anchor_w > (w * 0.55):
-            # Check if this page is a multi-column page (has anchors on both sides)
             page_anchors = anchors_by_page.get(a.page_number, [])
-            left_anchors = [p for p in page_anchors if p.bbox[2] < (w * 0.52)]
-            right_anchors = [p for p in page_anchors if p.bbox[0] > (w * 0.48)]
+            # Check for parallel columns in the same vertical zone (y0 - 50 to y1 + 50) or across the page
+            zone_left = [p for p in page_anchors if p.bbox[2] < (w * 0.50) and abs(p.bbox[1] - y0) < 150 and p.anchor_id != a.anchor_id]
+            zone_right = [p for p in page_anchors if p.bbox[0] > (w * 0.50) and abs(p.bbox[1] - y0) < 150 and p.anchor_id != a.anchor_id]
+            page_left = [p for p in page_anchors if p.bbox[2] < (w * 0.50) and p.anchor_id != a.anchor_id]
+            page_right = [p for p in page_anchors if p.bbox[0] > (w * 0.50) and p.anchor_id != a.anchor_id]
 
-            # If the page clearly has multiple columns or if text has embedded two-column patterns
-            if len(left_anchors) >= 2 and len(right_anchors) >= 2:
+            # Trigger only if the page clearly exhibits parallel text columns
+            if (len(zone_left) >= 1 and len(zone_right) >= 1) or (len(page_left) >= 3 and len(page_right) >= 3):
                 file_record["anomaly_counts"]["cross_column_bleeds"] += 1
                 file_record["violations"].append({
                     "type": "CROSS_COLUMN_BBOX_BLEED",
@@ -176,6 +210,7 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
                     "page": a.page_number,
                     "bbox": [round(c, 1) for c in a.bbox],
                     "page_width": round(w, 1),
+                    "word_count": len(words),
                     "text_excerpt": a.text[:140].replace('\n', ' ')
                 })
                 file_record["has_critical_failure"] = True
@@ -346,7 +381,8 @@ def main():
     parser.add_argument("--papers_dir", default=DEFAULT_PAPERS_DIR, help="Path to papers directory")
     parser.add_argument("--max_papers", type=int, default=None, help="Limit total papers audited (default: all)")
     parser.add_argument("--include_scanned", action="store_true", default=False, help="Include OCR processing on scanned/outlined PDFs")
-    parser.add_argument("--max_scanned", type=int, default=15, help="Maximum scanned papers to OCR (default: 15)")
+    parser.add_argument("--max_scanned", type=int, default=15, help="Maximum scanned papers to OCR (default: 15, 0 for all)")
+    parser.add_argument("--resume", action="store_true", default=False, help="Resume from existing report, auditing only remaining papers")
     parser.add_argument("--output_json", default=DEFAULT_REPORT_JSON, help="Path for JSON audit report")
     parser.add_argument("--output_summary", default=DEFAULT_SUMMARY_MD, help="Path for Markdown summary")
     args = parser.parse_args()
@@ -395,18 +431,39 @@ def main():
     if args.max_papers:
         target_pdfs = target_pdfs[:args.max_papers]
 
-    total_to_audit = len(target_pdfs)
-    print(f"\nStarting deep indexing audit of {total_to_audit} manuscripts...\n")
-
     audit_results: List[Dict[str, Any]] = []
+    audited_paths = set()
+    prev_elapsed = 0.0
+
+    if args.resume and os.path.exists(args.output_json):
+        try:
+            with open(args.output_json, "r", encoding="utf-8") as f:
+                prev_data = json.load(f)
+                existing_results = prev_data.get("results", [])
+                for r in existing_results:
+                    if "path" in r:
+                        audited_paths.add(r["path"])
+                audit_results.extend(existing_results)
+                prev_elapsed = prev_data.get("elapsed_seconds", 0.0)
+                print(f"Resuming: Loaded {len(existing_results)} already audited papers from {args.output_json}")
+        except Exception as e:
+            print(f"Warning: Could not load resume file: {e}")
+
+    queue = [p for p in target_pdfs if p not in audited_paths]
+    total_in_queue = len(queue)
+    total_overall = len(target_pdfs)
+    already_done = len(target_pdfs) - total_in_queue
+
+    print(f"\nStarting deep indexing audit: {total_in_queue} manuscripts in queue ({already_done} already completed, {total_overall} total)...\n")
+
     t_start = time.time()
+    critical_count = sum(1 for r in audit_results if r.get("has_critical_failure"))
+    clean_count = sum(1 for r in audit_results if not r.get("violations"))
 
-    critical_count = 0
-    clean_count = 0
-
-    for idx, pdf_path in enumerate(target_pdfs):
+    for idx, pdf_path in enumerate(queue):
         filename = os.path.basename(pdf_path)
-        progress = f"[{idx+1}/{total_to_audit}]"
+        current_overall_idx = already_done + idx + 1
+        progress = f"[{current_overall_idx}/{total_overall}] (Queue: {idx+1}/{total_in_queue})"
         
         # Immediate console print
         print(f"{progress} Auditing: {filename[:55]}...", end=" ", flush=True)
@@ -425,18 +482,33 @@ def main():
             clean_count += 1
             print("✅ PASS")
 
-    t_elapsed = time.time() - t_start
+        # Save checkpoint every 5 papers or on last paper
+        if (idx + 1) % 5 == 0 or (idx + 1) == total_in_queue:
+            t_current_elapsed = prev_elapsed + (time.time() - t_start)
+            os.makedirs(os.path.dirname(os.path.abspath(args.output_json)), exist_ok=True)
+            with open(args.output_json, "w", encoding="utf-8") as f:
+                json.dump({
+                    "timestamp": time.time(),
+                    "total_audited": len(audit_results),
+                    "elapsed_seconds": t_current_elapsed,
+                    "results": audit_results
+                }, f, indent=2)
+            md_summary = generate_markdown_summary(audit_results, t_current_elapsed)
+            with open(args.output_summary, "w", encoding="utf-8") as f:
+                f.write(md_summary)
+
+    t_elapsed = prev_elapsed + (time.time() - t_start)
     print("\n" + "=" * 80)
     print(f"AUDIT COMPLETE in {t_elapsed:.1f}s")
-    print(f"Clean Pass: {clean_count}/{total_to_audit} | Critical Failures: {critical_count}/{total_to_audit}")
+    print(f"Clean Pass: {clean_count}/{total_overall} | Critical Failures: {critical_count}/{total_overall}")
     print("=" * 80)
 
-    # Save detailed JSON report
+    # Save final detailed JSON report
     os.makedirs(os.path.dirname(os.path.abspath(args.output_json)), exist_ok=True)
     with open(args.output_json, "w", encoding="utf-8") as f:
         json.dump({
             "timestamp": time.time(),
-            "total_audited": total_to_audit,
+            "total_audited": len(audit_results),
             "elapsed_seconds": t_elapsed,
             "results": audit_results
         }, f, indent=2)
@@ -451,3 +523,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
