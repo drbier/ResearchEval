@@ -32,7 +32,7 @@ from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_D
 from src.summarizer.engine import PaperSummarizer, MODEL_DESIGNATION as SUMMARIZER_MODEL_DESIGNATION
 
 app = FastAPI(
-    title="F.A.C.T. - Find. Analyze. Check Trials",
+    title="F.A.C.T. - Find · Analyze · Contextualize · Talk",
     description="Deterministic Clinical Research Analyzer with Inline Coordinate Grounding",
     version="1.0.0"
 )
@@ -597,7 +597,7 @@ def index_page():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>F.A.C.T. — Find · Analyze · Check Trials</title>
+        <title>F.A.C.T. — Find · Analyze · Contextualize · Talk</title>
         
         <!-- PWA Meta Tags & Web Manifest -->
         <link rel="manifest" href="/manifest.json">
@@ -872,9 +872,9 @@ def index_page():
                             />
                         </div>
                     </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">F.A.C.T.</h1>
-                        <p class="text-slate-500 text-[11px] font-medium mt-0.5">Find <span class="text-slate-400 font-bold mx-1">·</span> Analyze <span class="text-slate-400 font-bold mx-1">·</span> Check Trials</p>
+                    <div class="flex flex-col items-center text-center">
+                        <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none text-center">F.A.C.T.</h1>
+                        <p class="text-slate-500 text-[11px] font-medium mt-1 text-center whitespace-nowrap">Find<span class="text-slate-400 font-bold px-1">·</span>Analyze<span class="text-slate-400 font-bold px-1">·</span>Contextualize<span class="text-slate-400 font-bold px-1">·</span>Talk</p>
                     </div>
                 </div>
 
@@ -887,7 +887,7 @@ def index_page():
                         <span>🔬</span> <span>Analyze</span>
                     </button>
                     <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
-                        <span>📝</span> <span>Summarize</span>
+                        <span>📝</span> <span>Contextualize</span>
                         <span id="summarizerBatchBadge" class="hidden ml-1 px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[10px] font-bold">0</span>
                     </button>
                 </div>
@@ -1044,10 +1044,10 @@ def index_page():
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                         <div>
                             <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                                <span>📝</span> Multi-Paper Science Communicator Summarizer
+                                <span>📝</span> Multi-Paper Science Communicator Contextualizer
                             </h2>
                             <p class="text-xs text-slate-500 mt-1">
-                                Paste a batch of 3–10 PubMed URLs, PMIDs, or DOIs. Reads structured abstracts sequentially to create an accessible, grounded overview.
+                                Paste a batch of 3–10 PubMed URLs, PMIDs, or DOIs. Reads structured abstracts sequentially to create an accessible, contextualized overview.
                             </p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
@@ -1505,11 +1505,12 @@ def index_page():
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button 
-                                        onclick="addToSummarizerBatch('${safeUrl}', '${safeTitle}')" 
-                                        class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-300 flex items-center gap-1 cursor-pointer"
-                                        title="Add to multi-paper summarizer batch"
+                                        onclick="toggleContextualizerBatch(this, '${safeUrl}', '${safeTitle}')" 
+                                        class="contextualizer-toggle-btn px-3 py-1.5 rounded-lg ${window.ResearchAppState.summarizerBatch.includes(safeUrl) ? 'bg-sky-600 hover:bg-sky-700 text-white border-sky-600 shadow-2xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'} text-xs font-semibold transition border flex items-center gap-1 cursor-pointer"
+                                        title="${window.ResearchAppState.summarizerBatch.includes(safeUrl) ? 'Click to remove from contextualizer batch' : 'Add to multi-paper contextualizer batch'}"
+                                        data-url="${safeUrl}"
                                     >
-                                        <span>➕</span> <span>Add to Summarizer</span>
+                                        ${window.ResearchAppState.summarizerBatch.includes(safeUrl) ? '<span>+ Added</span>' : '<span>➕</span> <span>Add to Contextualizer</span>'}
                                     </button>
                                     ${appraiseBtn}
                                 </div>
@@ -1519,28 +1520,64 @@ def index_page():
                 }).join('');
             }
 
-            // Summarizer Handlers
+            // Contextualizer (Summarizer) Handlers
             function updateSummarizerBatchCount() {
                 const textarea = document.getElementById('summarizerUrlsInput');
                 const counter = document.getElementById('summarizerBatchCounter');
                 if (!textarea || !counter) return;
-                const lines = textarea.value.trim().split(/\n+/).filter(l => l.trim().length > 0);
+                const lines = textarea.value.trim().split(/\n+/).map(l => l.trim()).filter(Boolean);
                 counter.innerText = `Batch size: ${lines.length} / 10 papers`;
                 if (lines.length > 10) {
                     counter.className = "text-[11px] text-rose-600 font-bold";
                 } else {
                     counter.className = "text-[11px] text-slate-400";
                 }
+                // Keep state aligned
+                window.ResearchAppState.summarizerBatch = lines;
+                updateSummarizerBadge();
+                document.querySelectorAll('.contextualizer-toggle-btn').forEach(btn => {
+                    const btnUrl = btn.getAttribute('data-url');
+                    if (btnUrl && lines.includes(btnUrl)) {
+                        btn.className = "contextualizer-toggle-btn px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition border border-sky-600 shadow-2xs flex items-center gap-1 cursor-pointer";
+                        btn.innerHTML = `<span>+ Added</span>`;
+                        btn.title = "Click to remove from contextualizer batch";
+                    } else if (btnUrl) {
+                        btn.className = "contextualizer-toggle-btn px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-300 flex items-center gap-1 cursor-pointer";
+                        btn.innerHTML = `<span>➕</span> <span>Add to Contextualizer</span>`;
+                        btn.title = "Add to multi-paper contextualizer batch";
+                    }
+                });
+            }
+
+            function toggleContextualizerBatch(btn, url, title) {
+                if (!url) return;
+                const batch = window.ResearchAppState.summarizerBatch;
+                const idx = batch.indexOf(url);
+                
+                if (idx > -1) {
+                    // Deselect
+                    batch.splice(idx, 1);
+                    if (btn) {
+                        btn.className = "contextualizer-toggle-btn px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-300 flex items-center gap-1 cursor-pointer";
+                        btn.innerHTML = `<span>➕</span> <span>Add to Contextualizer</span>`;
+                        btn.title = "Add to multi-paper contextualizer batch";
+                    }
+                } else {
+                    // Select
+                    batch.push(url);
+                    if (btn) {
+                        btn.className = "contextualizer-toggle-btn px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition border border-sky-600 shadow-2xs flex items-center gap-1 cursor-pointer";
+                        btn.innerHTML = `<span>+ Added</span>`;
+                        btn.title = "Click to remove from contextualizer batch";
+                    }
+                }
+                
+                updateSummarizerBadge();
+                syncSummarizerInputFromBatch();
             }
 
             function addToSummarizerBatch(url, title) {
-                if (!url) return;
-                if (!window.ResearchAppState.summarizerBatch.includes(url)) {
-                    window.ResearchAppState.summarizerBatch.push(url);
-                }
-                updateSummarizerBadge();
-                alert(`Added to Summarizer queue:
-${title || url}`);
+                toggleContextualizerBatch(null, url, title);
             }
 
             function updateSummarizerBadge() {
@@ -1558,12 +1595,14 @@ ${title || url}`);
 
             function syncSummarizerInputFromBatch() {
                 const textarea = document.getElementById('summarizerUrlsInput');
-                if (textarea && window.ResearchAppState.summarizerBatch.length > 0) {
-                    const currentVal = textarea.value.trim();
-                    const existingList = currentVal ? currentVal.split(/\n+/).map(s => s.trim()) : [];
-                    const combined = Array.from(new Set([...existingList, ...window.ResearchAppState.summarizerBatch])).filter(Boolean);
-                    textarea.value = combined.join('\n');
-                    updateSummarizerBatchCount();
+                if (textarea) {
+                    textarea.value = window.ResearchAppState.summarizerBatch.join('\n');
+                    const counter = document.getElementById('summarizerBatchCounter');
+                    if (counter) {
+                        const count = window.ResearchAppState.summarizerBatch.length;
+                        counter.innerText = `Batch size: ${count} / 10 papers`;
+                        counter.className = count > 10 ? "text-[11px] text-rose-600 font-bold" : "text-[11px] text-slate-400";
+                    }
                 }
             }
 
@@ -1575,6 +1614,11 @@ ${title || url}`);
                 }
                 window.ResearchAppState.summarizerBatch = [];
                 updateSummarizerBadge();
+                document.querySelectorAll('.contextualizer-toggle-btn').forEach(btn => {
+                    btn.className = "contextualizer-toggle-btn px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-300 flex items-center gap-1 cursor-pointer";
+                    btn.innerHTML = `<span>➕</span> <span>Add to Contextualizer</span>`;
+                    btn.title = "Add to multi-paper contextualizer batch";
+                });
             }
 
             function loadSampleSummarizerBatch() {
