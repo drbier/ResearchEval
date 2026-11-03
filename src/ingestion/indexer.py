@@ -128,6 +128,8 @@ def clean_ocr_text(text: str) -> str:
     text = re.sub(r'(\w+)-\n(\w+)', r'\1\2', text)
     # Clean OCR pseudo-bullet glyph artifacts (e.g. 'e Dietary uptake...' -> '• Dietary uptake...')
     text = re.sub(r'(?m)^[eo•·\-]\s+(?=[A-Z])', '• ', text)
+    # Clean isolated single-character OCR noise artifacts on their own line within blocks (e.g. stray edge margin specks)
+    text = re.sub(r'(?m)^\s*[a-zA-Z&@=><§©]\s*$\n?', '', text)
     return text.strip()
 
 def detect_section_header(line: str, current_section: Optional[str] = None, page_num: int = 1) -> Optional[str]:
@@ -417,20 +419,30 @@ def extract_raw_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[
             if not valid_spans:
                 continue
             
-            # Filter gutter noise glyphs on Pages 1-2 (e.g. OCR vertical line speckles / artifacts)
-            if page_num <= 2:
-                filtered_spans = []
-                for s in valid_spans:
-                    st = s["text"].strip()
-                    sx0 = s["bbox"][0]
+            # Filter gutter and extreme-margin noise glyphs (e.g. OCR vertical line speckles / artifacts)
+            filtered_spans = []
+            for s_idx, s in enumerate(valid_spans):
+                st = s["text"].strip()
+                sx0 = s["bbox"][0]
+                sx1 = s["bbox"][2]
+                if page_num <= 2:
                     if right_gutter_min <= sx0 <= right_gutter_max and len(st) <= 2 and not st.isalnum():
                         continue
                     if right_gutter_min <= sx0 <= right_gutter_max and len(st) == 1 and st.isdigit():
                         continue
-                    filtered_spans.append(s)
-                valid_spans = filtered_spans
-                if not valid_spans:
-                    continue
+                # Filter extreme margin scanner artifacts (x >= 0.93*w or x <= 0.05*w)
+                if sx0 >= 0.93 * w and len(st) <= 2:
+                    prev_s = valid_spans[s_idx - 1] if s_idx > 0 else None
+                    if not prev_s or (sx0 - prev_s["bbox"][2]) >= 10.0:
+                        continue
+                if sx1 <= 0.05 * w and len(st) <= 2:
+                    next_s = valid_spans[s_idx + 1] if s_idx + 1 < len(valid_spans) else None
+                    if not next_s or (next_s["bbox"][0] - sx1) >= 10.0:
+                        continue
+                filtered_spans.append(s)
+            valid_spans = filtered_spans
+            if not valid_spans:
+                continue
 
             # Right margin cleaving on Page 1 (split main column from right sidebar at x >= 0.78 * w only if sidebar contains metadata)
             if page_num == 1:
