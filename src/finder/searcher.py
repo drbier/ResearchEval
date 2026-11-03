@@ -37,7 +37,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 
 class SearchQueryCache:
     """
-    SQLite Query Cache for F.A.S.T. Paper Finder.
+    SQLite Query Cache for F.A.C.T. Paper Finder.
     Enforces:
     1. Normalization: extract, lowercase, and alphabetize query terms before SHA-256 hash.
     2. Concurrency Safety: WAL mode (Write-Ahead Logging) and connection timeouts for multi-worker Uvicorn.

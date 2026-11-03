@@ -1,10 +1,10 @@
 module.exports = {
   apps: [
     {
-      name: "fast",
+      name: "fact",
       script: "venv/bin/python",
       args: "-m uvicorn src.api.server:app --host 127.0.0.1 --port 3008 --workers 2",
-      cwd: "/var/www/fast",
+      cwd: "/var/www/fact",
       instances: 1,
       exec_mode: "fork",
       autorestart: true,

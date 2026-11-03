@@ -1,6 +1,6 @@
 {
-  "name": "F.A.S.T. - Find · Analyze · Summarize Trials",
-  "short_name": "F.A.S.T.",
+  "name": "F.A.C.T. - Find · Analyze · Check Trials",
+  "short_name": "F.A.C.T.",
   "description": "Deterministic Clinical Research Analyzer with Inline Source Grounding",
   "start_url": "/",
   "id": "/",

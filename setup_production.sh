@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# setup_production.sh - Initial Provisioning & Nginx Setup for F.A.S.T. v2.0
-# Domain: fast.wonkproject.com -> 127.0.0.1:3008
+# setup_production.sh - Initial Provisioning & Nginx Setup for F.A.C.T. v2.0
+# Domain: fact.wonkproject.com -> 127.0.0.1:3008
 # ==============================================================================
 
 set -e
 
-APP_DIR="/var/www/fast"
-DOMAIN="fast.wonkproject.com"
+APP_DIR="/var/www/fact"
+DOMAIN="fact.wonkproject.com"
 PORT=3008
 
 echo "=== [1/6] Setting directory permissions on $APP_DIR ==="
@@ -42,9 +42,9 @@ if [ ! -f "$APP_DIR/.env" ]; then
 fi
 
 echo "=== [4/6] Creating Nginx configuration for $DOMAIN ==="
-cat << 'EOF' > /etc/nginx/sites-available/fast.wonkproject.com
+cat << 'EOF' > /etc/nginx/sites-available/fact.wonkproject.com
 server {
-    server_name fast.wonkproject.com;
+    server_name fact.wonkproject.com;
 
     # Allow manuscript uploads up to 50MB
     client_max_body_size 50M;
@@ -81,36 +81,36 @@ server {
 }
 
 server {
-    if ($host = fast.wonkproject.com) {
+    if ($host = fact.wonkproject.com) {
         return 301 https://$host$request_uri;
     }
 
     listen 8080;
-    server_name fast.wonkproject.com;
+    server_name fact.wonkproject.com;
     return 404;
 }
 EOF
 
 echo "Enabling Nginx site..."
-ln -sf /etc/nginx/sites-available/fast.wonkproject.com /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/fact.wonkproject.com /etc/nginx/sites-enabled/
 nginx -t
 systemctl reload nginx
 
 echo "=== [5/6] Registering & Starting PM2 process ==="
-if sudo -u www-data pm2 describe fast > /dev/null 2>&1; then
-    echo "Restarting existing PM2 process 'fast'..."
-    sudo -u www-data pm2 restart fast --update-env
+if sudo -u www-data pm2 describe fact > /dev/null 2>&1; then
+    echo "Restarting existing PM2 process 'fact'..."
+    sudo -u www-data pm2 restart fact --update-env
 else
-    echo "Starting new PM2 process 'fast'..."
+    echo "Starting new PM2 process 'fact'..."
     sudo -u www-data pm2 start ecosystem.config.cjs
     sudo -u www-data pm2 save
 fi
 
 echo "=== [6/6] Production Deployment Status ==="
-sudo -u www-data pm2 status fast
+sudo -u www-data pm2 status fact
 
 echo ""
 echo "=========================================================================="
-echo " SUCCESS: F.A.S.T. v2.0 is live at https://fast.wonkproject.com"
+echo " SUCCESS: F.A.C.T. v2.0 is live at https://fact.wonkproject.com"
 echo "=========================================================================="
 

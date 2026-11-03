@@ -27,11 +27,12 @@ from PIL import Image
 from src.ingestion.indexer import parse_and_index_pdf, IndexedDocument
 from src.ingestion.fetcher import PaperFetcher
 from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL
+from src.appraisal.qa import PaperQAEngine
 from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_DESIGNATION
 from src.summarizer.engine import PaperSummarizer, MODEL_DESIGNATION as SUMMARIZER_MODEL_DESIGNATION
 
 app = FastAPI(
-    title="F.A.S.T. - Find. Analyze. Summarize Trials",
+    title="F.A.C.T. - Find. Analyze. Check Trials",
     description="Deterministic Clinical Research Analyzer with Inline Coordinate Grounding",
     version="1.0.0"
 )
@@ -70,12 +71,13 @@ def get_manifest():
         return FileResponse(manifest_file, media_type="application/manifest+json")
     raise HTTPException(status_code=404, detail="Manifest not found")
 
+@app.get("/FACT-Elf.jpeg")
 @app.get("/FAST-Elf.jpeg")
 def get_fast_elf_image():
     elf_file = os.path.join(PUBLIC_DIR, "FAST-Elf.jpeg")
     if os.path.exists(elf_file):
         return FileResponse(elf_file, media_type="image/jpeg")
-    raise HTTPException(status_code=404, detail="FAST-Elf image not found")
+    raise HTTPException(status_code=404, detail="Elf image not found")
 
 @app.get("/logo.png")
 @app.get("/elf-thinker.png")
@@ -107,6 +109,7 @@ CACHED_INDEX: Dict[str, IndexedDocument] = {}
 
 finder = PaperFinder()
 summarizer = PaperSummarizer()
+qa_engine = PaperQAEngine()
 
 
 class FinderSearchRequest(BaseModel):
@@ -221,6 +224,45 @@ def analyze_fetched_paper(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/ask-paper")
+async def ask_paper(
+    filename: str = Form(...),
+    question: str = Form(...),
+    history: Optional[str] = Form(None),
+    model_override: Optional[str] = Form(None),
+    api_key: Optional[str] = Form(None)
+):
+    """Answers clinical questions about a loaded manuscript with coordinate grounding."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Requested manuscript file not found on server.")
+        
+    try:
+        # Retrieve or index document
+        indexed = CACHED_INDEX.get(filename)
+        if not indexed:
+            indexed = parse_and_index_pdf(file_path)
+            CACHED_INDEX[filename] = indexed
+            
+        conv_history = []
+        if history:
+            try:
+                conv_history = json.loads(history)
+            except Exception:
+                conv_history = []
+                
+        engine_instance = PaperQAEngine(api_key=api_key) if api_key else qa_engine
+        result = engine_instance.ask(
+            indexed_doc=indexed,
+            question=question,
+            filename=filename,
+            conversation_history=conv_history,
+            model_override=model_override
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/analyze")
 @app.post("/appraise")
 async def analyze_paper(
@@ -313,11 +355,12 @@ def resolve_anchor(indexed: IndexedDocument, anchor_str: str) -> Optional[Any]:
             if meta.item_type == 'para' and meta.index == p_num:
                 return meta
 
-    # 3. Table or Figure matching: '[Results, Table 1]', '[Results, Fig 2]'
-    tbl_fig_match = re.search(r'\[?\s*([A-Za-z\s&]+?)\s*,\s*(Table|Fig)\s*(\d+)', anchor_clean, re.IGNORECASE)
+    # 3. Table, Figure, or Box matching: '[Results, Table 1]', '[Results, TableNote 2]', '[Discussion, Fig 2]', '[Methods, Box 1]'
+    tbl_fig_match = re.search(r'\[?\s*([A-Za-z\s&]+?)\s*,\s*(Table(?:Note)?|Fig(?:Legend)?|Box)\s*(\d+)', anchor_clean, re.IGNORECASE)
     if tbl_fig_match:
         section = tbl_fig_match.group(1).strip()
-        item_type = tbl_fig_match.group(2).capitalize()
+        raw_type = tbl_fig_match.group(2)
+        item_type = raw_type[0].upper() + raw_type[1:]
         num = int(tbl_fig_match.group(3))
 
         canonical = f"[{section}, {item_type} {num}]"
@@ -325,7 +368,7 @@ def resolve_anchor(indexed: IndexedDocument, anchor_str: str) -> Optional[Any]:
             return indexed.anchor_metadata[canonical]
 
         for k, meta in indexed.anchor_metadata.items():
-            if meta.item_type.lower() == item_type.lower() and meta.index == num:
+            if (meta.item_type or "").lower() == item_type.lower() and meta.index == num:
                 return meta
 
     # 4. Fallback: match any single paragraph number in the anchor string
@@ -554,7 +597,7 @@ def index_page():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>F.A.S.T. — Find · Analyze · Summarize Trials</title>
+        <title>F.A.C.T. — Find · Analyze · Check Trials</title>
         
         <!-- PWA Meta Tags & Web Manifest -->
         <link rel="manifest" href="/manifest.json">
@@ -562,7 +605,7 @@ def index_page():
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
-        <meta name="apple-mobile-web-app-title" content="F.A.S.T.">
+        <meta name="apple-mobile-web-app-title" content="F.A.C.T.">
         
         <!-- Icons -->
         <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -823,19 +866,19 @@ def index_page():
                     <div class="relative z-30 group shrink-0">
                         <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-2xs transition-all duration-300 ease-out origin-top-left group-hover:scale-[3.5] group-hover:rounded-xl group-hover:shadow-2xl group-hover:border-sky-300 group-hover:ring-4 group-hover:ring-sky-500/15 cursor-pointer">
                             <img 
-                                src="/FAST-Elf.jpeg" 
-                                alt="F.A.S.T. Logo" 
+                                src="/FACT-Elf.jpeg" 
+                                alt="F.A.C.T. Logo" 
                                 class="w-full h-full object-cover"
                             />
                         </div>
                     </div>
                     <div>
-                        <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">F.A.S.T.</h1>
-                        <p class="text-slate-500 text-[11px] font-medium mt-0.5">Find <span class="text-slate-400 font-bold mx-1">·</span> Analyze <span class="text-slate-400 font-bold mx-1">·</span> Summarize Trials</p>
+                        <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none">F.A.C.T.</h1>
+                        <p class="text-slate-500 text-[11px] font-medium mt-0.5">Find <span class="text-slate-400 font-bold mx-1">·</span> Analyze <span class="text-slate-400 font-bold mx-1">·</span> Check Trials</p>
                     </div>
                 </div>
 
-                <!-- Master 3-Mode Navigation Switcher: F.A.S.T. (Find -> Analyze -> Summarize Trials) -->
+                <!-- Master 3-Mode Navigation Switcher: F.A.C.T. (Find -> Analyze -> Summarize/Check Trials) -->
                 <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold gap-1 shrink-0">
                     <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
                         <span>🔍</span> <span>Find</span>
@@ -1080,6 +1123,9 @@ def index_page():
                                     <button id="leftTabAppraisalBtn" onclick="switchLeftTab('appraisal')" class="px-3 py-1 rounded-md bg-white text-sky-800 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
                                         <span>📄</span> <span>Clinical Analysis</span>
                                     </button>
+                                    <button id="leftTabAskBtn" onclick="switchLeftTab('ask')" class="px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer">
+                                        <span>💬</span> <span>Ask</span>
+                                    </button>
                                     <button id="leftTabThinkingBtn" onclick="switchLeftTab('thinking')" class="px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer">
                                         <span>🧠</span> <span>Show Thinking / Audit</span>
                                     </button>
@@ -1096,6 +1142,36 @@ def index_page():
                             </div>
                         </div>
                         <div id="outputMarkdown" class="prose max-w-none text-slate-800 bg-slate-50 p-6 rounded-lg border border-slate-200 text-sm leading-relaxed flex-1"></div>
+                        <!-- Ask Tab Container (Conversational QA Interrogation) -->
+                        <div id="askContainer" class="hidden flex-1 flex flex-col min-h-0 space-y-3">
+                            <!-- Quick Clinical Inquiries -->
+                            <div class="flex-shrink-0 bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1.5">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Quick Inquiries:</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <button onclick="askQuickChip('How many total participants were randomized or enrolled in the study?')" class="text-[11px] bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-200 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">👥 Total Sample Size</button>
+                                    <button onclick="askQuickChip('What was the primary endpoint, and was it statistically significant?')" class="text-[11px] bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-200 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">🎯 Primary Endpoint</button>
+                                    <button onclick="askQuickChip('Does the study report Overall Survival (OS) or MACE outcomes? What were the hazard ratios?')" class="text-[11px] bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-200 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">📈 Survival / MACE</button>
+                                    <button onclick="askQuickChip('What adverse events or safety signals were significantly different between groups?')" class="text-[11px] bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-200 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">⚠️ Safety & Harms</button>
+                                </div>
+                            </div>
+
+                            <!-- Chat Message History Feed -->
+                            <div id="askChatFeed" class="flex-1 bg-slate-50 p-4 rounded-lg border border-slate-200 overflow-y-auto space-y-4 text-xs leading-relaxed min-h-[300px]">
+                                <div class="text-center p-6 text-slate-400 my-auto">
+                                    <span class="text-2xl block mb-1">💬</span>
+                                    <p class="font-semibold text-slate-600 text-xs">Ask anything about this manuscript</p>
+                                    <p class="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">Answers cite coordinate anchors that jump directly to the source paragraph in the viewer on the right.</p>
+                                </div>
+                            </div>
+
+                            <!-- Question Input Box -->
+                            <div class="flex-shrink-0 flex gap-2 pt-1">
+                                <input type="text" id="askQuestionInput" onkeydown="if(event.key==='Enter') executeAskQuery();" placeholder="Ask a question about this paper (e.g. 'What was the blinding method?')..." class="flex-1 text-xs text-slate-800 bg-white px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs"/>
+                                <button id="askSubmitBtn" onclick="executeAskQuery()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
+                                    <span>Send</span> <span>➤</span>
+                                </button>
+                            </div>
+                        </div>
                         <div id="thinkingContainer" class="hidden flex-1 space-y-4"></div>
                     </div>
 
@@ -2190,25 +2266,37 @@ ${title || url}`);
 
             function switchLeftTab(tab) {
                 const appraisalView = document.getElementById('outputMarkdown');
+                const askView = document.getElementById('askContainer');
                 const thinkingView = document.getElementById('thinkingContainer');
                 const tabAppraisalBtn = document.getElementById('leftTabAppraisalBtn');
+                const tabAskBtn = document.getElementById('leftTabAskBtn');
                 const tabThinkingBtn = document.getElementById('leftTabThinkingBtn');
                 const hint = document.getElementById('leftPaneHint');
 
                 const activeClass = "px-3 py-1 rounded-md bg-white text-sky-800 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer";
                 const inactiveClass = "px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer";
 
+                if (appraisalView) appraisalView.classList.add('hidden');
+                if (askView) askView.classList.add('hidden');
+                if (thinkingView) thinkingView.classList.add('hidden');
+
+                if (tabAppraisalBtn) tabAppraisalBtn.className = inactiveClass;
+                if (tabAskBtn) tabAskBtn.className = inactiveClass;
+                if (tabThinkingBtn) tabThinkingBtn.className = inactiveClass;
+
                 if (tab === 'appraisal') {
-                    appraisalView.classList.remove('hidden');
-                    thinkingView.classList.add('hidden');
-                    tabAppraisalBtn.className = activeClass;
-                    tabThinkingBtn.className = inactiveClass;
+                    if (appraisalView) appraisalView.classList.remove('hidden');
+                    if (tabAppraisalBtn) tabAppraisalBtn.className = activeClass;
                     if (hint) hint.innerText = "Click any coordinate pill to inspect source text";
+                } else if (tab === 'ask') {
+                    if (askView) askView.classList.remove('hidden');
+                    if (tabAskBtn) tabAskBtn.className = activeClass;
+                    if (hint) hint.innerText = "Interactive QA grounded in manuscript anchors";
+                    const inp = document.getElementById('askQuestionInput');
+                    if (inp) inp.focus();
                 } else {
-                    appraisalView.classList.add('hidden');
-                    thinkingView.classList.remove('hidden');
-                    tabThinkingBtn.className = activeClass;
-                    tabAppraisalBtn.className = inactiveClass;
+                    if (thinkingView) thinkingView.classList.remove('hidden');
+                    if (tabThinkingBtn) tabThinkingBtn.className = activeClass;
                     if (hint) hint.innerText = "Auditing triage rationale, rules AST & reasoning trace";
                 }
             }
@@ -2699,6 +2787,92 @@ ${escapeHtml(thought)}
                 URL.revokeObjectURL(url);
             }
 
+            function renderAnchoredMarkdown(rawText) {
+                if (!rawText) return '';
+                let content = rawText;
+                // Strip raw {R_...} or [R_...] rule tags if emitted by model
+                content = content.replace(/\s*\{R_[A-Z0-9_]+\}/g, '').replace(/\s*\[R_[A-Z0-9_]+\]/g, '');
+                // Normalize any model variations like "Paragraph" -> "Para" in citations
+                content = content.replace(/(\[[^\]]*?\b)Paragraphs?\b/gi, '$1Para');
+
+                // Clean any raw LaTeX math formatting or macros emitted by the model
+                function cleanLatexMath(str) {
+                    if (!str) return '';
+                    let t = str;
+                    t = t.replace(/\\(?:text|mathrm|mathbf|mathit|mathsf)\{([^}]+)\}/g, '$1');
+                    t = t.replace(/\^\+/g, '⁺').replace(/\^\-/g, '⁻').replace(/\^2/g, '²').replace(/\^3/g, '³').replace(/\^0/g, '⁰').replace(/\^1/g, '¹');
+                    const greek = {
+                        '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ', '\\epsilon': 'ε',
+                        '\\theta': 'θ', '\\lambda': 'λ', '\\mu': 'μ', '\\pi': 'π', '\\sigma': 'σ',
+                        '\\tau': 'τ', '\\phi': 'φ', '\\chi': 'χ', '\\omega': 'ω', '\\pm': '±',
+                        '\\times': '×', '\\geq': '≥', '\\ge': '≥', '\\leq': '≤', '\\le': '≤',
+                        '\\neq': '≠', '\\approx': '≈', '\\infty': '∞', '\\rightarrow': '→', '\\to': '→'
+                    };
+                    for (const [k, v] of Object.entries(greek)) {
+                        t = t.replace(new RegExp(k.replace('\\', '\\\\') + '\\b', 'g'), v);
+                    }
+                    t = t.replace(/\$\$([^\$]+?)\$\$/g, '$1');
+                    t = t.replace(/\$([^\$\n]+?)\$/g, '$1');
+                    t = t.replace(/\\([a-zA-Z]+)/g, '$1');
+                    return t;
+                }
+                content = cleanLatexMath(content);
+
+                if (!window.marked) {
+                    return escapeHtml(content);
+                }
+
+                let html = marked.parse(content);
+                // Match coordinate blocks, supporting single, multi-paragraph, and compound citations
+                // Expanded to include Doc_Header, Para, Table, TableNote, Fig, FigLegend, Box
+                const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box)\b[^\]]*?)\]/gi;
+                html = html.replace(bracketCoordRegex, function(fullMatch, inner) {
+                    const trimmed = inner.trim();
+                    if (trimmed.toLowerCase() === 'doc_header') {
+                        const enc = encodeURIComponent('[Doc_Header]');
+                        return `<button onclick="inspectAnchor('${enc}')" data-anchor="[Doc_Header]" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">Header</button>`;
+                    }
+
+                    // Split compound coordinates by semicolon first, or by section-boundary comma
+                    let rawParts = [];
+                    if (trimmed.includes(';')) {
+                        rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
+                    } else {
+                        rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box))/i).map(p => p.trim()).filter(Boolean);
+                    }
+
+                    if (!rawParts || rawParts.length === 0) {
+                        rawParts = [trimmed];
+                    }
+
+                    let parts = [];
+                    for (const p of rawParts) {
+                        // Expand multi-paragraph list: e.g. "Methods, Para 1, 13" -> "Methods, Para 1", "Methods, Para 13"
+                        const multiParaMatch = p.match(/^([A-Za-z\s&]+?)\s*,\s*Para\s+(\d+(?:\s*,\s*\d+)+)$/i);
+                        if (multiParaMatch) {
+                            const sec = multiParaMatch[1].trim();
+                            const nums = multiParaMatch[2].split(',').map(n => n.trim()).filter(Boolean);
+                            for (const num of nums) {
+                                parts.push(`${sec}, Para ${num}`);
+                            }
+                        } else {
+                            parts.push(p);
+                        }
+                    }
+
+                    const buttons = parts.map(part => {
+                        const rawAnchorId = `[${part}]`;
+                        const enc = encodeURIComponent(rawAnchorId);
+                        const displayText = formatAnchorDisplay(part);
+                        return `<button onclick="inspectAnchor('${enc}')" data-anchor="${rawAnchorId}" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">${displayText}</button>`;
+                    });
+
+                    return buttons.join(' ');
+                });
+
+                return html;
+            }
+
             function renderAppraisalResults(data) {
                 anchorIndex = data.anchor_index || {};
 
@@ -2732,49 +2906,19 @@ ${escapeHtml(thought)}
                 }
 
                 let content = data.final_markdown || data.raw_output || '';
-                // Strip raw {R_...} or [R_...] rule tags if emitted by model
-                content = content.replace(/\s*\{R_[A-Z0-9_]+\}/g, '').replace(/\s*\[R_[A-Z0-9_]+\]/g, '');
-                // Normalize any model variations like "Paragraph" -> "Para" in citations
-                content = content.replace(/(\[[^\]]*?\b)Paragraphs?\b/gi, '$1Para');
-
-                // Clean any raw LaTeX math formatting or macros emitted by the model
-                function cleanLatexMath(str) {
-                    if (!str) return '';
-                    let t = str;
-                    t = t.replace(/\\(?:text|mathrm|mathbf|mathit|mathsf)\{([^}]+)\}/g, '$1');
-                    t = t.replace(/\^\+/g, '⁺').replace(/\^\-/g, '⁻').replace(/\^2/g, '²').replace(/\^3/g, '³').replace(/\^0/g, '⁰').replace(/\^1/g, '¹');
-                    const greek = {
-                        '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ', '\\epsilon': 'ε',
-                        '\\theta': 'θ', '\\lambda': 'λ', '\\mu': 'μ', '\\pi': 'π', '\\sigma': 'σ',
-                        '\\tau': 'τ', '\\phi': 'φ', '\\chi': 'χ', '\\omega': 'ω', '\\pm': '±',
-                        '\\times': '×', '\\geq': '≥', '\\ge': '≥', '\\leq': '≤', '\\le': '≤',
-                        '\\neq': '≠', '\\approx': '≈', '\\infty': '∞', '\\rightarrow': '→', '\\to': '→'
-                    };
-                    for (const [k, v] of Object.entries(greek)) {
-                        t = t.replace(new RegExp(k.replace('\\', '\\\\') + '\\b', 'g'), v);
-                    }
-                    t = t.replace(/\$\$([^\$]+?)\$\$/g, '$1');
-                    t = t.replace(/\$([^\$\n]+?)\$/g, '$1');
-                    t = t.replace(/\\([a-zA-Z]+)/g, '$1');
-                    return t;
-                }
-                content = cleanLatexMath(content);
 
                 // Ensure study title and 'Clinical Bottom Line' have proper bold/header markdown
-                // Strip square brackets from title: e.g. '# [Title]' or '[Title]' -> '# Title'
                 const contentLines = content.trim().split('\n');
                 if (contentLines.length > 0) {
                     let firstNonEmptyIdx = contentLines.findIndex(l => l.trim().length > 0);
                     if (firstNonEmptyIdx !== -1) {
                         let firstLine = contentLines[firstNonEmptyIdx].trim();
-                        // Strip leading '#', '**', and enclosing '[' ']' from title
                         let rawTitle = firstLine.replace(/^#+\s*/, '').replace(/^\*\*|\*\*$/g, '').trim();
                         if (rawTitle.startsWith('[') && rawTitle.endsWith(']')) {
                             rawTitle = rawTitle.slice(1, -1).trim();
                         }
                         contentLines[firstNonEmptyIdx] = '# ' + rawTitle;
                     }
-                    // Ensure 'Clinical Bottom Line' line is formatted as ## Clinical Bottom Line
                     for (let i = 0; i < contentLines.length; i++) {
                         let trimmedLine = contentLines[i].trim();
                         if (/^(?:#*\s*)?\*\*?Clinical Bottom Line\*\*?:?$/i.test(trimmedLine) || trimmedLine.toLowerCase() === 'clinical bottom line') {
@@ -2790,62 +2934,11 @@ ${escapeHtml(thought)}
                     window.ResearchAppState.lastAppraisalFilename = currentFilename || 'clinical_analysis';
                 }
 
-                if (window.marked) {
-                    let html = marked.parse(content);
-                    // Match coordinate blocks, supporting single, multi-paragraph, and compound citations
-                    // e.g. [Results, Para 17; Discussion, Para 18], [Methods, Para 26; Results, Para 19], [Abstract, Para 2, 3; Methods, Para 3, 27]
-                    const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig)\b[^\]]*?)\]/gi;
-                    html = html.replace(bracketCoordRegex, function(fullMatch, inner) {
-                        const trimmed = inner.trim();
-                        if (trimmed.toLowerCase() === 'doc_header') {
-                            const enc = encodeURIComponent('[Doc_Header]');
-                            return `<button onclick="inspectAnchor('${enc}')" data-anchor="[Doc_Header]" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">Header</button>`;
-                        }
+                const container = document.getElementById('outputMarkdown');
+                if (container) {
+                    container.innerHTML = renderAnchoredMarkdown(content);
 
-                        // Split compound coordinates by semicolon first, or by section-boundary comma
-                        let rawParts = [];
-                        if (trimmed.includes(';')) {
-                            rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
-                        } else {
-                            rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig))/i).map(p => p.trim()).filter(Boolean);
-                        }
-
-                        if (!rawParts || rawParts.length === 0) {
-                            rawParts = [trimmed];
-                        }
-
-                        let parts = [];
-                        for (const p of rawParts) {
-                            // Expand multi-paragraph list: e.g. "Methods, Para 1, 13" -> "Methods, Para 1", "Methods, Para 13"
-                            const multiParaMatch = p.match(/^([A-Za-z\s&]+?)\s*,\s*Para\s+(\d+(?:\s*,\s*\d+)+)$/i);
-                            if (multiParaMatch) {
-                                const sec = multiParaMatch[1].trim();
-                                const nums = multiParaMatch[2].split(',').map(n => n.trim()).filter(Boolean);
-                                for (const num of nums) {
-                                    parts.push(`${sec}, Para ${num}`);
-                                }
-                            } else {
-                                parts.push(p);
-                            }
-                        }
-
-                        const buttons = parts.map(part => {
-                            const rawAnchorId = `[${part}]`;
-                            const enc = encodeURIComponent(rawAnchorId);
-                            
-                            // Standard section contraction dictionary
-                            const displayText = formatAnchorDisplay(part);
-
-                            return `<button onclick="inspectAnchor('${enc}')" data-anchor="${rawAnchorId}" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">${displayText}</button>`;
-                        });
-
-                        return buttons.join(' ');
-                    });
-                    
-                    const container = document.getElementById('outputMarkdown');
-                    container.innerHTML = html;
-
-                    // Ensure all <a> tags open in a new tab and have classic hyperlink style
+                    // Ensure all <a> tags open in a new tab
                     container.querySelectorAll('a').forEach(a => {
                         a.setAttribute('target', '_blank');
                         a.setAttribute('rel', 'noopener noreferrer');
@@ -2855,7 +2948,7 @@ ${escapeHtml(thought)}
                         }
                     });
 
-                    // Convert any unlinked DOI / PubMed text into live links
+                    // Convert unlinked DOI/PubMed text
                     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
                     const nodesToReplace = [];
                     while (walker.nextNode()) {
@@ -2874,9 +2967,10 @@ ${escapeHtml(thought)}
                         });
                         node.parentNode.replaceChild(span, node);
                     });
-                } else {
-                    document.getElementById('outputMarkdown').innerText = content;
                 }
+
+                // Reset Ask conversational interface for new paper
+                resetAskChat();
 
                 // Populate Thinking & Audit Trail view (Behavior 3)
                 renderThinkingAudit(data);
@@ -2954,7 +3048,157 @@ ${escapeHtml(thought)}
                 }
             }
 
+            // --- Interactive Conversational Interrogation ('Ask') Feature ---
+            let askConversationHistory = [];
+
+            function resetAskChat() {
+                askConversationHistory = [];
+                const feed = document.getElementById('askChatFeed');
+                if (feed) {
+                    feed.innerHTML = `
+                        <div class="text-center p-6 text-slate-400 my-auto">
+                            <span class="text-2xl block mb-1">💬</span>
+                            <p class="font-semibold text-slate-600 text-xs">Ask anything about this manuscript</p>
+                            <p class="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">Answers cite coordinate anchors that jump directly to the source paragraph in the viewer on the right.</p>
+                        </div>
+                    `;
+                }
+                const inp = document.getElementById('askQuestionInput');
+                if (inp) inp.value = '';
+            }
+
+            function askQuickChip(question) {
+                switchLeftTab('ask');
+                const inp = document.getElementById('askQuestionInput');
+                if (inp) {
+                    inp.value = question;
+                    executeAskQuery();
+                }
+            }
+
+            async function executeAskQuery() {
+                const inp = document.getElementById('askQuestionInput');
+                const btn = document.getElementById('askSubmitBtn');
+                const feed = document.getElementById('askChatFeed');
+
+                if (!inp || !inp.value.trim()) return;
+                const question = inp.value.trim();
+
+                if (!currentFilename) {
+                    alert('Please analyze a paper first before asking questions.');
+                    return;
+                }
+
+                // If feed currently shows placeholder empty state, clear it
+                if (askConversationHistory.length === 0 && feed) {
+                    feed.innerHTML = '';
+                }
+
+                // Append user message
+                const userMsgEl = document.createElement('div');
+                userMsgEl.className = 'flex justify-end';
+                userMsgEl.innerHTML = `
+                    <div class="max-w-[85%] bg-sky-600 text-white rounded-lg px-3.5 py-2 shadow-2xs">
+                        <p class="font-medium text-xs">${escapeHtml(question)}</p>
+                    </div>
+                `;
+                if (feed) {
+                    feed.appendChild(userMsgEl);
+                }
+
+                // Append temporary loading assistant message
+                const loadingMsgId = 'ask-loading-' + Date.now();
+                const loadingMsgEl = document.createElement('div');
+                loadingMsgEl.id = loadingMsgId;
+                loadingMsgEl.className = 'flex justify-start';
+                loadingMsgEl.innerHTML = `
+                    <div class="max-w-[85%] bg-white border border-slate-200 text-slate-700 rounded-lg px-3.5 py-2.5 shadow-2xs space-y-1">
+                        <div class="flex items-center gap-2 text-slate-500 font-medium">
+                            <svg class="animate-spin h-3.5 w-3.5 text-sky-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <span>Examining manuscript anchors...</span>
+                        </div>
+                    </div>
+                `;
+                if (feed) {
+                    feed.appendChild(loadingMsgEl);
+                    feed.scrollTop = feed.scrollHeight;
+                }
+
+                inp.value = '';
+                inp.disabled = true;
+                if (btn) btn.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('filename', currentFilename);
+                    formData.append('question', question);
+                    formData.append('history', JSON.stringify(askConversationHistory.slice(-4)));
+
+                    const apiKeyInput = document.getElementById('apiKey');
+                    if (apiKeyInput && apiKeyInput.value.trim()) {
+                        formData.append('api_key', apiKeyInput.value.trim());
+                    }
+
+                    const res = await fetch('/ask-paper', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+
+                    const loadingNode = document.getElementById(loadingMsgId);
+                    if (loadingNode) loadingNode.remove();
+
+                    if (!res.ok) {
+                        throw new Error(data.detail || 'Inquiry failed.');
+                    }
+
+                    const answerHtml = renderAnchoredMarkdown(data.answer || data.message || 'No answer generated.');
+                    const cachedBadge = data.cached ? `<span class="ml-2 inline-flex items-center px-1.5 py-0.2 text-[10px] bg-emerald-100 text-emerald-800 rounded font-normal">⚡ Cached ($0.00)</span>` : '';
+
+                    const assistantMsgEl = document.createElement('div');
+                    assistantMsgEl.className = 'flex justify-start';
+                    assistantMsgEl.innerHTML = `
+                        <div class="max-w-[90%] bg-white border border-slate-200 text-slate-800 rounded-lg px-3.5 py-2.5 shadow-2xs space-y-1.5">
+                            <div class="text-[11px] font-semibold text-slate-500 flex items-center justify-between">
+                                <span>Study Wonk Answer ${cachedBadge}</span>
+                            </div>
+                            <div class="prose prose-sm max-w-none text-xs leading-relaxed">${answerHtml}</div>
+                        </div>
+                    `;
+                    if (feed) {
+                        feed.appendChild(assistantMsgEl);
+                    }
+
+                    // Update rolling history
+                    askConversationHistory.push({ role: 'user', content: question });
+                    askConversationHistory.push({ role: 'assistant', content: data.answer || '' });
+
+                } catch (err) {
+                    const loadingNode = document.getElementById(loadingMsgId);
+                    if (loadingNode) loadingNode.remove();
+
+                    const errorMsgEl = document.createElement('div');
+                    errorMsgEl.className = 'flex justify-start';
+                    errorMsgEl.innerHTML = `
+                        <div class="max-w-[85%] bg-rose-50 border border-rose-200 text-rose-700 rounded-lg px-3.5 py-2 shadow-2xs text-xs">
+                            <span class="font-bold">Error:</span> ${escapeHtml(err.message)}
+                        </div>
+                    `;
+                    if (feed) {
+                        feed.appendChild(errorMsgEl);
+                    }
+                } finally {
+                    inp.disabled = false;
+                    if (btn) btn.disabled = false;
+                    inp.focus();
+                    if (feed) {
+                        feed.scrollTop = feed.scrollHeight;
+                    }
+                }
+            }
+
             function inspectAnchor(encodedAnchor) {
+                if (!encodedAnchor) return;
                 const anchor = decodeURIComponent(encodedAnchor);
                 
                 // Highlight active pill
@@ -2997,11 +3241,12 @@ ${escapeHtml(thought)}
                     }
                 }
 
-                // Support Table or Figure citations (e.g. [Results, Table 1], [Discussion, Fig 2])
+                // Support Table, TableNote, Fig, FigLegend, Box citations
                 if (!meta) {
-                    const tblFigMatch = anchor.match(/\[?\s*([A-Za-z\s&]+?)\s*,\s*(Table|Fig)\s*(\d+)/i);
+                    const tblFigMatch = anchor.match(/\[?\s*([A-Za-z\s&]+?)\s*,\s*(Table(?:Note)?|Fig(?:Legend)?|Box)\s*(\d+)/i);
                     if (tblFigMatch) {
-                        const itemType = tblFigMatch[2].charAt(0).toUpperCase() + tblFigMatch[2].slice(1).toLowerCase();
+                        const rawType = tblFigMatch[2];
+                        const itemType = rawType.charAt(0).toUpperCase() + rawType.slice(1);
                         const expandedSec = expandAnchorShortName(tblFigMatch[1].trim()).replace(/^\[|\]$/g, '');
                         const fallbackId = `[${expandedSec}, ${itemType} ${tblFigMatch[3]}]`;
                         meta = anchorIndex[fallbackId];
@@ -3029,14 +3274,22 @@ ${escapeHtml(thought)}
                 const snippetText = document.getElementById('snippetText');
                 const placeholder = document.getElementById('viewerPlaceholder');
 
-                subtitle.innerText = formatAnchorDisplay(anchor);
+                if (subtitle) {
+                    subtitle.innerText = formatAnchorDisplay(anchor);
+                }
 
                 if (meta) {
                     currentMeta = Object.assign({ anchor_id: anchor }, meta);
-                    pageBadge.innerText = 'Page ' + meta.page;
-                    pageBadge.classList.remove('hidden');
-                    snippetText.innerText = meta.text;
-                    snippetBox.classList.remove('hidden');
+                    if (pageBadge) {
+                        pageBadge.innerText = 'Page ' + (meta.page || 1);
+                        pageBadge.classList.remove('hidden');
+                    }
+                    if (snippetText) {
+                        snippetText.innerText = meta.text || '';
+                    }
+                    if (snippetBox) {
+                        snippetBox.classList.remove('hidden');
+                    }
 
                     // If popup is pinned, update it to the new anchor
                     if (isPinned) {
@@ -3051,8 +3304,8 @@ ${escapeHtml(thought)}
                     }
                 } else {
                     currentMeta = null;
-                    pageBadge.classList.add('hidden');
-                    snippetBox.classList.add('hidden');
+                    if (pageBadge) pageBadge.classList.add('hidden');
+                    if (snippetBox) snippetBox.classList.add('hidden');
                     const popup = document.getElementById('sectionPopup');
                     if (popup) popup.style.display = 'none';
                 }
