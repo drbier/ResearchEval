@@ -14,7 +14,7 @@ module.exports = {
         PORT: 3008,
         PYTHONPATH: ".",
         ENVIRONMENT: "production",
-        GEMINI_APPRAISAL_THINKING_LEVEL: "medium",
+        GEMINI_APPRAISAL_THINKING_LEVEL: "low",
         GEMINI_SEARCH_BASE_THINKING_LEVEL: "low",
         GEMINI_SUMMARIZER_THINKING_LEVEL: "low"
       }

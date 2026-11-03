@@ -133,8 +133,8 @@ class TestDynamicThinkingLevel(unittest.TestCase):
 
 class TestAppraisalAndSummarizerThinkingConfig(unittest.TestCase):
     @patch("requests.post")
-    def test_appraisal_invokes_medium_thinking_by_default(self, mock_post):
-        """SynthesisEngine._invoke_gemini_rest sends thinkingConfig with thinkingLevel='medium'."""
+    def test_appraisal_invokes_low_thinking_by_default(self, mock_post):
+        """SynthesisEngine._invoke_gemini_rest sends thinkingConfig with thinkingLevel='low'."""
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = {
@@ -150,7 +150,7 @@ class TestAppraisalAndSummarizerThinkingConfig(unittest.TestCase):
         json_payload = call_kwargs.get("json", {})
         gen_config = json_payload.get("generationConfig", {})
         self.assertIn("thinkingConfig", gen_config)
-        self.assertEqual(gen_config["thinkingConfig"].get("thinkingLevel"), "medium")
+        self.assertEqual(gen_config["thinkingConfig"].get("thinkingLevel"), "low")
 
     @patch("requests.post")
     def test_summarizer_invokes_low_thinking_by_default(self, mock_post):

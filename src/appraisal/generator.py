@@ -126,7 +126,7 @@ Anchors & Text:
             if m not in models_to_try:
                 models_to_try.append(m)
                 
-        effective_thinking = thinking_level or os.getenv("GEMINI_APPRAISAL_THINKING_LEVEL", "medium")
+        effective_thinking = thinking_level or os.getenv("GEMINI_APPRAISAL_THINKING_LEVEL", "low")
 
         last_error = ""
         for model in models_to_try:
@@ -187,7 +187,7 @@ Anchors & Text:
             }
             
         # Step 2: Invoke verified Gemini endpoint
-        thinking_lvl = os.getenv("GEMINI_APPRAISAL_THINKING_LEVEL", "medium")
+        thinking_lvl = os.getenv("GEMINI_APPRAISAL_THINKING_LEVEL", "low")
         raw_output, thought_output, used_model = self._invoke_gemini_rest(
             prompt=payload["user_prompt"],
             system_instruction=payload["system_instruction"],
