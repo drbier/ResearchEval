@@ -1,0 +1,162 @@
+[
+  {
+    "slot": "BMJ_01_RCT",
+    "pmcid": "PMC13059914",
+    "title": "Digital support for chronic dyspnoea management in primary care: protocol for the BREATHE (Breathlessness Rapid Evaluation and Therapy) cluster randomised controlled trial.",
+    "publisher": "BMJ Publishing Group",
+    "journal": "BMJ Open",
+    "design": "Randomized Controlled Trial",
+    "pubdate": "2025 Dec 31",
+    "doi": ""
+  },
+  {
+    "slot": "BMJ_02_Review",
+    "pmcid": "PMC13062688",
+    "title": "Cardiac arrhythmia assessment with patch electrocardiogram versus insertable cardiac monitor: a cohort study in endurance athletes with atrial fibrillation.",
+    "publisher": "BMJ Publishing Group",
+    "journal": "BMJ Open",
+    "design": "Systematic Review / Protocol",
+    "pubdate": "2025 Jan 6",
+    "doi": ""
+  },
+  {
+    "slot": "PLOS_01_Cohort",
+    "pmcid": "PMC13537468",
+    "title": "A Swedish genome-wide haplotype association analysis identifies novel candidate loci associated with endometrial cancer risk.",
+    "publisher": "PLOS",
+    "journal": "PLoS One",
+    "design": "Observational / Cohort Study",
+    "pubdate": "2025",
+    "doi": ""
+  },
+  {
+    "slot": "PLOS_02_RCT",
+    "pmcid": "PMC12755763",
+    "title": "Development and validation of the leisure lifestyle and satisfaction assessment: A comprehensive tool for evaluating leisure engagement.",
+    "publisher": "PLOS",
+    "journal": "PLoS One",
+    "design": "Randomized Controlled Trial",
+    "pubdate": "2025",
+    "doi": ""
+  },
+  {
+    "slot": "BMC_01_MetaAnalysis",
+    "pmcid": "PMC12964619",
+    "title": "Association of GLP-1 receptor agonists with herpes risks in diabetes mellitus: a target trial emulation.",
+    "publisher": "BioMed Central / Springer",
+    "journal": "BMC Med",
+    "design": "Meta-Analysis",
+    "pubdate": "2025 Dec 31",
+    "doi": ""
+  },
+  {
+    "slot": "BMC_02_Trial",
+    "pmcid": "PMC13054984",
+    "title": "Decoding anoikis-related genes in lung adenocarcinoma brainmetastasis via single-cell RNA sequencing: CD44-mediated functions.",
+    "publisher": "BioMed Central / Springer",
+    "journal": "BMC Cancer",
+    "design": "Clinical Trial",
+    "pubdate": "2025 Dec 26",
+    "doi": ""
+  },
+  {
+    "slot": "NPG_01_DeepBiomarker",
+    "pmcid": "PMC13039972",
+    "title": "Proteome-wide association study of prostate cancer risk across populations.",
+    "publisher": "Nature Publishing Group",
+    "journal": "Nat Commun",
+    "design": "Molecular / Biomarker Cohort",
+    "pubdate": "2025 Dec 6",
+    "doi": ""
+  },
+  {
+    "slot": "NPG_02_ClinicalStudy",
+    "pmcid": "PMC12848112",
+    "title": "Clinical outcomes of intra-articular corticosteroid injection vs. multimodal physiotherapy in patients with frozen shoulder in short term: a randomized clinical trial.",
+    "publisher": "Nature Publishing Group",
+    "journal": "Sci Rep",
+    "design": "Clinical Observational Study",
+    "pubdate": "2025 Dec 31",
+    "doi": ""
+  },
+  {
+    "slot": "FRONTIERS_01_Oncology",
+    "pmcid": "PMC12785180",
+    "title": "A novel model for predicting prognosis in pancreatic cancer patients: a retrospective study.",
+    "publisher": "Frontiers",
+    "journal": "Front Oncol",
+    "design": "Translational / Clinical Cohort",
+    "pubdate": "2025",
+    "doi": ""
+  },
+  {
+    "slot": "FRONTIERS_02_Meta",
+    "pmcid": "PMC12797090",
+    "title": "Comparative effectiveness of several adjuvant therapies for patients with hepatocellular carcinoma with high-risk factors for recurrence after hepatectomy: a systematic review and meta-analysis.",
+    "publisher": "Frontiers",
+    "journal": "Front Med (Lausanne)",
+    "design": "Systematic Review / Meta-Analysis",
+    "pubdate": "2025",
+    "doi": ""
+  },
+  {
+    "slot": "ELSEVIER_01_Lancet_eClinMed",
+    "pmcid": "PMC11832944",
+    "title": "Conflict-related and sexual trauma in treatment-seeking Arabic-speaking men: a cross-sectional study.",
+    "publisher": "Elsevier / The Lancet Discovery Science",
+    "journal": "eClinicalMedicine",
+    "design": "Cross-Sectional Observational Study",
+    "pubdate": "2024",
+    "doi": "10.1016/j.eclinm.2024.102555"
+  },
+  {
+    "slot": "ELSEVIER_02_eBioMed",
+    "pmcid": "PMC12902255",
+    "title": "A genome- and phenome-wide association study of plasma procalcitonin concentrations in individuals of European ancestry.",
+    "publisher": "Elsevier / Lancet",
+    "journal": "EBioMedicine",
+    "design": "Translational Clinical Study",
+    "pubdate": "2026 Jan",
+    "doi": ""
+  },
+  {
+    "slot": "MDPI_01_Nutrients",
+    "pmcid": "PMC12813636",
+    "title": "Bioconversion-Based Postbiotics Enhance Muscle Strength and Modulate Gut Microbiota in Healthy Individuals: A Randomized, Double-Blind, Placebo-Controlled Trial.",
+    "publisher": "MDPI",
+    "journal": "Nutrients",
+    "design": "Dietary / Metabolic RCT or Cohort",
+    "pubdate": "2025 Dec 17",
+    "doi": ""
+  },
+  {
+    "slot": "MDPI_02_Cancers",
+    "pmcid": "PMC12784979",
+    "title": "Visual Impairment and Cancer Risk: A Nationwide Cohort Study of Adult Swedish Men and Women.",
+    "publisher": "MDPI",
+    "journal": "Cancers (Basel)",
+    "design": "Oncology Retrospective Analysis",
+    "pubdate": "2025 Dec 31",
+    "doi": ""
+  },
+  {
+    "slot": "BRIEF_01_AutismDev",
+    "pmcid": "PMC12938728",
+    "title": "Brief Report: Under-Identification of Symptomatic Menopause in Publicly-Insured Autistic People.",
+    "publisher": "Springer",
+    "journal": "J Autism Dev Disord",
+    "design": "Brief Report",
+    "pubdate": "2026 Dec",
+    "doi": ""
+  },
+  {
+    "slot": "BRIEF_02_PalliatMed",
+    "pmcid": "PMC13641539",
+    "title": "Shared Medication PLanning In Home Hospice to Address Medication Regimen Complexity and Family Caregiver Burden: A Brief Report.",
+    "publisher": "Mary Ann Liebert",
+    "journal": "J Palliat Med",
+    "design": "Short Communication / Brief",
+    "pubdate": "2024 Dec",
+    "doi": ""
+  }
+]

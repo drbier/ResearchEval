@@ -99,3 +99,4 @@ if __name__ == "__main__":
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(cohort, f, indent=2)
     print(f"\nCohort saved to: {out_file}")
+
