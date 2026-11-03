@@ -1,0 +1,1812 @@
+[
+  {
+    "paper": "Breast Cancer Screening Strategies for Women With ATM, CHEK2, and PALB2 Pathogenic Variants_ A Comparative Modeling Analysis - PMC.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Breast Cancer Screening Strategies for Women With ATM, CHEK2, and PALB2 Pathogenic Variants_ A Comparative Modeling Analysis - PMC.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Methods, Para 5]",
+    "page": 7,
+    "bbox": [
+      118.9,
+      15.3,
+      587.6,
+      24.2
+    ],
+    "y0_ratio": 0.019,
+    "y1_ratio": 0.031,
+    "w_ratio": 0.766,
+    "excerpt": "Breast Cancer Screening Strategies for Women With ATM, CHEK2, and PALB2 Pathogenic Variants: A Comparative Modeling Ana\u2026",
+    "numeric_symbol_density": 0.017,
+    "dominant_font_size": 8.0,
+    "page_body_font": 13.3,
+    "font_diff": -5.3,
+    "font_names": [
+      "ArialMT"
+    ],
+    "vgap": 8.93,
+    "line_count": 2,
+    "dimension": "Dim 1: Web / Margin Timestamp & Running Artifact"
+  },
+  {
+    "paper": "Cancer Medicine - 2025 - Modi - Associations of Commonly Used Concomitant Medications With Survival and Adverse Event.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Cancer Medicine - 2025 - Modi - Associations of Commonly Used Concomitant Medications With Survival and Adverse Event.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Abstract, Para 3]",
+    "page": 2,
+    "bbox": [
+      53.6,
+      40.5,
+      543.8,
+      66.3
+    ],
+    "y0_ratio": 0.052,
+    "y1_ratio": 0.085,
+    "w_ratio": 0.823,
+    "excerpt": "Conclusion: These findings emphasise the need for careful management of concomitant medications in breast cancer care and support ongoing re",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "STIXTwoText",
+      "STIXTwoText-Bold"
+    ],
+    "vgap": 12.45,
+    "line_count": 2,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Metronomic Chemotherapy in Triple-Negative Metastatic Breast Cancer The Future Is Now.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Metronomic\\Metronomic Chemotherapy in Triple-Negative Metastatic Breast Cancer The Future Is Now.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 17]",
+    "page": 4,
+    "bbox": [
+      50.6,
+      225.4,
+      407.5,
+      257.6
+    ],
+    "y0_ratio": 0.282,
+    "y1_ratio": 0.322,
+    "w_ratio": 0.595,
+    "excerpt": "CTX 50 mg/day + Veliparib 60 mg once daily throughout a 21-day cycle ORR = overall response rate; CBR = clinical benefit rate; PFS = progres",
+    "numeric_symbol_density": 0.086,
+    "dominant_font_size": 8.0,
+    "page_body_font": 10.0,
+    "font_diff": -2.0,
+    "font_names": [
+      "MinionPro-Regular2"
+    ],
+    "vgap": 7.97,
+    "line_count": 1,
+    "dimension": "Dim 3: Dense Abbreviation Key / Table Footnote"
+  },
+  {
+    "paper": "Metronomic chemotherapy for non-metastatic triple negative breast cancer Selection is the key.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Metronomic\\Metronomic chemotherapy for non-metastatic triple negative breast cancer Selection is the key.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Introduction, Para 28]",
+    "page": 4,
+    "bbox": [
+      56.7,
+      568.4,
+      540.3,
+      587.9
+    ],
+    "y0_ratio": 0.675,
+    "y1_ratio": 0.698,
+    "w_ratio": 0.812,
+    "excerpt": "EC: Clinical stage; ER: Estrogen receptor; DX: Doxorubicin; CTX: Cyclophosphamide; PTX: Paclitaxel; C: Carboplatin; X: Capecitabine; 5-FU: 5",
+    "numeric_symbol_density": 0.021,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "BookAntiqua"
+    ],
+    "vgap": 10.0,
+    "line_count": 2,
+    "dimension": "Dim 3: Dense Abbreviation Key / Table Footnote"
+  },
+  {
+    "paper": "Metronomic chemotherapy for non-metastatic triple negative breast cancer Selection is the key.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Metronomic\\Metronomic chemotherapy for non-metastatic triple negative breast cancer Selection is the key.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Methods, Para 33]",
+    "page": 7,
+    "bbox": [
+      56.7,
+      394.1,
+      540.3,
+      403.5
+    ],
+    "y0_ratio": 0.468,
+    "y1_ratio": 0.479,
+    "w_ratio": 0.812,
+    "excerpt": "5FU: 5-Fluoracil; E: Epirubicin, Ca: Carboplatin; T: Docetaxel; CTX: Cyclophosphamide; MTX: Methotrexate; X: Capecitabine; AT: Anthracycline",
+    "numeric_symbol_density": 0.021,
+    "dominant_font_size": 7.0,
+    "page_body_font": 9.0,
+    "font_diff": -2.0,
+    "font_names": [
+      "BookAntiqua"
+    ],
+    "vgap": 10.0,
+    "line_count": 2,
+    "dimension": "Dim 3: Dense Abbreviation Key / Table Footnote"
+  },
+  {
+    "paper": "Real-world impact of postmastectomy radiotherapy in T1\u20132 breast cancer with one to three positive lymph nodes.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Radiation Therapy\\Breast\\Real-world impact of postmastectomy radiotherapy in T1\u20132 breast cancer with one to three positive lymph nodes.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Discussion, Para 11]",
+    "page": 5,
+    "bbox": [
+      45.0,
+      414.3,
+      448.9,
+      465.4
+    ],
+    "y0_ratio": 0.531,
+    "y1_ratio": 0.597,
+    "w_ratio": 0.679,
+    "excerpt": "2004 2005 2006 2007 2008 2009 2010 2011 2012 69.4% 71.2% 70.1% 67.3% 63.2% 64 .9% 60.9% 54.4% 52.9% 30.6% 28.8% 29.9% 32.7% 36.8% 35.1 % 39.",
+    "numeric_symbol_density": 0.7,
+    "dominant_font_size": 8.5,
+    "page_body_font": 9.5,
+    "font_diff": -1.0,
+    "font_names": [
+      "JansonTextLT-Roman",
+      "JansonTextLT-Bold"
+    ],
+    "vgap": 10.75,
+    "line_count": 1,
+    "dimension": "Dim 2: Dense Statistical Matrix / Tabular Grid"
+  },
+  {
+    "paper": "Respiratory viral infections awaken metastatic breast cancer cells in lungs_optimize.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Respiratory viral infections awaken metastatic breast cancer cells in lungs_optimize.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Methods, Para 89]",
+    "page": 47,
+    "bbox": [
+      25.0,
+      567.4,
+      556.4,
+      654.9
+    ],
+    "y0_ratio": 0.716,
+    "y1_ratio": 0.827,
+    "w_ratio": 0.868,
+    "excerpt": "Data analysis Data Processing for single cell RNA-seq analysis and bulk RNA-seq analysis is described in Methods, utilizing R (v 4.1.1) and ",
+    "numeric_symbol_density": 0.036,
+    "dominant_font_size": 8.0,
+    "page_body_font": 9.0,
+    "font_diff": -1.0,
+    "font_names": [
+      "CIDFont+F3"
+    ],
+    "vgap": 9.6,
+    "line_count": 7,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Simple sugar intake and cancer incidence, cancer mortality and all-cause mortality A cohort study from the PREDIMED trial.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Simple sugar intake and cancer incidence, cancer mortality and all-cause mortality A cohort study from the PREDIMED trial.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Abstract, Para 4]",
+    "page": 2,
+    "bbox": [
+      202.0,
+      111.9,
+      557.7,
+      138.2
+    ],
+    "y0_ratio": 0.141,
+    "y1_ratio": 0.174,
+    "w_ratio": 0.598,
+    "excerpt": "Conclusions: Simple sugar intake in drinks and fruit juice was associated with an increased risk of overall cancer incidence and mortality a",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 7.3,
+    "page_body_font": 8.1,
+    "font_diff": -0.8,
+    "font_names": [
+      "AdvPS44A44B",
+      "AdvOT863180fb",
+      "AdvOTb92eb7df.I"
+    ],
+    "vgap": 9.58,
+    "line_count": 8,
+    "dimension": "Unclassified"
+  },
+  {
+    "paper": "Simple sugar intake and cancer incidence, cancer mortality and all-cause mortality A cohort study from the PREDIMED trial.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Simple sugar intake and cancer incidence, cancer mortality and all-cause mortality A cohort study from the PREDIMED trial.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Abstract, Para 5]",
+    "page": 2,
+    "bbox": [
+      207.8,
+      140.5,
+      557.7,
+      157.4
+    ],
+    "y0_ratio": 0.177,
+    "y1_ratio": 0.198,
+    "w_ratio": 0.588,
+    "excerpt": "\u00a9 2021 The Authors. Published by Elsevier Ltd. This is an open access article under the CC BY-NC-ND license ( http://creativecommons.org/lic",
+    "numeric_symbol_density": 0.064,
+    "dominant_font_size": 7.3,
+    "page_body_font": 8.1,
+    "font_diff": -0.8,
+    "font_names": [
+      "AdvOTb0c9bf5d",
+      "AdvOT863180fb"
+    ],
+    "vgap": 7.25,
+    "line_count": 1,
+    "dimension": "Unclassified"
+  },
+  {
+    "paper": "No impact of fish oil supplements on bleeding risk a systematic review.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\FIsh Oil\\No impact of fish oil supplements on bleeding risk a systematic review.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 8]",
+    "page": 4,
+    "bbox": [
+      34.0,
+      116.9,
+      370.7,
+      124.9
+    ],
+    "y0_ratio": 0.147,
+    "y1_ratio": 0.157,
+    "w_ratio": 0.566,
+    "excerpt": "Summary of studies investigating the haemostatic effect of fish oil in healthy individuals including at least 20 subjects a .",
+    "numeric_symbol_density": 0.016,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Calibri"
+    ],
+    "vgap": 8.02,
+    "line_count": 1,
+    "dimension": "Unclassified"
+  },
+  {
+    "paper": "No impact of fish oil supplements on bleeding risk a systematic review.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\FIsh Oil\\No impact of fish oil supplements on bleeding risk a systematic review.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Methods, Para 32]",
+    "page": 7,
+    "bbox": [
+      42.0,
+      115.3,
+      385.5,
+      123.3
+    ],
+    "y0_ratio": 0.145,
+    "y1_ratio": 0.155,
+    "w_ratio": 0.577,
+    "excerpt": "Summary of studies investigating clinical bleeding and haemostasis in patients undergoing surgery with fish oil exposure a .",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Calibri"
+    ],
+    "vgap": 8.02,
+    "line_count": 1,
+    "dimension": "Unclassified"
+  },
+  {
+    "paper": "No impact of fish oil supplements on bleeding risk a systematic review.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\FIsh Oil\\No impact of fish oil supplements on bleeding risk a systematic review.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 33]",
+    "page": 7,
+    "bbox": [
+      42.5,
+      723.0,
+      465.4,
+      740.0
+    ],
+    "y0_ratio": 0.911,
+    "y1_ratio": 0.932,
+    "w_ratio": 0.71,
+    "excerpt": "\u2191) Statistically significant increase in the fish oil group compared with baseline or controls, as regards to platelet aggregation this is f",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Calibri"
+    ],
+    "vgap": 9.0,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The benefits and risks of menopause hormone therapy for the cardiovascular system in postmenopausal women- a systematic review and meta-analysis.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\HRT\\The benefits and risks of menopause hormone therapy for the cardiovascular system in postmenopausal women- a systematic review and meta-analysis.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Abstract, Para 2]",
+    "page": 2,
+    "bbox": [
+      63.9,
+      93.8,
+      518.8,
+      156.1
+    ],
+    "y0_ratio": 0.119,
+    "y1_ratio": 0.197,
+    "w_ratio": 0.764,
+    "excerpt": "Early acceptance of MHT not only reduces the risk of all-cause death and cardiovascular events but also further improves FMD, although the r",
+    "numeric_symbol_density": 0.007,
+    "dominant_font_size": 10.0,
+    "page_body_font": 9.8,
+    "font_diff": 0.2,
+    "font_names": [
+      "MyriadPro-Semibold",
+      "MyriadPro-Light"
+    ],
+    "vgap": 12.0,
+    "line_count": 6,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Hypercalcemia, hypercalciuria, and kidney stones in long-term studies of vitamin D supplementation- a systematic review and meta-analysisS.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Hypercalcemia, hypercalciuria, and kidney stones in long-term studies of vitamin D supplementation- a systematic review and meta-analysisS.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Discussion, Para 11]",
+    "page": 9,
+    "bbox": [
+      40.0,
+      517.6,
+      545.1,
+      537.3
+    ],
+    "y0_ratio": 0.661,
+    "y1_ratio": 0.686,
+    "w_ratio": 0.863,
+    "excerpt": "4 For studies with 4 arms, we combined 2 arms into appropriate subgroups (calcium and calcium plus vitamin D in one subgroup compared with v",
+    "numeric_symbol_density": 0.021,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "AdvPSA88A"
+    ],
+    "vgap": 9.98,
+    "line_count": 5,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Labs\\Troponin\\Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Introduction, Para 15]",
+    "page": 51,
+    "bbox": [
+      139.3,
+      153.9,
+      693.5,
+      185.4
+    ],
+    "y0_ratio": 0.259,
+    "y1_ratio": 0.312,
+    "w_ratio": 0.658,
+    "excerpt": "Explain the medical context (including whether diagnostic or prognostic) and rationale Introduction, 3a D;V for developing or validating the",
+    "numeric_symbol_density": 0.007,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "NimbusSans-Regular"
+    ],
+    "vgap": 9.18,
+    "line_count": 3,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Labs\\Troponin\\Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Introduction, Para 16]",
+    "page": 51,
+    "bbox": [
+      147.2,
+      177.7,
+      686.1,
+      208.9
+    ],
+    "y0_ratio": 0.299,
+    "y1_ratio": 0.351,
+    "w_ratio": 0.64,
+    "excerpt": "Background and existing models. objectives Specify the objectives, including whether the study describes the development or Introduction, 3b",
+    "numeric_symbol_density": 0.007,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "NimbusSans-Regular",
+      "NimbusSans-Bold"
+    ],
+    "vgap": 9.45,
+    "line_count": 3,
+    "dimension": "Unclassified"
+  },
+  {
+    "paper": "Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Labs\\Troponin\\Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Methods, Para 14]",
+    "page": 51,
+    "bbox": [
+      139.3,
+      210.6,
+      704.3,
+      242.1
+    ],
+    "y0_ratio": 0.354,
+    "y1_ratio": 0.407,
+    "w_ratio": 0.671,
+    "excerpt": "Methods, paragraph 1; Describe the study design or source of data (e.g., randomized trial, cohort, or registry 4a D;V Supplementary Tables d",
+    "numeric_symbol_density": 0.014,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "NimbusSans-Regular"
+    ],
+    "vgap": 6.9,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Labs\\Troponin\\Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Methods, Para 15]",
+    "page": 51,
+    "bbox": [
+      147.2,
+      238.7,
+      701.9,
+      265.6
+    ],
+    "y0_ratio": 0.401,
+    "y1_ratio": 0.446,
+    "w_ratio": 0.659,
+    "excerpt": "1-4 Source of data Specify the key study dates, including start of accrual; end of accrual; and, if Methods, paragraphs 4b D;V applicable, e",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "NimbusSans-Regular"
+    ],
+    "vgap": 6.87,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Labs\\Troponin\\Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Discussion, Para 16]",
+    "page": 52,
+    "bbox": [
+      146.9,
+      361.5,
+      689.6,
+      383.6
+    ],
+    "y0_ratio": 0.608,
+    "y1_ratio": 0.645,
+    "w_ratio": 0.645,
+    "excerpt": "Interpretation Give an overall interpretation of the results, considering objectives, limitations, results Discussion, all 19b D;V from simi",
+    "numeric_symbol_density": 0.014,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "NimbusSans-Regular"
+    ],
+    "vgap": 6.93,
+    "line_count": 4,
+    "dimension": "Unclassified"
+  },
+  {
+    "paper": "Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Labs\\Troponin\\Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Discussion, Para 17]",
+    "page": 52,
+    "bbox": [
+      146.9,
+      375.7,
+      703.9,
+      397.9
+    ],
+    "y0_ratio": 0.631,
+    "y1_ratio": 0.669,
+    "w_ratio": 0.662,
+    "excerpt": "paragraphs Discussion, paragraph Implications 20 D;V Discuss the potential clinical use of the model and implications for future research.",
+    "numeric_symbol_density": 0.014,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "NimbusSans-Regular",
+      "NimbusSans-Bold"
+    ],
+    "vgap": 4.62,
+    "line_count": 5,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Labs\\Troponin\\Cardiac Troponins and Cardiovascular Disease Risk Prediction.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Discussion, Para 18]",
+    "page": 52,
+    "bbox": [
+      139.3,
+      394.6,
+      670.8,
+      431.1
+    ],
+    "y0_ratio": 0.663,
+    "y1_ratio": 0.725,
+    "w_ratio": 0.631,
+    "excerpt": "3, 4 Other information Supplementary Provide information about the availability of supplementary resources, such as study 21 D;V n/a informa",
+    "numeric_symbol_density": 0.036,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "NimbusSans-Regular",
+      "NimbusSans-Bold"
+    ],
+    "vgap": 9.65,
+    "line_count": 2,
+    "dimension": "Unclassified"
+  },
+  {
+    "paper": "Menopausal hormone therapy and breast cancer risk a population-based cohort study of 1.3 million women in Norway.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Menopausal hormone therapy and breast cancer risk a population-based cohort study of 1.3 million women in Norway.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Introduction, Para 3]",
+    "page": 1,
+    "bbox": [
+      45.4,
+      531.7,
+      559.4,
+      610.4
+    ],
+    "y0_ratio": 0.672,
+    "y1_ratio": 0.772,
+    "w_ratio": 0.863,
+    "excerpt": "When reaching menopause, most women experience menoIn this large population-based cohort study, we provide a pausal symptoms, which may impa",
+    "numeric_symbol_density": 0.007,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "AdvOT46dcae81",
+      "AdvOT46dcae81+20",
+      "AdvOT46dcae81+fb"
+    ],
+    "vgap": 9.98,
+    "line_count": 16,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Alzheimer s   Dementia - 2025 - Marino - Higher vitamin B12 from mid\u2010 to late life is related to slower rates of cognitive.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Neuro\\Alzheimer s   Dementia - 2025 - Marino - Higher vitamin B12 from mid\u2010 to late life is related to slower rates of cognitive.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 12]",
+    "page": 6,
+    "bbox": [
+      92.7,
+      48.0,
+      528.2,
+      100.6
+    ],
+    "y0_ratio": 0.061,
+    "y1_ratio": 0.129,
+    "w_ratio": 0.732,
+    "excerpt": "Associations between cumulative average three-component vitamin B 12 indicator (3cB 12 ) quartiles and mean annual cognitive Change in execu",
+    "numeric_symbol_density": 0.043,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Lato-Italic",
+      "Lato-Black",
+      "STIXMath-Regular"
+    ],
+    "vgap": 5.48,
+    "line_count": 3,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Brain Abnormalities in Children Exposed Prenatally to the Pesticide Chlorpyrifos.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Neuro\\Brain Abnormalities in Children Exposed Prenatally to the Pesticide Chlorpyrifos.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 7]",
+    "page": 4,
+    "bbox": [
+      72.3,
+      347.2,
+      533.5,
+      382.9
+    ],
+    "y0_ratio": 0.438,
+    "y1_ratio": 0.483,
+    "w_ratio": 0.754,
+    "excerpt": "Participants with exposure The transformed variables were used in sensitivity analyses. The 2 outliers in panel D were CPF levels of 32 and ",
+    "numeric_symbol_density": 0.021,
+    "dominant_font_size": 7.0,
+    "page_body_font": 8.0,
+    "font_diff": -1.0,
+    "font_names": [
+      "GuardianSansGR-Regular"
+    ],
+    "vgap": 8.98,
+    "line_count": 2,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 16]",
+    "page": 7,
+    "bbox": [
+      55.1,
+      45.9,
+      546.0,
+      95.8
+    ],
+    "y0_ratio": 0.058,
+    "y1_ratio": 0.121,
+    "w_ratio": 0.802,
+    "excerpt": "NUTS, CORN, AND POPCORN AND DIVERTICULAR DISEASE pothesized that these foods would deCritical revision of the manuscript for important intic",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Syntax-Roman",
+      "Syntax-Bold",
+      "Syntax-Italic"
+    ],
+    "vgap": 7.98,
+    "line_count": 35,
+    "dimension": "Dim 1: Web / Margin Timestamp & Running Artifact"
+  },
+  {
+    "paper": "Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 18]",
+    "page": 7,
+    "bbox": [
+      55.1,
+      90.6,
+      545.9,
+      107.3
+    ],
+    "y0_ratio": 0.114,
+    "y1_ratio": 0.135,
+    "w_ratio": 0.802,
+    "excerpt": "15. Floch MH, Bina I. The natural history of divercomplications, and it is possible that this Statistical analysis: Strate, Liu, Giovannucci",
+    "numeric_symbol_density": 0.014,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Syntax-Roman",
+      "Syntax-Bold",
+      "Syntax-Italic"
+    ],
+    "vgap": 7.98,
+    "line_count": 35,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 19]",
+    "page": 7,
+    "bbox": [
+      55.1,
+      98.7,
+      546.0,
+      118.8
+    ],
+    "y0_ratio": 0.125,
+    "y1_ratio": 0.15,
+    "w_ratio": 0.802,
+    "excerpt": "ticulitis: fact and theory. J Clin Gastroenterol . 2004; finding is the result of chance alone. Obtained funding: Strate, Giovannucci.",
+    "numeric_symbol_density": 0.03,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Syntax-Roman",
+      "Syntax-Bold",
+      "Syntax-Italic"
+    ],
+    "vgap": 7.98,
+    "line_count": 35,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 23]",
+    "page": 7,
+    "bbox": [
+      55.1,
+      122.9,
+      545.3,
+      141.7
+    ],
+    "y0_ratio": 0.155,
+    "y1_ratio": 0.179,
+    "w_ratio": 0.801,
+    "excerpt": "ology and fiber. J Clin Gastroenterol . 2006;40 noted earlier, it is possible that the as- Study supervision: Syngal, Aldoori, Giovannucci.",
+    "numeric_symbol_density": 0.05,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Syntax-Roman",
+      "Syntax-Bold",
+      "Syntax-Italic"
+    ],
+    "vgap": 7.98,
+    "line_count": 35,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 25]",
+    "page": 7,
+    "bbox": [
+      55.1,
+      139.1,
+      546.4,
+      176.2
+    ],
+    "y0_ratio": 0.176,
+    "y1_ratio": 0.222,
+    "w_ratio": 0.803,
+    "excerpt": "17. Laine L, Connors LG, Reicin A, et al. Serious lower sociations found between nuts and popFunding/Support: This study was funded by grant",
+    "numeric_symbol_density": 0.021,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Syntax-Roman",
+      "Syntax-Bold",
+      "Syntax-Italic"
+    ],
+    "vgap": 8.08,
+    "line_count": 78,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Nut, corn and popcorn consumption and the incidence of diverticular disease.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 26]",
+    "page": 7,
+    "bbox": [
+      55.1,
+      234.1,
+      465.4,
+      245.0
+    ],
+    "y0_ratio": 0.296,
+    "y1_ratio": 0.309,
+    "w_ratio": 0.67,
+    "excerpt": "of the authors and do not necessarily represent the medical records endorsed the validity 2003;52(12):1734-1737.",
+    "numeric_symbol_density": 0.152,
+    "dominant_font_size": 7.0,
+    "page_body_font": 7.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Syntax-Roman",
+      "Syntax-Bold",
+      "Syntax-Italic"
+    ],
+    "vgap": 7.98,
+    "line_count": 35,
+    "dimension": "Dim 2: Dense Statistical Matrix / Tabular Grid"
+  },
+  {
+    "paper": "ayers-et-al-2023-effectiveness-and-safety-of-treatments-to-prevent-fractures-in-people-with-low-bone-mass-or-primary.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Osteoporosis\\ayers-et-al-2023-effectiveness-and-safety-of-treatments-to-prevent-fractures-in-people-with-low-bone-mass-or-primary.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Introduction, Para 20]",
+    "page": 5,
+    "bbox": [
+      45.0,
+      241.3,
+      446.5,
+      267.1
+    ],
+    "y0_ratio": 0.31,
+    "y1_ratio": 0.343,
+    "w_ratio": 0.676,
+    "excerpt": "* Shaded rows are harm outcomes. Details of the \ufb01 ndings and CoE ratings can be found in Appendix Tables 1 to 138. \u2020 Values are statisticall",
+    "numeric_symbol_density": 0.036,
+    "dominant_font_size": 7.5,
+    "page_body_font": 9.5,
+    "font_diff": -2.0,
+    "font_names": [
+      "AdvOT4dfa5ba6+fb",
+      "AdvPi2",
+      "AdvOT4dfa5ba6+20"
+    ],
+    "vgap": 9.01,
+    "line_count": 5,
+    "dimension": "Dim 5: Outlier Typography / Heading / Micro-Note"
+  },
+  {
+    "paper": "Safe, mild ultraviolet\u2010B exposure An essential human requirement for vitamin D and other vital bodily parameter adequacy A review.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Safe, mild ultraviolet\u2010B exposure An essential human requirement for vitamin D and other vital bodily parameter adequacy A review.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Abstract, Para 20]",
+    "page": 2,
+    "bbox": [
+      46.5,
+      712.0,
+      551.9,
+      733.9
+    ],
+    "y0_ratio": 0.91,
+    "y1_ratio": 0.938,
+    "w_ratio": 0.849,
+    "excerpt": "FIG URE 1 Ultraviolet radiation conversion of 7-dehydrocholesterol to previtamin D3 before thermal conversion to vitamin D3 and chemical mod",
+    "numeric_symbol_density": 0.036,
+    "dominant_font_size": 8.0,
+    "page_body_font": 8.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Lato-Italic",
+      "Lato-Bold",
+      "Lato-Regular"
+    ],
+    "vgap": 10.93,
+    "line_count": 3,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Soy Combined.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Soy\\Soy Combined.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Abstract, Para 62]",
+    "page": 169,
+    "bbox": [
+      58.1,
+      433.6,
+      554.2,
+      559.1
+    ],
+    "y0_ratio": 0.548,
+    "y1_ratio": 0.707,
+    "w_ratio": 0.81,
+    "excerpt": "2.2 Association of soy isoflavone intake and breast cancer and breast cancer risk among postmenopausal women indicates decrease breast cance",
+    "numeric_symbol_density": 0.014,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "AdvP4980F",
+      "AdvP7DB7",
+      "AdvP49811"
+    ],
+    "vgap": 10.66,
+    "line_count": 19,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Impact of thyroid hormone replacement on the risk of second cancer after thyroidectomy a Korean National Cohort Study.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\Impact of thyroid hormone replacement on the risk of second cancer after thyroidectomy a Korean National Cohort Study.pdf",
+    "violation_type": "INDEXER_CRASH",
+    "anchor_id": "N/A",
+    "page": 1,
+    "bbox": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "y0_ratio": 0.0,
+    "y1_ratio": 0.0,
+    "w_ratio": 0.0,
+    "excerpt": "parse_and_index_pdf crashed: cannot access local variable 'idx_num' where it is not associated with a value",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 8.0,
+    "page_body_font": 9.0,
+    "font_diff": -1.0,
+    "font_names": [
+      "Corbel"
+    ],
+    "vgap": 9.53,
+    "line_count": 1,
+    "dimension": "Dim 1: Web / Margin Timestamp & Running Artifact"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 21]",
+    "page": 15,
+    "bbox": [
+      166.4,
+      734.4,
+      560.9,
+      769.4
+    ],
+    "y0_ratio": 0.872,
+    "y1_ratio": 0.914,
+    "w_ratio": 0.663,
+    "excerpt": "The hallmark case report of Hercbergs and Leith in 1993, pointing to the anticancer potential of hypothyroidism in lung cancer in the clinic",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 9.9,
+    "page_body_font": 9.0,
+    "font_diff": 0.9,
+    "font_names": [
+      "URWPalladioL-Roma"
+    ],
+    "vgap": 12.57,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 29]",
+    "page": 17,
+    "bbox": [
+      52.9,
+      384.6,
+      529.8,
+      431.3
+    ],
+    "y0_ratio": 0.457,
+    "y1_ratio": 0.512,
+    "w_ratio": 0.801,
+    "excerpt": "Results Case report of a 69-years-old male patient with metastatic NSCLC treated with radiation and Spontaneous remission of NSCLC after myx",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 6.75,
+    "line_count": 3,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 34]",
+    "page": 17,
+    "bbox": [
+      48.4,
+      547.0,
+      548.2,
+      613.8
+    ],
+    "y0_ratio": 0.65,
+    "y1_ratio": 0.729,
+    "w_ratio": 0.84,
+    "excerpt": "Circadian rhythm synchronized to the 24 h environmental light-dark cycle similar between NSCLC patients and healthy A research study of 9 NS",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "CMSY10",
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 8.43,
+    "line_count": 10,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 44]",
+    "page": 18,
+    "bbox": [
+      48.4,
+      393.8,
+      545.7,
+      424.7
+    ],
+    "y0_ratio": 0.468,
+    "y1_ratio": 0.504,
+    "w_ratio": 0.835,
+    "excerpt": "Prospective cohort study of a community-dwelling population of 3649 [ 105 ] No association of TSH, fT4 or anti-TPOAbs with lung cancer.",
+    "numeric_symbol_density": 0.074,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "URWPalladioL-Roma"
+    ],
+    "vgap": 10.96,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 45]",
+    "page": 18,
+    "bbox": [
+      48.4,
+      415.7,
+      553.3,
+      495.2
+    ],
+    "y0_ratio": 0.494,
+    "y1_ratio": 0.588,
+    "w_ratio": 0.848,
+    "excerpt": "participants aged 25\u201384 years in Western Australia to assess the association of thyroid function with cancer risk. Research study of correla",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 8.9,
+    "page_body_font": 9.0,
+    "font_diff": -0.1,
+    "font_names": [
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 10.96,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 47]",
+    "page": 18,
+    "bbox": [
+      50.7,
+      517.4,
+      518.0,
+      552.7
+    ],
+    "y0_ratio": 0.615,
+    "y1_ratio": 0.656,
+    "w_ratio": 0.785,
+    "excerpt": "TR \u03b2 1 methylation detected in 47% of NSCLC surgical Research study of analysis of TR \u03b2 1 specimens. [ 95 ] No signi\ufb01cant association of met",
+    "numeric_symbol_density": 0.05,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "EURM10",
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 9.69,
+    "line_count": 7,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 49]",
+    "page": 18,
+    "bbox": [
+      166.4,
+      639.7,
+      561.0,
+      687.4
+    ],
+    "y0_ratio": 0.76,
+    "y1_ratio": 0.816,
+    "w_ratio": 0.663,
+    "excerpt": "In the era of precision oncology, a novel aspect of the TH-lung cancer association is the thyroid impairment related to immune checkpoint in",
+    "numeric_symbol_density": 0.007,
+    "dominant_font_size": 10.0,
+    "page_body_font": 9.0,
+    "font_diff": 1.0,
+    "font_names": [
+      "URWPalladioL-Roma"
+    ],
+    "vgap": 12.55,
+    "line_count": 8,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 67]",
+    "page": 20,
+    "bbox": [
+      48.4,
+      212.9,
+      440.6,
+      260.8
+    ],
+    "y0_ratio": 0.253,
+    "y1_ratio": 0.31,
+    "w_ratio": 0.659,
+    "excerpt": "All patients were asymptomatic. Prospective observational study of 50 NSCLC Overt thyroid dysfunction: [ 120 ] patients treated with EGFR an",
+    "numeric_symbol_density": 0.036,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "CMSY10",
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 8.43,
+    "line_count": 10,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 70]",
+    "page": 20,
+    "bbox": [
+      48.4,
+      333.8,
+      528.9,
+      375.6
+    ],
+    "y0_ratio": 0.396,
+    "y1_ratio": 0.446,
+    "w_ratio": 0.807,
+    "excerpt": "Incidence of TKI-induced hypothyroidism: 26%. Retrospective review of 197 patients with various Higher clinical bene\ufb01t rates in patients wit",
+    "numeric_symbol_density": 0.05,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "URWPalladioL-Ital",
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 8.43,
+    "line_count": 9,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Prevention\\The Intriguing Thyroid Hormones-Lung Cancer Association as Exemplification of the Thyroid Hormones-Cancer Association Three Decades of Evolving Research.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 72]",
+    "page": 20,
+    "bbox": [
+      48.4,
+      409.8,
+      554.1,
+      444.5
+    ],
+    "y0_ratio": 0.487,
+    "y1_ratio": 0.528,
+    "w_ratio": 0.85,
+    "excerpt": "Incidence of hypothyroidism related to TKI targeting VEGFR, FGFR, PDGF-R, and c-Kit in anlotinib group vs. placebo Phase III ALTER-0303 tria",
+    "numeric_symbol_density": 0.05,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 9.69,
+    "line_count": 7,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 27]",
+    "page": 36,
+    "bbox": [
+      166.4,
+      734.4,
+      560.9,
+      769.4
+    ],
+    "y0_ratio": 0.872,
+    "y1_ratio": 0.914,
+    "w_ratio": 0.663,
+    "excerpt": "The hallmark case report of Hercbergs and Leith in 1993, pointing to the anticancer potential of hypothyroidism in lung cancer in the clinic",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 9.9,
+    "page_body_font": 9.0,
+    "font_diff": 0.9,
+    "font_names": [
+      "URWPalladioL-Roma"
+    ],
+    "vgap": 12.57,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 35]",
+    "page": 38,
+    "bbox": [
+      52.9,
+      384.6,
+      529.8,
+      431.3
+    ],
+    "y0_ratio": 0.457,
+    "y1_ratio": 0.512,
+    "w_ratio": 0.801,
+    "excerpt": "Results Case report of a 69-years-old male patient with metastatic NSCLC treated with radiation and Spontaneous remission of NSCLC after myx",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 6.75,
+    "line_count": 3,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 40]",
+    "page": 38,
+    "bbox": [
+      48.4,
+      547.0,
+      548.2,
+      613.8
+    ],
+    "y0_ratio": 0.65,
+    "y1_ratio": 0.729,
+    "w_ratio": 0.84,
+    "excerpt": "Circadian rhythm synchronized to the 24 h environmental light-dark cycle similar between NSCLC patients and healthy A research study of 9 NS",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "CMSY10",
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 8.43,
+    "line_count": 10,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 50]",
+    "page": 39,
+    "bbox": [
+      48.4,
+      393.8,
+      545.7,
+      424.7
+    ],
+    "y0_ratio": 0.468,
+    "y1_ratio": 0.504,
+    "w_ratio": 0.835,
+    "excerpt": "Prospective cohort study of a community-dwelling population of 3649 [ 105 ] No association of TSH, fT4 or anti-TPOAbs with lung cancer.",
+    "numeric_symbol_density": 0.074,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "URWPalladioL-Roma"
+    ],
+    "vgap": 10.96,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 51]",
+    "page": 39,
+    "bbox": [
+      48.4,
+      415.7,
+      553.3,
+      495.2
+    ],
+    "y0_ratio": 0.494,
+    "y1_ratio": 0.588,
+    "w_ratio": 0.848,
+    "excerpt": "participants aged 25\u201384 years in Western Australia to assess the association of thyroid function with cancer risk. Research study of correla",
+    "numeric_symbol_density": 0.029,
+    "dominant_font_size": 8.9,
+    "page_body_font": 9.0,
+    "font_diff": -0.1,
+    "font_names": [
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 10.96,
+    "line_count": 4,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 53]",
+    "page": 39,
+    "bbox": [
+      50.7,
+      517.4,
+      518.0,
+      552.7
+    ],
+    "y0_ratio": 0.615,
+    "y1_ratio": 0.656,
+    "w_ratio": 0.785,
+    "excerpt": "TR \u03b2 1 methylation detected in 47% of NSCLC surgical Research study of analysis of TR \u03b2 1 specimens. [ 95 ] No signi\ufb01cant association of met",
+    "numeric_symbol_density": 0.05,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "EURM10",
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 9.69,
+    "line_count": 7,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 55]",
+    "page": 39,
+    "bbox": [
+      166.4,
+      639.7,
+      561.0,
+      687.4
+    ],
+    "y0_ratio": 0.76,
+    "y1_ratio": 0.816,
+    "w_ratio": 0.663,
+    "excerpt": "In the era of precision oncology, a novel aspect of the TH-lung cancer association is the thyroid impairment related to immune checkpoint in",
+    "numeric_symbol_density": 0.007,
+    "dominant_font_size": 10.0,
+    "page_body_font": 9.0,
+    "font_diff": 1.0,
+    "font_names": [
+      "URWPalladioL-Roma"
+    ],
+    "vgap": 12.55,
+    "line_count": 8,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 73]",
+    "page": 41,
+    "bbox": [
+      48.4,
+      212.9,
+      440.6,
+      260.8
+    ],
+    "y0_ratio": 0.253,
+    "y1_ratio": 0.31,
+    "w_ratio": 0.659,
+    "excerpt": "All patients were asymptomatic. Prospective observational study of 50 NSCLC Overt thyroid dysfunction: [ 120 ] patients treated with EGFR an",
+    "numeric_symbol_density": 0.036,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "CMSY10",
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 8.43,
+    "line_count": 10,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 76]",
+    "page": 41,
+    "bbox": [
+      48.4,
+      333.8,
+      528.9,
+      375.6
+    ],
+    "y0_ratio": 0.396,
+    "y1_ratio": 0.446,
+    "w_ratio": 0.807,
+    "excerpt": "Incidence of TKI-induced hypothyroidism: 26%. Retrospective review of 197 patients with various Higher clinical bene\ufb01t rates in patients wit",
+    "numeric_symbol_density": 0.05,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "URWPalladioL-Ital",
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 8.43,
+    "line_count": 9,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Thyroid & Cancer - All 2025-12-24.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Thyroid\\Thyroid & Cancer\\Thyroid & Cancer - All 2025-12-24.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 78]",
+    "page": 41,
+    "bbox": [
+      48.4,
+      409.8,
+      554.1,
+      444.5
+    ],
+    "y0_ratio": 0.487,
+    "y1_ratio": 0.528,
+    "w_ratio": 0.85,
+    "excerpt": "Incidence of hypothyroidism related to TKI targeting VEGFR, FGFR, PDGF-R, and c-Kit in anlotinib group vs. placebo Phase III ALTER-0303 tria",
+    "numeric_symbol_density": 0.05,
+    "dominant_font_size": 9.0,
+    "page_body_font": 9.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "URWPalladioL-Roma",
+      "Dingbats"
+    ],
+    "vgap": 9.69,
+    "line_count": 7,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "What are the optimal mind-body therapies for cancer-related pain.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\What are the optimal mind-body therapies for cancer-related pain.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Methods, Para 7]",
+    "page": 3,
+    "bbox": [
+      51.0,
+      494.8,
+      527.0,
+      514.0
+    ],
+    "y0_ratio": 0.623,
+    "y1_ratio": 0.648,
+    "w_ratio": 0.8,
+    "excerpt": "evidence-based complementary therapy for clinical adoption; 2) Taichi showed cancer-type speci \ufb01 city (89.6 % SUCRA in breast cancer), enabl",
+    "numeric_symbol_density": 0.05,
+    "dominant_font_size": 8.0,
+    "page_body_font": 9.5,
+    "font_diff": -1.5,
+    "font_names": [
+      "AdvTT052d8736+fb",
+      "AdvTT382fe7bb.B",
+      "AdvTT052d8736"
+    ],
+    "vgap": 10.94,
+    "line_count": 4,
+    "dimension": "Dim 5: Outlier Typography / Heading / Micro-Note"
+  },
+  {
+    "paper": "mortstatsh_1900-1904 mortality Statistics (1)_optimize.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\mortstatsh_1900-1904 mortality Statistics (1)_optimize.pdf",
+    "violation_type": "INDEXER_CRASH",
+    "anchor_id": "N/A",
+    "page": 1,
+    "bbox": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "y0_ratio": 0.0,
+    "y1_ratio": 0.0,
+    "w_ratio": 0.0,
+    "excerpt": "parse_and_index_pdf crashed: cannot access local variable 'idx_num' where it is not associated with a value",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 8.6,
+    "page_body_font": 19.4,
+    "font_diff": -10.8,
+    "font_names": [
+      "Helvetica"
+    ],
+    "vgap": 11.87,
+    "line_count": 1,
+    "dimension": "Dim 1: Web / Margin Timestamp & Running Artifact"
+  },
+  {
+    "paper": "Association of eating duration less than 8 h with all-cause, cardiovascular, and cancer mortalityS.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Association of eating duration less than 8 h with all-cause, cardiovascular, and cancer mortalityS.pdf",
+    "violation_type": "MISSING_DISCUSSION_SECTION",
+    "anchor_id": "N/A",
+    "page": 1,
+    "bbox": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "y0_ratio": 0.0,
+    "y1_ratio": 0.0,
+    "w_ratio": 0.0,
+    "excerpt": "Paper has 8 pages and 58 Results anchors, but Discussion has 0 anchors (Discussion trapped in Results).",
+    "numeric_symbol_density": 0.039,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 4: Trapped Section / Alternative Hierarchy"
+  },
+  {
+    "paper": "Association of statins use and genetic susceptibility with incidence ofAlzheimer\u2019s diseaseS.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Association of statins use and genetic susceptibility with incidence ofAlzheimer\u2019s diseaseS.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Introduction, Para 33]",
+    "page": 3,
+    "bbox": [
+      37.8,
+      508.7,
+      559.1,
+      654.5
+    ],
+    "y0_ratio": 0.642,
+    "y1_ratio": 0.826,
+    "w_ratio": 0.852,
+    "excerpt": "2.6. Covariates additive and multiplicative interaction between statins use and genetic susceptibility to AD. Genetic susceptibility consist",
+    "numeric_symbol_density": 0.014,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Tamoxifen for the prevention.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Cancer\\Tamoxifen for the prevention.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 8]",
+    "page": 3,
+    "bbox": [
+      42.8,
+      506.9,
+      569.4,
+      518.1
+    ],
+    "y0_ratio": 0.64,
+    "y1_ratio": 0.654,
+    "w_ratio": 0.86,
+    "excerpt": "the number of person-years in the tamoxifen group (PY,q,) divided by the tT the percent of participants with complete follow-up was 92.4% in",
+    "numeric_symbol_density": 0.043,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Differential impact of PPI on ImmunotherapyS.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Differential impact of PPI on ImmunotherapyS.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Abstract, Para 6]",
+    "page": 1,
+    "bbox": [
+      37.1,
+      626.8,
+      558.5,
+      679.7
+    ],
+    "y0_ratio": 0.791,
+    "y1_ratio": 0.858,
+    "w_ratio": 0.852,
+    "excerpt": "Interpretation Baseline exposure to proton pump inhibitors and antibiotics was associated with inferior outcomes with MD PhD); B Ricciuti tr",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Effects of blood pressure and lipid lowering on cognition - results from the HOPE-3 studyS.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Effects of blood pressure and lipid lowering on cognition - results from the HOPE-3 studyS.pdf",
+    "violation_type": "MISSING_DISCUSSION_SECTION",
+    "anchor_id": "N/A",
+    "page": 1,
+    "bbox": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "y0_ratio": 0.0,
+    "y1_ratio": 0.0,
+    "w_ratio": 0.0,
+    "excerpt": "Paper has 12 pages and 65 Results anchors, but Discussion has 0 anchors (Discussion trapped in Results).",
+    "numeric_symbol_density": 0.048,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 4: Trapped Section / Alternative Hierarchy"
+  },
+  {
+    "paper": "Estimated Lifetimes Gained from ScreeningS.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Estimated Lifetimes Gained from ScreeningS.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Introduction, Para 7]",
+    "page": 5,
+    "bbox": [
+      24.1,
+      16.9,
+      547.1,
+      24.5
+    ],
+    "y0_ratio": 0.021,
+    "y1_ratio": 0.031,
+    "w_ratio": 0.855,
+    "excerpt": "2/20/26, 3:10 PM Estimated Lifetime Gained With Cancer Screening Tests: A Meta-Analysis of Randomized Clinical Trials - PMC.",
+    "numeric_symbol_density": 0.097,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 1: Web / Margin Timestamp & Running Artifact"
+  },
+  {
+    "paper": "IACR Red Meat and Processed MeatS.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\IACR Red Meat and Processed MeatS.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 794]",
+    "page": 234,
+    "bbox": [
+      83.9,
+      196.2,
+      481.3,
+      517.7
+    ],
+    "y0_ratio": 0.248,
+    "y1_ratio": 0.654,
+    "w_ratio": 0.649,
+    "excerpt": "i iH Sa eae Bia i f Zea aE i a H i a a ess zo sSoe 34 re sees 2 |2 2355 e288 2885 285 zm ae 2 a 2 8 ly By 5 ge 25 7 2e See ae: ee ale os Som",
+    "numeric_symbol_density": 0.193,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 2: Dense Statistical Matrix / Tabular Grid"
+  },
+  {
+    "paper": "Low-Dose Lithium for Mild Cognitive ImpairmentS.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Low-Dose Lithium for Mild Cognitive ImpairmentS.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Abstract, Para 10]",
+    "page": 1,
+    "bbox": [
+      84.6,
+      564.5,
+      536.6,
+      608.8
+    ],
+    "y0_ratio": 0.713,
+    "y1_ratio": 0.769,
+    "w_ratio": 0.739,
+    "excerpt": "CONCLUSIONS AND RELEVANCE This pilot randomized clinical trial established feasibility, Alkhateeb, Chu); Department of con firmed safety and",
+    "numeric_symbol_density": 0.0,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 6: Broad Multi-Column Span / Callout Flow"
+  },
+  {
+    "paper": "Physical Health Decline after Chemotherapy or Endocrine therapy in Breast Cancer.pdf",
+    "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Physical Health Decline after Chemotherapy or Endocrine therapy in Breast Cancer.pdf",
+    "violation_type": "CROSS_COLUMN_BBOX_BLEED",
+    "anchor_id": "[Results, Para 7]",
+    "page": 4,
+    "bbox": [
+      77.4,
+      697.0,
+      547.1,
+      715.0
+    ],
+    "y0_ratio": 0.88,
+    "y1_ratio": 0.903,
+    "w_ratio": 0.767,
+    "excerpt": "without cancer were matched to breast cancer 1.7 (0.9-2.7) y 1.1 (0.7-1.6) y 3.3 (2.6-4.1) y 6.1(5.5-7.0) y survivors based on age and year ",
+    "numeric_symbol_density": 0.2,
+    "dominant_font_size": 10.0,
+    "page_body_font": 10.0,
+    "font_diff": 0.0,
+    "font_names": [
+      "Unknown"
+    ],
+    "vgap": 0.0,
+    "line_count": 1,
+    "dimension": "Dim 2: Dense Statistical Matrix / Tabular Grid"
+  }
+]

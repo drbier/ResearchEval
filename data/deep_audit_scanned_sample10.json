@@ -1,0 +1,1096 @@
+{
+  "timestamp": 1793634330.2457361,
+  "total_audited": 10,
+  "elapsed_seconds": 329.9632375240326,
+  "results": [
+    {
+      "filename": "A Cell-free DNA Blood-Based Test for Colorectal Cancer ScreeningS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\A Cell-free DNA Blood-Based Test for Colorectal Cancer ScreeningS.pdf",
+      "is_scanned": true,
+      "page_count": 11,
+      "total_anchors": 145,
+      "sections_detected": {
+        "Header": 1,
+        "Introduction": 2,
+        "Methods": 95,
+        "Results": 1,
+        "Conclusions": 5,
+        "References": 41
+      },
+      "violations": [
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Methods, Para 68]",
+          "page": 9,
+          "char_length": 2160,
+          "text_excerpt": "challenge more broadly, because the most appropriate precancerous target has not been precisely defined and no noninvasive screening test ye"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 3]",
+          "page": 2,
+          "char_length": 22,
+          "text_excerpt": "974\nN ENGLJ MED 390;11"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 7]",
+          "page": 2,
+          "char_length": 23,
+          "text_excerpt": "NEJM.ORG\nMARCH 14, 2024"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 11]",
+          "page": 3,
+          "char_length": 18,
+          "text_excerpt": "N ENGLJ MED 390;11"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 16]",
+          "page": 3,
+          "char_length": 29,
+          "text_excerpt": "come measures for this study."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 18]",
+          "page": 3,
+          "char_length": 27,
+          "text_excerpt": "NEJM.ORG\nMARCH 14, 2024\n975"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 21]",
+          "page": 4,
+          "char_length": 22,
+          "text_excerpt": "976\nN ENGLJ MED 390;11"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 27]",
+          "page": 4,
+          "char_length": 23,
+          "text_excerpt": "NEJM.ORG\nMARCH 14, 2024"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 29]",
+          "page": 5,
+          "char_length": 11,
+          "text_excerpt": "10,258 Were"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 31]",
+          "page": 5,
+          "char_length": 18,
+          "text_excerpt": "N ENGLJ MED 390;11"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 38]",
+          "page": 5,
+          "char_length": 27,
+          "text_excerpt": "NEJM.ORG\nMARCH 14, 2024\n977"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 39]",
+          "page": 5,
+          "char_length": 17,
+          "text_excerpt": "validation cohort"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 41]",
+          "page": 6,
+          "char_length": 32,
+          "text_excerpt": "978 NEJM.ORG\nN ENGL J MED 390;11"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 45]",
+          "page": 6,
+          "char_length": 14,
+          "text_excerpt": "MARCH 14, 2024"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 47]",
+          "page": 7,
+          "char_length": 25,
+          "text_excerpt": "Most Advanced\nColonoscopy"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 48]",
+          "page": 7,
+          "char_length": 18,
+          "text_excerpt": "N ENGL) MED 390;11"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 57]",
+          "page": 7,
+          "char_length": 27,
+          "text_excerpt": "NEJM.ORG\nMARCH 14, 2024\n979"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 63]",
+          "page": 8,
+          "char_length": 22,
+          "text_excerpt": "980\nN ENGLJ MED 390;11"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 67]",
+          "page": 8,
+          "char_length": 23,
+          "text_excerpt": "NEJM.ORG\nMARCH 14, 2024"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 69]",
+          "page": 9,
+          "char_length": 18,
+          "text_excerpt": "N ENGL) MED 390;11"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 75]",
+          "page": 9,
+          "char_length": 27,
+          "text_excerpt": "NEJM.ORG\nMARCH 14, 2024\n981"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 0,
+        "abstract_leakage": 0,
+        "mega_paragraphs": 1,
+        "micro_fragments": 20,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 29.47
+    },
+    {
+      "filename": "A Ketogenic Diet for Treatment-Resistant DepressionS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\A Ketogenic Diet for Treatment-Resistant DepressionS.pdf",
+      "is_scanned": true,
+      "page_count": 10,
+      "total_anchors": 138,
+      "sections_detected": {
+        "Header": 1,
+        "Abstract": 14,
+        "Methods": 32,
+        "Results": 36,
+        "Discussion": 14,
+        "Conclusions": 18,
+        "References": 23
+      },
+      "violations": [
+        {
+          "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
+          "severity": "HIGH",
+          "anchor_id": "[Abstract, Para 7]",
+          "page": 2,
+          "text_excerpt": "PP treated with antidepressants, but many patients do not agents are considered to have treatment-resistant depression r"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 14]",
+          "page": 3,
+          "char_length": 15,
+          "text_excerpt": "Data Collection"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 5]",
+          "page": 6,
+          "char_length": 26,
+          "text_excerpt": "eTable 1 in Supplement 2)."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 13]",
+          "page": 7,
+          "char_length": 34,
+          "text_excerpt": "15\n10 2 2\na % 10\n2 H z 8 f\na 2\n5\n5"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 24]",
+          "page": 8,
+          "char_length": 4,
+          "text_excerpt": "Hmmm"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 0,
+        "abstract_leakage": 1,
+        "mega_paragraphs": 0,
+        "micro_fragments": 4,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 27.38
+    },
+    {
+      "filename": "A National Study Exploring the Association between Fasting Duration and Mortality among the ElderlyS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\A National Study Exploring the Association between Fasting Duration and Mortality among the ElderlyS.pdf",
+      "is_scanned": true,
+      "page_count": 14,
+      "total_anchors": 117,
+      "sections_detected": {
+        "Header": 1,
+        "Introduction": 7,
+        "Methods": 17,
+        "Results": 50,
+        "Discussion": 18,
+        "Conclusions": 9,
+        "References": 15
+      },
+      "violations": [
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Methods, Para 13]",
+          "page": 4,
+          "char_length": 2164,
+          "text_excerpt": "Diabetes was defined by self-reported prior diagnosis, hemoglobin A1c levels (>6.5%), fasting plasma glucose levels (>7 mmol/L), or current "
+        },
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Methods, Para 14]",
+          "page": 4,
+          "char_length": 2116,
+          "text_excerpt": "A BMI > 25 kg/ m? indicated \u201coverweight\u201d, while a BMI of >30 kg/m? indicated \u201cobesity\u201d [29]. The dietary inflammatory index (DII) was comput"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 10]",
+          "page": 3,
+          "char_length": 25,
+          "text_excerpt": "2.4. Covariate Assessment"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 2]",
+          "page": 6,
+          "char_length": 29,
+          "text_excerpt": "Quartiles of Fasting Duration"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 17]",
+          "page": 7,
+          "char_length": 18,
+          "text_excerpt": "B\n20\nP value=0.002"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 24]",
+          "page": 8,
+          "char_length": 30,
+          "text_excerpt": "and Non-Shift Worker Subgroups"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 34]",
+          "page": 9,
+          "char_length": 21,
+          "text_excerpt": "374\n175\nBefore 8 a.m."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 35]",
+          "page": 9,
+          "char_length": 33,
+          "text_excerpt": "1457 625\nLate eating\nAfter 9 p.m."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 36]",
+          "page": 9,
+          "char_length": 20,
+          "text_excerpt": "239\n74\nBefore 9 p.m."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Discussion, Para 3]",
+          "page": 9,
+          "char_length": 14,
+          "text_excerpt": "4 to 12 weeks."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Discussion, Para 4]",
+          "page": 9,
+          "char_length": 32,
+          "text_excerpt": "effects, whereas our\n6.66 years."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Discussion, Para 5]",
+          "page": 9,
+          "char_length": 7,
+          "text_excerpt": "in body"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 0,
+        "abstract_leakage": 0,
+        "mega_paragraphs": 2,
+        "micro_fragments": 10,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 40.64
+    },
+    {
+      "filename": "A metronomic schedule as salvage chemotherapy for upper gastrointestinal tract cancerS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\A metronomic schedule as salvage chemotherapy for upper gastrointestinal tract cancerS.pdf",
+      "is_scanned": true,
+      "page_count": 6,
+      "total_anchors": 67,
+      "sections_detected": {
+        "Header": 1,
+        "Introduction": 4,
+        "Methods": 3,
+        "Results": 40,
+        "Discussion": 2,
+        "References": 17
+      },
+      "violations": [
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Methods, Para 2]",
+          "page": 2,
+          "char_length": 1878,
+          "text_excerpt": "failure of one of more previous chemotherapeutic lines for metastatic disease; age at beast 18 years; EOOMG performance starus (PS) up co 3;"
+        },
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Discussion, Para 1]",
+          "page": 5,
+          "char_length": 2421,
+          "text_excerpt": "Rieecoily. \u00ab steniicane cxcedion of 05 wae achicecd wih chemotherapy and target therapy in recurrent, upper gasA tointestinal tact cancer. I"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 3]",
+          "page": 2,
+          "char_length": 33,
+          "text_excerpt": "Health, Inc. All rights reserved."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 4]",
+          "page": 3,
+          "char_length": 13,
+          "text_excerpt": "INCU (21.5%)."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 7]",
+          "page": 3,
+          "char_length": 29,
+          "text_excerpt": "tree surdval; PS, parformance"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 9]",
+          "page": 3,
+          "char_length": 16,
+          "text_excerpt": "Ciinical benatia"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 17]",
+          "page": 3,
+          "char_length": 16,
+          "text_excerpt": "clinical outcome"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 18]",
+          "page": 3,
+          "char_length": 17,
+          "text_excerpt": "\u2018Overall surrival"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 20]",
+          "page": 3,
+          "char_length": 33,
+          "text_excerpt": "Health, Inc. All rights reserved."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 23]",
+          "page": 4,
+          "char_length": 25,
+          "text_excerpt": "10\n20\na0\n40\nTeme (months)"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 24]",
+          "page": 4,
+          "char_length": 14,
+          "text_excerpt": "co\n1-2\nal once"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 0,
+        "abstract_leakage": 0,
+        "mega_paragraphs": 2,
+        "micro_fragments": 9,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 21.66
+    },
+    {
+      "filename": "A natural experiment on the effect of herpes zoster vaccination on dementiaS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\A natural experiment on the effect of herpes zoster vaccination on dementiaS.pdf",
+      "is_scanned": true,
+      "page_count": 18,
+      "total_anchors": 123,
+      "sections_detected": {
+        "Header": 1,
+        "Discussion": 27,
+        "Methods": 95
+      },
+      "violations": [
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Methods, Para 8]",
+          "page": 11,
+          "char_length": 2343,
+          "text_excerpt": "Article of a zoster vaccination program, thereisnoreasonthatthecompeting risk of death should differ across the 2 September 1933 date-of-bir"
+        },
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Methods, Para 21]",
+          "page": 13,
+          "char_length": 2015,
+          "text_excerpt": "Robustness to a different analytical approach. We additionallyused adifference-in-differences instrumental variable approach (DID-IV) to con"
+        },
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Methods, Para 26]",
+          "page": 13,
+          "char_length": 1911,
+          "text_excerpt": "Robustness checks to different analytical specifications. We conductedaseries of additional robustness checks. First, instead of starting th"
+        },
+        {
+          "type": "MEGA_PARAGRAPH_SWALLOWED_SUBSECTION",
+          "severity": "MEDIUM",
+          "anchor_id": "[Methods, Para 30]",
+          "page": 14,
+          "char_length": 2375,
+          "text_excerpt": "1and 2 (except forthe more sex-specific variables of past breast cancer screening, breastcancerand while controlling for the false-discovery"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 24]",
+          "page": 13,
+          "char_length": 23,
+          "text_excerpt": "\u2022 YaatBxVitn, +1. +\n(5)"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 50]",
+          "page": 15,
+          "char_length": 13,
+          "text_excerpt": "|, Econometr."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 79]",
+          "page": 18,
+          "char_length": 32,
+          "text_excerpt": "Materials & experimental systems"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 83]",
+          "page": 18,
+          "char_length": 29,
+          "text_excerpt": "Authentication\nNot applicable"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 0,
+        "abstract_leakage": 0,
+        "mega_paragraphs": 4,
+        "micro_fragments": 4,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 82.17
+    },
+    {
+      "filename": "A phase I-II study of niacin in patients with newly diagnosed glioblastoma- safety and interim phase II analysisS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\A phase I-II study of niacin in patients with newly diagnosed glioblastoma- safety and interim phase II analysisS.pdf",
+      "is_scanned": true,
+      "page_count": 15,
+      "total_anchors": 75,
+      "sections_detected": {
+        "Header": 1,
+        "Abstract": 1,
+        "Methods": 14,
+        "Results": 12,
+        "Conclusions": 3,
+        "Introduction": 4,
+        "Discussion": 6,
+        "References": 34
+      },
+      "violations": [
+        {
+          "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
+          "severity": "HIGH",
+          "anchor_id": "[Abstract, Para 1]",
+          "page": 3,
+          "text_excerpt": "PURPOSE Survival of patients with glioblastoma (GB) treated with standard of care (SOC) surgery, radiotherapy, and temoz"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Conclusions, Para 2]",
+          "page": 3,
+          "char_length": 26,
+          "text_excerpt": "Trial Registration number:"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 0,
+        "abstract_leakage": 1,
+        "mega_paragraphs": 0,
+        "micro_fragments": 1,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 23.99
+    },
+    {
+      "filename": "ADHD as a circadian rhythm disorder evidence and implications for chronotherapyS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\ADHD as a circadian rhythm disorder evidence and implications for chronotherapyS.pdf",
+      "is_scanned": true,
+      "page_count": 5,
+      "total_anchors": 44,
+      "sections_detected": {
+        "Header": 1,
+        "Introduction": 26,
+        "Conclusions": 7,
+        "References": 10
+      },
+      "violations": [
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 11]",
+          "page": 3,
+          "char_length": 23,
+          "text_excerpt": "Daytime:\nLower cortisol"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 15]",
+          "page": 3,
+          "char_length": 23,
+          "text_excerpt": "1\nj ( 1\n1\nri\n1\n1 Night:"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 17]",
+          "page": 3,
+          "char_length": 27,
+          "text_excerpt": "1\nL\n1\n1\nMes\n'1\n1 1\n| Night:"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 0,
+        "abstract_leakage": 0,
+        "mega_paragraphs": 0,
+        "micro_fragments": 3,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 16.97
+    },
+    {
+      "filename": "Active Monitoring With or Without Endocrine Therapy for Low-Risk Ductal Carcinoma In Situ- The COMET Randomized Clinical TrialS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Active Monitoring With or Without Endocrine Therapy for Low-Risk Ductal Carcinoma In Situ- The COMET Randomized Clinical TrialS.pdf",
+      "is_scanned": true,
+      "page_count": 9,
+      "total_anchors": 141,
+      "sections_detected": {
+        "Header": 1,
+        "Abstract": 31,
+        "Introduction": 14,
+        "Results": 35,
+        "Discussion": 12,
+        "Conclusions": 8,
+        "References": 40
+      },
+      "violations": [
+        {
+          "type": "MISSING_METHODS_SECTION",
+          "severity": "HIGH",
+          "details": "Paper has 9 pages but Methods has 0 anchors (Unnumbered heading transition missed)."
+        },
+        {
+          "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
+          "severity": "HIGH",
+          "anchor_id": "[Abstract, Para 12]",
+          "page": 2,
+          "text_excerpt": "Research Preliminary Communication Active"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 2]",
+          "page": 1,
+          "char_length": 20,
+          "text_excerpt": "Supplemental content"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Abstract, Para 11]",
+          "page": 1,
+          "char_length": 25,
+          "text_excerpt": "(shelley.hwang@duke.edu)."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 11]",
+          "page": 3,
+          "char_length": 4,
+          "text_excerpt": "Mumm"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 12]",
+          "page": 5,
+          "char_length": 18,
+          "text_excerpt": "by Treatment Group"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 13]",
+          "page": 5,
+          "char_length": 25,
+          "text_excerpt": "Guideline-concordant care"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 16]",
+          "page": 5,
+          "char_length": 28,
+          "text_excerpt": "Per-protocol analysis\n=5\n2 2"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 1,
+        "abstract_leakage": 1,
+        "mega_paragraphs": 0,
+        "micro_fragments": 6,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 34.17
+    },
+    {
+      "filename": "Antibiotic Therapy for Uncomplicated Acute Appendicitis Ten-Year Follow-Up of the APPAC Randomized Clinical TrialS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Antibiotic Therapy for Uncomplicated Acute Appendicitis Ten-Year Follow-Up of the APPAC Randomized Clinical TrialS.pdf",
+      "is_scanned": true,
+      "page_count": 31,
+      "total_anchors": 141,
+      "sections_detected": {
+        "Header": 1,
+        "Results": 49,
+        "Abstract": 5,
+        "Introduction": 7,
+        "Methods": 19,
+        "Appendix": 40,
+        "Discussion": 15,
+        "Conclusions": 5
+      },
+      "violations": [
+        {
+          "type": "ABSTRACT_LEAKAGE_PAGE_2_PLUS",
+          "severity": "HIGH",
+          "anchor_id": "[Abstract, Para 1]",
+          "page": 2,
+          "text_excerpt": "Importance Antibiotic therapy is effective and safe for uncomplicated acute appendicitis in adults, but randomized clini"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 2]",
+          "page": 5,
+          "char_length": 33,
+          "text_excerpt": "Objective and Predefined Outcomes"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 4]",
+          "page": 6,
+          "char_length": 17,
+          "text_excerpt": "Post Hoc Outcomes"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 6]",
+          "page": 6,
+          "char_length": 19,
+          "text_excerpt": "Long-Term Follow-Up"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 10]",
+          "page": 7,
+          "char_length": 26,
+          "text_excerpt": "Quality-of-Life Assessment"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Methods, Para 13]",
+          "page": 8,
+          "char_length": 20,
+          "text_excerpt": "Statistical Analysis"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 4]",
+          "page": 10,
+          "char_length": 18,
+          "text_excerpt": "View LargeDownload"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 6]",
+          "page": 11,
+          "char_length": 32,
+          "text_excerpt": "SI conversion factor: To convert"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 7]",
+          "page": 11,
+          "char_length": 14,
+          "text_excerpt": "possible pain."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 8]",
+          "page": 11,
+          "char_length": 33,
+          "text_excerpt": "of the Appendicitis Acuta (APPAC)"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 10]",
+          "page": 11,
+          "char_length": 32,
+          "text_excerpt": "values to mg/dL, divide by 88.4."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 11]",
+          "page": 12,
+          "char_length": 18,
+          "text_excerpt": "(opens in new tab)"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 15]",
+          "page": 13,
+          "char_length": 18,
+          "text_excerpt": "View LargeDownload"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 16]",
+          "page": 14,
+          "char_length": 14,
+          "text_excerpt": "530 Randomized"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 17]",
+          "page": 14,
+          "char_length": 32,
+          "text_excerpt": "1379 Patients 218 y\nappendicitis"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 20]",
+          "page": 14,
+          "char_length": 31,
+          "text_excerpt": "suspected acute\nfor eligibility"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 24]",
+          "page": 15,
+          "char_length": 18,
+          "text_excerpt": "(opens in new tab)"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 26]",
+          "page": 15,
+          "char_length": 18,
+          "text_excerpt": "View LargeDownload"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 28]",
+          "page": 16,
+          "char_length": 25,
+          "text_excerpt": "No.atrisk 242\n186\n169\n166"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 32]",
+          "page": 16,
+          "char_length": 27,
+          "text_excerpt": "Time since randomization, y"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 33]",
+          "page": 16,
+          "char_length": 18,
+          "text_excerpt": "(opens in new tab)"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 39]",
+          "page": 18,
+          "char_length": 18,
+          "text_excerpt": "View LargeDownload"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Conclusions, Para 2]",
+          "page": 31,
+          "char_length": 19,
+          "text_excerpt": "Article Information"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 0,
+        "abstract_leakage": 1,
+        "mega_paragraphs": 0,
+        "micro_fragments": 22,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 33.29
+    },
+    {
+      "filename": "Antimicrobial Natural Product Berberine Is Efficacious for the Treatment of Atrial FibrillationS.pdf",
+      "path": "J:\\My Drive\\WonkProject\\Research Reviews\\Papers\\Antimicrobial Natural Product Berberine Is Efficacious for the Treatment of Atrial FibrillationS.pdf",
+      "is_scanned": true,
+      "page_count": 5,
+      "total_anchors": 65,
+      "sections_detected": {
+        "Header": 1,
+        "Introduction": 12,
+        "Results": 25,
+        "Discussion": 11,
+        "References": 16
+      },
+      "violations": [
+        {
+          "type": "MISSING_METHODS_SECTION",
+          "severity": "HIGH",
+          "details": "Paper has 5 pages but Methods has 0 anchors (Unnumbered heading transition missed)."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 2]",
+          "page": 2,
+          "char_length": 18,
+          "text_excerpt": "One-year follow-up"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 3]",
+          "page": 2,
+          "char_length": 18,
+          "text_excerpt": "AF patients\nn= 225"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 4]",
+          "page": 2,
+          "char_length": 23,
+          "text_excerpt": "Berberine started\nn= 48"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Introduction, Para 9]",
+          "page": 2,
+          "char_length": 24,
+          "text_excerpt": "Amiodarone started\nn= 48"
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 11]",
+          "page": 4,
+          "char_length": 22,
+          "text_excerpt": "improvement over time."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Results, Para 14]",
+          "page": 4,
+          "char_length": 20,
+          "text_excerpt": "3.4. Adverse Events."
+        },
+        {
+          "type": "MICRO_PARAGRAPH_FRAGMENT",
+          "severity": "LOW",
+          "anchor_id": "[Discussion, Para 8]",
+          "page": 5,
+          "char_length": 17,
+          "text_excerpt": "porary AL pop'\niz"
+        }
+      ],
+      "anomaly_counts": {
+        "cross_column_bleeds": 0,
+        "section_voids": 1,
+        "abstract_leakage": 0,
+        "mega_paragraphs": 0,
+        "micro_fragments": 7,
+        "table_footnote_pollution": 0,
+        "overflow_orphans": 0
+      },
+      "publisher_family": "Unknown",
+      "has_critical_failure": false,
+      "indexing_seconds": 16.77
+    }
+  ]
+}

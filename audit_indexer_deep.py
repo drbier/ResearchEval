@@ -190,9 +190,15 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
         # Invariant 1: Exclude intentional full-width tables, figures, flowcharts, callout boxes, and author disclosures
         if re.search(r'\b(?:Table|TABLE|Fig(?:ure)?|FIG(?:URE)?)\s*(?:\d+|[IVXLCDM]+)\b', a.text[:100]):
             continue
+        if re.search(r'\b(?:Table\s+\d+.*Cont|Cochrane\s+Library|Review\)\s+Copyright)\b', a.text[:100], re.IGNORECASE):
+            continue
         if re.search(r'\b(?:Flow\s+diagram|Trial\s+selection|Consort\s+diagram|PRISMA|Normalised\s+Enrichment\s+Score|MFI\s+of|confocal\s+microscopy)\b', a.text, re.IGNORECASE):
             continue
-        if re.search(r'(?:^|\b)(?:Abbreviations?|Footnotes?|Notes?)\s*:', a.text[:100], re.IGNORECASE):
+        if re.search(r'(?:^|\b)(?:Abbreviations?|Footnotes?|Notes?|Source|Data\s+source|Legend)\s*:', a.text[:100], re.IGNORECASE):
+            continue
+        if re.search(r'\b(?:Quartile\s+ranges?|Values\s+are\s+n\s+or\s+hazard\s+ratios|Multivariable\s+analysis|Cox\s+regression|proportional\s+hazards|GRADE\s+evidence)\b', a.text, re.IGNORECASE):
+            continue
+        if re.search(r'[\*\†\‡\§\¶\¢\£]\s*(?:p\s*[<>=]|HR|OR|RR|CI|Cancer\s+mortality|further\s+adjusted)', a.text, re.IGNORECASE):
             continue
         if re.search(r'\b(?:Key\s+Objective|Knowledge\s+Generated|Key\s+Points|Research\s+in\s+context|What\s+is\s+already\s+known|What\s+this\s+study\s+adds|Box\s*\d+|Characteristics\s+of\s+\d+|Can\s+a\s+model\s+combining)\b', a.text[:100], re.IGNORECASE):
             continue
@@ -207,10 +213,10 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
         if x0 < (w * 0.38) and x1 > (w * 0.62) and anchor_w > (w * 0.55):
             page_anchors = anchors_by_page.get(a.page_number, [])
             # Check for parallel columns in the same vertical zone (y0 - 50 to y1 + 50) or across the page
-            zone_left = [p for p in page_anchors if p.bbox[2] < (w * 0.50) and abs(p.bbox[1] - y0) < 150 and p.anchor_id != a.anchor_id]
-            zone_right = [p for p in page_anchors if p.bbox[0] > (w * 0.50) and abs(p.bbox[1] - y0) < 150 and p.anchor_id != a.anchor_id]
-            page_left = [p for p in page_anchors if p.bbox[2] < (w * 0.50) and p.anchor_id != a.anchor_id]
-            page_right = [p for p in page_anchors if p.bbox[0] > (w * 0.50) and p.anchor_id != a.anchor_id]
+            zone_left = [p for p in page_anchors if p.item_type in ("para", "paragraph") and p.bbox[2] < (w * 0.50) and abs(p.bbox[1] - y0) < 150 and p.anchor_id != a.anchor_id]
+            zone_right = [p for p in page_anchors if p.item_type in ("para", "paragraph") and p.bbox[0] > (w * 0.50) and abs(p.bbox[1] - y0) < 150 and p.anchor_id != a.anchor_id]
+            page_left = [p for p in page_anchors if p.item_type in ("para", "paragraph") and p.bbox[2] < (w * 0.50) and p.anchor_id != a.anchor_id]
+            page_right = [p for p in page_anchors if p.item_type in ("para", "paragraph") and p.bbox[0] > (w * 0.50) and p.anchor_id != a.anchor_id]
 
             # Invariant 1: Exclude Page 1 Top-Zone abstracts/headers from cross-column bleed check
             page_h = a.page_height or 792.0
@@ -219,6 +225,12 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
 
             # On Page 1, hybrid layouts require substantive parallel columns in the SAME vertical band to flag a bleed.
             if a.page_number == 1 and not (len(zone_left) >= 1 and len(zone_right) >= 1):
+                continue
+
+            # Invariant 1: Exclude Page 2 Top-Zone blocks beginning with terminal abstract keywords (e.g. "Conclusion:")
+            if a.page_number == 2 and y0 <= (page_h * 0.28) and (
+                a.section == "Abstract" or re.match(r'^(?:Conclusions?:|Interpretation:|Key\s+Points:|Relevance:)', a.text.strip(), re.IGNORECASE)
+            ):
                 continue
 
             # Trigger only if the page clearly exhibits parallel text columns
@@ -247,13 +259,38 @@ def audit_single_document(pdf_path: str) -> Dict[str, Any]:
 
     # 2A: Discussion void when Results is disproportionately large (the JCEM bug)
     if page_count >= 5 and res_count >= 15 and disc_count == 0:
-        file_record["anomaly_counts"]["section_voids"] += 1
-        file_record["violations"].append({
-            "type": "MISSING_DISCUSSION_SECTION",
-            "severity": "CRITICAL",
-            "details": f"Paper has {page_count} pages and {res_count} Results anchors, but Discussion has 0 anchors (Discussion trapped in Results)."
-        })
-        file_record["has_critical_failure"] = True
+        # Exempt non-standard document typologies (e.g., Clinical Guidelines, Reviews, Consensus Statements)
+        # or documents with alternative structural sections (Conclusions, Recommendations, Consensus Summary, Literature Review)
+        has_alternative_structure = False
+        concl_count = section_counts.get("Conclusions", 0)
+        if concl_count >= 2:
+            has_alternative_structure = True
+
+        alt_pattern = re.compile(
+            r'\b(?:Recommendations?|Clinical\s+Practice\s+Recommendations?|'
+            r'Consensus\s+(?:Summary|Statement|Recommendations?)|Expert\s+Consensus|'
+            r'Literature\s+Review|Evidence\s+Synthesis|Clinical\s+Considerations|'
+            r'Practice\s+Points|Expert\s+Opinion|Concluding\s+Remarks|'
+            r'Guideline(?:\s+Statement)?|Systematic\s+Review)\b',
+            re.IGNORECASE
+        )
+        if not has_alternative_structure:
+            if alt_pattern.search(pdf_path) or alt_pattern.search(indexed.all_anchors.get("[Doc_Header]", "")):
+                has_alternative_structure = True
+            else:
+                for a in indexed.anchor_metadata.values():
+                    if a.section == "Results" and alt_pattern.search(a.text[:100]):
+                        has_alternative_structure = True
+                        break
+
+        if not has_alternative_structure:
+            file_record["anomaly_counts"]["section_voids"] += 1
+            file_record["violations"].append({
+                "type": "MISSING_DISCUSSION_SECTION",
+                "severity": "CRITICAL",
+                "details": f"Paper has {page_count} pages and {res_count} Results anchors, but Discussion has 0 anchors (Discussion trapped in Results)."
+            })
+            file_record["has_critical_failure"] = True
 
     # 2B: Core Methods void in substantive papers
     if page_count >= 4 and meth_count == 0 and res_count >= 5:
@@ -402,6 +439,7 @@ def main():
     parser.add_argument("--papers_dir", default=DEFAULT_PAPERS_DIR, help="Path to papers directory")
     parser.add_argument("--max_papers", type=int, default=None, help="Limit total papers audited (default: all)")
     parser.add_argument("--include_scanned", action="store_true", default=False, help="Include OCR processing on scanned/outlined PDFs")
+    parser.add_argument("--only_scanned", action="store_true", default=False, help="Audit ONLY scanned/outlined PDFs with Tesseract OCR")
     parser.add_argument("--max_scanned", type=int, default=15, help="Maximum scanned papers to OCR (default: 15, 0 for all)")
     parser.add_argument("--resume", action="store_true", default=False, help="Resume from existing report, auditing only remaining papers")
     parser.add_argument("--output_json", default=DEFAULT_REPORT_JSON, help="Path for JSON audit report")
@@ -438,16 +476,20 @@ def main():
     print(f"Corpus Profile: {len(digital_pdfs)} Born-Digital PDFs | {len(scanned_pdfs)} Scanned/Outlined PDFs")
 
     # Assemble target queue
-    target_pdfs = list(digital_pdfs)
-    if args.include_scanned:
-        if args.max_scanned > 0:
-            target_pdfs.extend(scanned_pdfs[:args.max_scanned])
-            print(f"Including {min(len(scanned_pdfs), args.max_scanned)} scanned PDFs with Tesseract OCR.")
-        else:
-            target_pdfs.extend(scanned_pdfs)
-            print(f"Including ALL {len(scanned_pdfs)} scanned PDFs with Tesseract OCR.")
+    if args.only_scanned:
+        target_pdfs = scanned_pdfs[:args.max_scanned] if args.max_scanned > 0 else scanned_pdfs
+        print(f"Targeting ONLY {len(target_pdfs)} scanned/outlined PDFs with Tesseract OCR.")
     else:
-        print("Scanned PDFs skipped for fast initial pass (use --include_scanned to include).")
+        target_pdfs = list(digital_pdfs)
+        if args.include_scanned:
+            if args.max_scanned > 0:
+                target_pdfs.extend(scanned_pdfs[:args.max_scanned])
+                print(f"Including {min(len(scanned_pdfs), args.max_scanned)} scanned PDFs with Tesseract OCR.")
+            else:
+                target_pdfs.extend(scanned_pdfs)
+                print(f"Including ALL {len(scanned_pdfs)} scanned PDFs with Tesseract OCR.")
+        else:
+            print("Scanned PDFs skipped for fast initial pass (use --include_scanned to include).")
 
     if args.max_papers:
         target_pdfs = target_pdfs[:args.max_papers]

@@ -1,8 +1,17 @@
 import os
 import re
+import statistics
 import pymupdf
 from typing import List, Dict, Any, Tuple, Optional
 from pydantic import BaseModel
+
+MATH_OPERATORS = set("+-*/=<>≤≥±%~^≠≈#&|°")
+
+def compute_numeric_symbol_density(text: str) -> float:
+    if not text:
+        return 0.0
+    count = sum(1 for c in text if c.isdigit() or c in MATH_OPERATORS)
+    return count / max(1, len(text))
 
 class CoordinateAnchor(BaseModel):
     anchor_id: str
@@ -86,8 +95,10 @@ RUN_IN_DISCUSSION_REGEX = re.compile(
 
 DISCLOSURE_BANNER_REGEX = re.compile(
     r'\b(?:Authors?[\'’]?\s+Disclosures?|Disclosure\s+information\s+provided\s+by\s+authors|'
-    r'Conflicts?\s+of\s+interest\s+disclosures?|Financial\s+disclosure|'
-    r'Author\s+contributions?|Data\s+sharing\s+statement)\b',
+    r'Conflicts?\s+of\s+interest\s+disclosures?|Financial\s+[Dd]isclosures?|'
+    r'Author\s+contributions?|Data\s+sharing\s+statement|'
+    r'Role\s+of\s+the\s+(?:Sponsors?|Funders?)|Additional\s+Contributions?|'
+    r'Disclaimer|Funding/Support)\b',
     re.IGNORECASE
 )
 
@@ -122,7 +133,7 @@ def clean_ocr_text(text: str) -> str:
 def detect_section_header(line: str, current_section: Optional[str] = None, page_num: int = 1) -> Optional[str]:
     """Identify common medical manuscript section headers, supporting numbered prefixes and subsections."""
     clean_line = line.strip().strip(':').strip('.').strip('#').strip()
-    if not clean_line:
+    if not clean_line or clean_line[0].islower():
         return None
         
     # Check for run-in discussion header if line starts with commentary/limitation keywords
@@ -208,6 +219,8 @@ def detect_section_header(line: str, current_section: Optional[str] = None, page
         
     if upper in section_map:
         return section_map[upper]
+    if re.match(r'^(?:DI\s*ASION|D[I1L][SCU\s]{1,5}[SIO0N]{2,5})$', upper):
+        return 'Discussion'
     for key in section_map:
         if upper == key:
             return section_map[key]
@@ -217,6 +230,11 @@ def detect_section_header(line: str, current_section: Optional[str] = None, page
                 if re.match(r'^(?:APPENDIX|SUPPLEMENTARY(?:\s+(?:APPENDIX|MATERIAL))?)\s*(?:[0-9A-Z]+|TABLE|FIGURE)?$', upper):
                     return section_map[key]
                 continue
+            # Guard: do not match running prose clauses like "results and test combination regimens" or "methods used in this trial"
+            if key in ('RESULTS', 'METHODS', 'INTRODUCTION', 'DISCUSSION') and not upper.startswith('RESULTS AND DISCUSSION'):
+                remainder = upper[len(key):].strip(' :.-')
+                if re.match(r'^(?:AND|FROM|IN|OF|USED|SHOWED|WERE|FOR|WITH)\s+[A-Z0-9]+\s+[A-Z0-9]+', remainder):
+                    continue
             return section_map[key]
     return None
 
@@ -324,6 +342,29 @@ def is_non_prose_metadata_block(b: Tuple[float, float, float, float], page, text
     if block_h <= (0.016 * h) and len(clean_t) < 65 and re.search(r'doi|https?://|vol|issue|issn', clean_t, re.IGNORECASE):
         return True
 
+    # Condition B2: Recurring Wiley/Cochrane and Academic Running Headers at extreme upper bounds (y1 <= 0.10 * H or y0 <= 0.08 * H)
+    if y1 <= (0.10 * h) and (
+        re.search(r'Cochrane\s+(?:Library|Database\s+of\s+Systematic\s+Reviews)', clean_t, re.IGNORECASE)
+        or re.search(r'\b(?:JAMA(?:\s+Network(?:\s+Open)?)?|The\s+Lancet|BMJ(?:\s+Open)?|New\s+England\s+Journal|NEJM)\b', clean_t, re.IGNORECASE)
+        or re.search(r'\b(?:Nutrients|Cancers|Int\.?\s*J\.?\s*Mol\.?\s*Sci|Biomedicines|Cells|Diagnostics|Antioxidants)\s+\d{4},\s+\d+', clean_t, re.IGNORECASE)
+        or re.search(r'https?://(?:dx\.)?doi\.org/|\b\d+\s+of\s+\d+\b', clean_t, re.IGNORECASE)
+    ):
+        return True
+
+    # Condition B3: Browser print timestamps and web print URLs at extreme top margin (y0 <= 0.045 * H)
+    if y0 <= (0.045 * h) and (
+        re.match(r'^\d{1,2}/\d{1,2}/\d{2,4},\s+\d{1,2}:\d{2}\s+(?:AM|PM)', clean_t)
+        or re.search(r'https?://[a-z0-9\.\-]+/(?:pmc/articles|doi)/', clean_t, re.IGNORECASE)
+    ):
+        return True
+
+    # Condition F: Abbreviation Glossary Filter (multiple definition pairs: "KEY: Definition; KEY: ...")
+    abbr_defs = re.findall(r'\b[A-Z0-9]{2,}\s*[:=]\s*[^;]+(?:;|\n|$)', clean_t)
+    if len(abbr_defs) >= 3 or (len(abbr_defs) >= 2 and re.search(r'\b(?:Abbreviations?|Glossary|Acronyms?)\b', clean_t, re.IGNORECASE)):
+        return True
+    if re.search(r'\b[A-Z0-9]{2,}\s*:\s*[A-Z][a-z]+;\s*[A-Z0-9]{2,}\s*:\s*[A-Z]', clean_t):
+        return True
+
     # Condition A: Dynamic Sidebar Conjunction (GEOMETRY AND CONTENT) on Pages 1-2
     if page_num <= 2:
         is_sidebar_geometry = (x0 >= (0.56 * w)) and (block_w <= (0.35 * w))
@@ -339,8 +380,14 @@ def is_non_prose_metadata_block(b: Tuple[float, float, float, float], page, text
         if page_num == 1 and y0 >= (0.72 * h) and METADATA_CONTENT_REGEX.search(clean_t) and not is_structured_header_line(clean_t):
             return True
 
-    # Condition D: Creative Commons / Open Access license footers at bottom of page (y0 >= 0.85 * H)
-    if y0 >= (0.85 * h) and re.search(r'Creative\s+Commons|Attribution\s+License|creativecommons\.org|licenses/by|[©\u00a9]\s*The\s+Author', clean_t, re.IGNORECASE):
+    # Condition D: Creative Commons / Open Access / Recurring Wiley-Cochrane license & copyright footers (y0 >= 0.78 * H)
+    if y0 >= (0.78 * h) and (
+        re.search(r'Creative\s+Commons|Attribution\s+License|creativecommons\.org|licenses/by', clean_t, re.IGNORECASE)
+        or re.search(r'Copyright\s+(?:\([Cc]\)|\u00a9|\d{4})|(?:\([Cc]\)|\u00a9)\s*(?:\d{4}\s*)?(?:The\s+Authors?|John\s+Wiley|Wiley|Elsevier|Springer|BMJ|MDPI|Oxford|Lancet)', clean_t, re.IGNORECASE)
+        or re.search(r'\b(?:Published\s+by\s+John\s+Wiley|Wiley\s+Periodicals|All\s+rights\s+reserved|\(Review\)\s+Copyright)\b', clean_t, re.IGNORECASE)
+        or re.search(r'https?://(?:dx\.)?doi\.org/|Downloaded\s+from\s+[a-z0-9\.\-]+', clean_t, re.IGNORECASE)
+        or re.search(r'^[0-9\s\.\(\)\-\u2013/:]*doi:10\.\d{4,9}/[^\n]*$', clean_t, re.IGNORECASE)
+    ):
         return True
 
     # Condition E: Author disclosures and end-matter banners
@@ -418,6 +465,63 @@ def extract_raw_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[
                             })
                         continue
 
+            # Stage 1B: OCR Gutter Cleaving (split lines straddling the center gutter due to OCR artifacts or wide gutter gaps)
+            x0 = min(s["bbox"][0] for s in valid_spans)
+            x1 = max(s["bbox"][2] for s in valid_spans)
+            if x0 < 0.40 * w and x1 > 0.60 * w:
+                cleaved = False
+                for i in range(len(valid_spans)):
+                    mid_x = (valid_spans[i]["bbox"][0] + valid_spans[i]["bbox"][2]) / 2.0
+                    st = valid_spans[i]["text"].strip()
+                    if 0.42 * w <= mid_x <= 0.58 * w:
+                        # Case A: OCR delimiter glyph
+                        if re.match(r'^[_—–\|\-]+$', st) or st in ('I', 'l', ':', ';', '|'):
+                            left_s = valid_spans[:i]
+                            right_s = valid_spans[i+1:]
+                            if left_s and right_s:
+                                t_l = " ".join(s["text"].strip() for s in left_s)
+                                t_r = " ".join(s["text"].strip() for s in right_s)
+                                if len(t_l) >= 2 and len(t_r) >= 2:
+                                    raw_lines.append({
+                                        "text": t_l,
+                                        "bbox": [min(s["bbox"][0] for s in left_s), min(s["bbox"][1] for s in left_s), max(s["bbox"][2] for s in left_s), max(s["bbox"][3] for s in left_s)],
+                                        "spans": left_s
+                                    })
+                                    raw_lines.append({
+                                        "text": t_r,
+                                        "bbox": [min(s["bbox"][0] for s in right_s), min(s["bbox"][1] for s in right_s), max(s["bbox"][2] for s in right_s), max(s["bbox"][3] for s in right_s)],
+                                        "spans": right_s
+                                    })
+                                    cleaved = True
+                                    break
+                        # Case B: wide gutter gap between columns
+                        elif i < len(valid_spans) - 1:
+                            gap = valid_spans[i+1]["bbox"][0] - valid_spans[i]["bbox"][2]
+                            next_is_header = valid_spans[i+1]["text"].strip().upper() in (
+                                'COMMENT', 'COMMENTS', 'DISCUSSION', 'RESULTS', 'METHODS', 
+                                'INTRODUCTION', 'CONCLUSIONS', 'CONCLUSION'
+                            )
+                            if gap >= 10.0 or (next_is_header and gap >= 6.0):
+                                left_s = valid_spans[:i+1]
+                                right_s = valid_spans[i+1:]
+                                t_l = " ".join(s["text"].strip() for s in left_s)
+                                t_r = " ".join(s["text"].strip() for s in right_s)
+                                if len(t_l) >= 2 and len(t_r) >= 2:
+                                    raw_lines.append({
+                                        "text": t_l,
+                                        "bbox": [min(s["bbox"][0] for s in left_s), min(s["bbox"][1] for s in left_s), max(s["bbox"][2] for s in left_s), max(s["bbox"][3] for s in left_s)],
+                                        "spans": left_s
+                                    })
+                                    raw_lines.append({
+                                        "text": t_r,
+                                        "bbox": [min(s["bbox"][0] for s in right_s), min(s["bbox"][1] for s in right_s), max(s["bbox"][2] for s in right_s), max(s["bbox"][3] for s in right_s)],
+                                        "spans": right_s
+                                    })
+                                    cleaved = True
+                                    break
+                if cleaved:
+                    continue
+
             line_text = " ".join(s["text"].strip() for s in valid_spans)
             x0 = min(s["bbox"][0] for s in valid_spans)
             y0 = min(s["bbox"][1] for s in valid_spans)
@@ -440,11 +544,20 @@ TABLE_FOOTNOTE_REGEX = re.compile(
     r'(?:^|\b)(?:Abbreviations?|Footnotes?|Notes?|Source|Data\s+source|Legend)\s*:|'
     r'\b(?:Multivariable\s+analysis|Cox\s+regression|Asterisk|Boldface\s+indicates|hazard\s+models?|'
     r'relative\s+risk|odds\s+ratio|confidence\s+interval|comorbidity\s+index|primary\s+care\s+visits|'
-    r'standard\s+deviation|interquartile\s+range|values\s+are\s+means?|percentages?\s+may\s+not|'
-    r'proportional\s+hazards\s+estimate|GRADE\s+evidence|Risk\s+difference|'
+    r'standard\s+deviation|interquartile\s+range|'
+    r'values\s+are\s+(?:n|means?|percentages?|medians?|hazard\s+ratios?|numbers?)|'
+    r'hazard\s+ratios?\s*\((?:95%\s*)?confidence\s+intervals?\)|'
+    r'percentages?\s+may\s+not|proportional\s+hazards\s+estimate|'
+    r'GRADE\s+evidence|Risk\s+difference|'
     r'HIGH:\s*There\s+is\s+complete\s+confidence|'
     r'MODERATE:\s*There\s+is\s+moderate\s+confidence|'
-    r'LOW:\s*There\s+is\s+low\s+confidence)\b',
+    r'LOW:\s*There\s+is\s+low\s+confidence|'
+    r'(?:further\s+)?adjusted\s+(?:\([^\)]+\)\s+)?for\b|'
+    r'adjusted\s+for\s+(?:age|sex|gender|covariates|confounders|multivariable)|'
+    r'Models?\s+\d+:\s*(?:Adjusted|Unadjusted)|'
+    r'Per\s+\d+\s*(?:h|unit|sd|increment)\s+increment|'
+    r'(?:Quartile|Quintile|Tertile|Decile)\s+ranges?:|'
+    r'Quartile\s+\d+\s*:)\b',
     re.IGNORECASE
 )
 
@@ -456,25 +569,32 @@ ABBREVIATION_GLOSSARY_REGEX = re.compile(
 def is_footnote_or_table_banner(line_text: str, bbox: Any, height: float, width: float) -> bool:
     """
     Explicitly differentiates localized full-width table footnotes/banners from genuine full-width body paragraphs.
-    Table footnotes: localized in lower 40% (y > 0.60 * H) or immediate header banner (y < 0.15 * H),
-    or containing abbreviation glossaries, statistical models, footnote markers (*, †, ‡, §, ¶).
+    Table footnotes: localized in lower 65% (y > 0.35 * H) or immediate header banner (y < 0.15 * H),
+    or containing abbreviation glossaries, statistical models, footnote markers (*, †, ‡, §, ¶, ¢, £).
     Genuine full-width body paragraphs: running prose sentences without footnote markers.
     """
     t = line_text.strip()
     if not t:
         return False
     
+    # Guard: Substantive numbered subsection headers are body prose, never table footnotes
+    if re.match(r'^\d+\.\d+\.?\s+[A-Z]', t):
+        return False
+
     # 1. Direct content match for table footnotes / abbreviations
     if TABLE_FOOTNOTE_REGEX.search(t) or ABBREVIATION_GLOSSARY_REGEX.search(t):
         return True
         
     # 2. Footnote symbols with statistical or explanatory content
-    if re.match(r'^(?:[\*\†\‡\§\¶\#\+\d\-\u2022]\s*)+(?:p\s*[<>=]|HR|OR|RR|CI|Model|Adjusted|Values|Data|Asterisk|N\s*[=:])', t, re.IGNORECASE):
+    if re.match(r'^(?:[\*\†\‡\§\¶\¢\£\#\+\d\-\u2022]\s*)+(?:p\s*[<>=]|\b(?:HR|OR|RR|CI)\b|Model|Adjusted|Values|Data|Asterisk|N\s*[=:]|Quartile|Cancer\s+mortality)', t, re.IGNORECASE):
         return True
 
-    # 3. Geometric location + localized notation: bottom 35% of page with statistical symbols
+    # 3. Geometric location + localized notation: mid-page or bottom with statistical symbols
     y0 = bbox[1]
-    if y0 >= height * 0.65 and re.search(r'[\*\†\‡\§\¶]|CI|HR|OR|RR|p\s*[<>=]', t):
+    if y0 >= height * 0.35 and (
+        re.search(r'[\*\†\‡\§\¶\¢\£]|p\s*[<>=]|hazard\s+ratios?|confidence\s+intervals?|Quartile\s+ranges?|adjusted\s+for', t, re.IGNORECASE)
+        or re.search(r'\b(?:CI|HR|OR|RR)\b', t)
+    ):
         return True
         
     # 4. Running publisher watermarks/citations
@@ -536,7 +656,13 @@ def _calculate_column_split_for_lines(lines_to_check: List[Dict[str, Any]], widt
             right_count = sum(1 for l in lines_to_check if l["bbox"][0] > split_x)
             straddle_count = sum(1 for l in lines_to_check if l["bbox"][0] < split_x - 20 and l["bbox"][2] > split_x + 20)
             max_allowed_straddle = max(3, int(0.12 * (left_count + right_count)))
-            if left_count >= min_lines_per_col and right_count >= min_lines_per_col and straddle_count <= max_allowed_straddle:
+            wide_straddles = sum(
+                1 for l in lines_to_check 
+                if l["bbox"][0] < split_x - 30 and l["bbox"][2] > split_x + 30 
+                and (l["bbox"][2] - l["bbox"][0]) >= 0.45 * width 
+                and len(l.get("text", "").strip()) >= 20
+            )
+            if wide_straddles < 5 and left_count >= min_lines_per_col and right_count >= min_lines_per_col and straddle_count <= max_allowed_straddle:
                 return split_x, True
 
     # 2. Valley detector for pages with wide cross-column tables or minor OCR bleed
@@ -557,7 +683,13 @@ def _calculate_column_split_for_lines(lines_to_check: List[Dict[str, Any]], widt
             right_count = sum(1 for l in lines_to_check if l["bbox"][0] > best_x)
             straddle_count = sum(1 for l in lines_to_check if l["bbox"][0] < best_x - 20 and l["bbox"][2] > best_x + 20)
             max_allowed_straddle = max(3, int(0.12 * (left_count + right_count)))
-            if left_count >= min_lines_per_col and right_count >= min_lines_per_col and straddle_count <= max_allowed_straddle:
+            wide_straddles = sum(
+                1 for l in lines_to_check 
+                if l["bbox"][0] < best_x - 30 and l["bbox"][2] > best_x + 30 
+                and (l["bbox"][2] - l["bbox"][0]) >= 0.45 * width 
+                and len(l.get("text", "").strip()) >= 20
+            )
+            if wide_straddles < 5 and left_count >= min_lines_per_col and right_count >= min_lines_per_col and straddle_count <= max_allowed_straddle:
                 return float(best_x), True
             
     return width * 0.5, False
@@ -566,7 +698,7 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
     w = int(width)
     body_lines = [
         l for l in lines 
-        if l["bbox"][1] >= height * 0.15 and l["bbox"][3] <= height * 0.90 and len(l.get("text", "").strip()) >= 2
+        if l["bbox"][1] >= height * 0.06 and l["bbox"][3] <= height * 0.94 and len(l.get("text", "").strip()) >= 2
     ]
     if not body_lines:
         return width * 0.5, False
@@ -603,7 +735,14 @@ def detect_page_column_split(lines: List[Dict[str, Any]], width: float, height: 
             if len(upper_lines) >= 8:
                 u_split_x, u_two_col = _calculate_column_split_for_lines(upper_lines, width, min_lines_per_col=4)
                 if u_two_col:
-                    return u_split_x, True
+                    lower_wide_prose = sum(
+                        1 for l in analysis_lines 
+                        if l["bbox"][1] > height * y_top_cut 
+                        and (l["bbox"][2] - l["bbox"][0]) >= 0.45 * width 
+                        and len(l.get("text", "").strip()) >= 20
+                    )
+                    if lower_wide_prose < 3:
+                        return u_split_x, True
     return split_x, is_two_col
 
 def extract_clean_page_lines(page, textpage=None, page_num: int = 1) -> List[Dict[str, Any]]:
@@ -660,9 +799,8 @@ def extract_clean_page_lines(page, textpage=None, page_num: int = 1) -> List[Dic
         left_spans = [s for s in filtered_spans if s["bbox"][2] <= split_x]
         right_spans = [s for s in filtered_spans if s["bbox"][0] >= split_x]
         
-        # Gutter cleaving: only cleave across split_x if there is an unmistakable two-column gutter (>= 8pt)
-        # Genuine full-width body paragraphs with standard word spacing (< 8pt) are preserved in col=0
-        if left_spans and right_spans and (min(s["bbox"][0] for s in right_spans) - max(s["bbox"][2] for s in left_spans)) >= 8.0:
+        # Gutter cleaving: cleave across split_x when text spans exist on both sides of the column split
+        if left_spans and right_spans and (min(s["bbox"][0] for s in right_spans) - max(s["bbox"][2] for s in left_spans)) >= 2.0:
             t_left = " ".join(s["text"].strip() for s in left_spans if s["text"].strip())
             t_right = " ".join(s["text"].strip() for s in right_spans if s["text"].strip())
             if t_left:
@@ -716,12 +854,18 @@ def extract_clean_page_lines(page, textpage=None, page_num: int = 1) -> List[Dic
         curr_row = [col_subset[0]]
         for item in col_subset[1:]:
             h_gap = item["bbox"][0] - curr_row[-1]["bbox"][2]
-            if abs(item["bbox"][1] - curr_row[-1]["bbox"][1]) <= 3.5 and h_gap <= 6.0:
+            prev_h = curr_row[-1]["bbox"][3] - curr_row[-1]["bbox"][1]
+            item_h = item["bbox"][3] - item["bbox"][1]
+            # Standard prose fragments allow h_gap <= 6.0; header/title fragments with enlarged font (h >= 13.0) or short words allow h_gap <= 20.0
+            max_allowed_h_gap = 20.0 if (prev_h >= 13.0 or item_h >= 13.0 or len(curr_row[-1]["text"]) <= 3 or len(item["text"]) <= 5) else 6.0
+            if abs(item["bbox"][1] - curr_row[-1]["bbox"][1]) <= 3.5 and h_gap <= max_allowed_h_gap:
                 curr_row.append(item)
             else:
                 curr_row.sort(key=lambda r: r["bbox"][0])
                 r_text = clean_ocr_text(" ".join(r["text"] for r in curr_row))
                 r_text = re.sub(r'[\s\|\.\-]{3,}$', '', r_text).strip()
+                if re.match(r'^Di\s*asion$', r_text, re.IGNORECASE):
+                    r_text = "Discussion"
                 if r_text:
                     merged_lines.append({
                         "text": r_text,
@@ -738,6 +882,8 @@ def extract_clean_page_lines(page, textpage=None, page_num: int = 1) -> List[Dic
             curr_row.sort(key=lambda r: r["bbox"][0])
             r_text = clean_ocr_text(" ".join(r["text"] for r in curr_row))
             r_text = re.sub(r'[\s\|\.\-]{3,}$', '', r_text).strip()
+            if re.match(r'^Di\s*asion$', r_text, re.IGNORECASE):
+                r_text = "Discussion"
             if r_text:
                 merged_lines.append({
                     "text": r_text,
@@ -787,6 +933,8 @@ def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0, pa
         elif re.match(r'^\d+\.\d+(?:\.\d+)*\.?\s+[A-Z]', curr_text):
             is_break = True
         # 2. Substantial vertical leading gap with sentence-terminal punctuation
+        elif (vgap > max(7.5, 0.85 * median_h) or (l["bbox"][3] - l["bbox"][1] >= 1.35 * median_h and vgap > 5.0)) and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text):
+            is_break = True
         elif vgap > paragraph_gap_threshold and re.search(r'[\.\?!:]["\'\]\)]*$', prev_text):
             is_break = True
         elif vgap > (max_vgap * 1.5):
@@ -812,7 +960,25 @@ def cluster_column_lines(lines: List[Dict[str, Any]], max_vgap: float = 14.0, pa
         y0 = min(item["bbox"][1] for item in cl)
         x1 = max(item["bbox"][2] for item in cl)
         y1 = max(item["bbox"][3] for item in cl)
-        blocks.append((x0, y0, x1, y1, block_text, 0, 0))
+
+        # Compute font profile and vertical leading (vgap) for block
+        span_sizes = [float(s.get("size", 10.0)) for item in cl for s in item.get("spans", []) if s.get("text", "").strip()]
+        dom_font = float(statistics.median(span_sizes)) if span_sizes else 10.0
+
+        vgaps = []
+        if len(cl) > 1:
+            for idx in range(len(cl) - 1):
+                vg = abs(cl[idx+1]["bbox"][3] - cl[idx]["bbox"][3])
+                if vg > 0.5:
+                    vgaps.append(vg)
+        med_vgap = float(statistics.median(vgaps)) if vgaps else 0.0
+
+        metrics = {
+            "font_size": dom_font,
+            "vgap": med_vgap,
+            "line_count": len(cl)
+        }
+        blocks.append((x0, y0, x1, y1, block_text, 0, 0, metrics))
         
     return blocks
 
@@ -856,7 +1022,9 @@ def order_page_blocks(raw_blocks, page) -> List[Any]:
     clean_blocks = []
     for b in raw_blocks:
         t = b[4].strip()
-        if not t or is_junk_block(b, page, t):
+        if not t:
+            continue
+        if is_junk_block(b, page, t) and not is_non_prose_metadata_block(b, page, t, 1):
             continue
         clean_blocks.append((b, t))
         
@@ -939,6 +1107,26 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         
         blocks = order_page_blocks(raw_blocks, page)
 
+        # Determine dominant body font size of the page (for born-digital documents)
+        page_body_font = 10.0
+        if not is_scanned_pdf:
+            try:
+                page_dict = page.get_text("dict")
+                font_char_counts = {}
+                for b_dict in page_dict.get("blocks", []):
+                    if "lines" not in b_dict:
+                        continue
+                    for l_dict in b_dict["lines"]:
+                        for s_dict in l_dict.get("spans", []):
+                            sz = round(float(s_dict.get("size", 10.0)), 1)
+                            t_len = len(s_dict.get("text", "").strip())
+                            if t_len > 0:
+                                font_char_counts[sz] = font_char_counts.get(sz, 0) + t_len
+                if font_char_counts:
+                    page_body_font = max(font_char_counts.items(), key=lambda item: item[1])[0]
+            except Exception:
+                page_body_font = 10.0
+
         # Invariant 2: Abstract Boundary Enforcement
         # An abstract is strictly confined to Pages 1-2. If prose continues past Page 2
         # in a multi-page document without an explicit header, transition to Introduction.
@@ -948,6 +1136,10 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             active_table_anchor = None
 
         for b, block_text in blocks:
+            metrics = b[7] if len(b) > 7 and isinstance(b[7], dict) else {}
+            block_font_size = float(metrics.get("font_size", 10.0))
+            block_vgap = float(metrics.get("vgap", 0.0))
+            block_line_count = int(metrics.get("line_count", 1))
             lines = [l.strip() for l in block_text.split('\n') if l.strip()]
 
             # Check for run-in discussion headers (e.g. 'Strengths and Limitations Compared with...')
@@ -1049,14 +1241,46 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
             
             fig_match = None
             table_match = None
+            table_cont_match = None
             for l in lines[:3]:
                 if not fig_match:
                     fig_match = re.match(r'^(?:Fig(?:ure)?\.?|FIG(?:URE)?\.?)\s*(\d+[A-Za-z]?)', l.strip(), re.IGNORECASE)
                 if not table_match:
                     table_match = re.match(r'^(?:Table|TABLE)\s*(\d+[A-Za-z]?|[IVXLCDM]+)\b', l.strip())
+                if not table_cont_match:
+                    table_cont_match = re.match(r'^(?:Table|TABLE)\s*(\d+[A-Za-z]?|[IVXLCDM]+)\s*[\.\:\-\–—]?\s*(?:\(?\s*Cont(?:inued|\.)?\s*\)?|\bcontinued\b)\b', l.strip(), re.IGNORECASE)
 
-            table_title_match = re.search(r'\b(?:Characteristics\s+of\s+\d+|Baseline\s+characteristics|Demographic\s+and\s+clinical\s+characteristics|Patient\s+characteristics|Study\s+characteristics)\b', first_3_lines, re.IGNORECASE)
+            table_title_match = re.search(r'\b(?:Characteristics\s+of\s+\d+|Baseline\s+characteristics|Demographic\s+and\s+clinical\s+characteristics|Patient\s+characteristics|Study\s+characteristics|Characteristics\s+of\s+(?:included\s+)?studies|Summary\s+of\s+findings(?:\s+table)?)\b', first_3_lines, re.IGNORECASE)
             
+            # Table continuation detection:
+            # 1. Explicit continuation header (e.g. 'Table 2. Cont.')
+            # 2. Repeated table number on continuation page matching active_table_anchor
+            is_table_continuation = False
+            if table_cont_match:
+                c_num = table_cont_match.group(1)
+                cand_anchor = f"[{current_section}, Table {c_num}]"
+                if cand_anchor in indexed_doc.anchor_metadata or active_table_anchor == cand_anchor:
+                    active_table_anchor = cand_anchor
+                    active_table_page = page_num
+                    is_table_continuation = True
+            elif table_match and active_table_anchor and page_num > active_table_page:
+                num_str = table_match.group(1)
+                if active_table_anchor == f"[{current_section}, Table {num_str}]":
+                    active_table_page = page_num
+                    is_table_continuation = True
+
+            if is_table_continuation:
+                t_meta = indexed_doc.anchor_metadata.get(active_table_anchor)
+                if t_meta:
+                    t_meta.bbox[0] = min(t_meta.bbox[0], float(b[0]))
+                    t_meta.bbox[1] = min(t_meta.bbox[1], float(b[1]))
+                    t_meta.bbox[2] = max(t_meta.bbox[2], float(b[2]))
+                    t_meta.bbox[3] = max(t_meta.bbox[3], float(b[3]))
+                    indexed_doc.all_anchors[active_table_anchor] = (
+                        indexed_doc.all_anchors.get(active_table_anchor, "") + "\n" + block_text
+                    ).strip()
+                continue
+
             if fig_match and not is_narrative:
                 active_table_anchor = None
                 item_type = "fig"
@@ -1106,11 +1330,28 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                     if re.search(r'\bHR[†*‡§¶\s]+(?:HR[†*‡§¶\s]+)?95%\s*CI\b', t):
                         return True
                     # 5. Table rows with study author/year tags (e.g. 'Calais da Silva 2009', 'Crook 2012')
-                    if re.match(r'^[A-Z][a-zA-Z\s\.\-]+\d{4}\b', t):
+                    if re.match(r'^[A-Z][a-zA-Z\s\.\-]+\s*(?:et\s+al\.?\s*)?\(?\d{4}\)?', t) or re.match(r'^[A-Z][a-zA-Z\s\.\-]+\d{4}\b', t):
+                        return True
+                    # 6. GRADE evidence profiles, Risk of Bias judgment rows, or Certainty ratings
+                    if re.search(r'[⨁\u2a01]|(?:Downgraded\s+due\s+to|Certainty\s+of\s+evidence|Risk\s+of\s+bias|Quality\s+assessment)', t, re.IGNORECASE):
+                        return True
+                    if re.search(r'\b(?:Low|Moderate|High|Critical|Unclear)\s+(?:Low|Moderate|High|Critical|Unclear)\b', t):
+                        return True
+                    # 7. Continuation markers or repeated table column headers
+                    if re.search(r'\b(?:Table|TABLE)\s*\d+.*(?:Cont|continued)\b', t, re.IGNORECASE):
+                        return True
+                    if re.search(r'\b(?:Bias\s+Due\s+to|Overall\s+Judgment|Exposure\s+Assessment|Missing\s+Data|Selective\s+Reporting)\b', t, re.IGNORECASE):
+                        return True
+                    # 8. Numeric density & leading compression table indicators
+                    density = compute_numeric_symbol_density(t)
+                    if density >= 0.18:
+                        return True
+                    if not is_scanned_pdf and block_vgap > 0 and block_vgap <= (0.85 * block_font_size) and len(lines_in_block) >= 2:
                         return True
                     return False
 
                 if active_table_anchor and (page_num <= active_table_page + 1) and is_table_content_block(block_text):
+                    active_table_page = page_num
                     t_meta = indexed_doc.anchor_metadata.get(active_table_anchor)
                     if t_meta:
                         t_meta.bbox[0] = min(t_meta.bbox[0], float(b[0]))
@@ -1123,7 +1364,41 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                     continue
 
                 active_table_anchor = None
-                if current_section in ("References", "Bibliography"):
+
+                # Constraint 1: Numeric Density Filter
+                # Classify blocks with numeric/symbol density >= 18% AND a negative font differential (or tight leading) as 'table'
+                density = compute_numeric_symbol_density(block_text)
+                block_w = float(b[2] - b[0])
+                is_full_w = block_w >= (0.55 * float(page.rect.width))
+
+                is_dense_numeric_table = (
+                    density >= 0.18 and (
+                        block_font_size <= page_body_font - 0.5 
+                        or (block_vgap > 0 and block_vgap <= 11.0)
+                        or (block_vgap > 0 and block_vgap <= 0.95 * block_font_size)
+                        or len(lines) >= 3
+                    )
+                )
+
+                # Constraint 2: Leading Compression Filter (conditionally for born-digital documents)
+                # Classify full-width blocks with compressed vertical leading (vgap <= 0.85 * font_size) as 'table'
+                is_compressed_leading_table = (
+                    not is_scanned_pdf
+                    and is_full_w
+                    and len(lines) >= 2
+                    and block_vgap > 0
+                    and block_vgap <= (0.85 * block_font_size)
+                    and not is_structured_header_line(lines[0])
+                    and not re.match(r'^(?:Conclusions?:|Results?:|Methods?:|Background?:|Introduction:)', lines[0], re.IGNORECASE)
+                )
+
+                if is_dense_numeric_table or is_compressed_leading_table:
+                    item_type = "table"
+                    idx_num = 0
+                    anchor_id = f"[{current_section}, Table p{page_num}_{int(b[1])}]"
+                    active_table_anchor = anchor_id
+                    active_table_page = page_num
+                elif current_section in ("References", "Bibliography"):
                     item_type = "ref"
                     if current_section not in section_para_counters:
                         section_para_counters[current_section] = 0
