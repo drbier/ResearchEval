@@ -106,6 +106,12 @@ else
     sudo -u www-data pm2 save
 fi
 
+# Ensure deploy user has passwordless restart for future automatic deploy.bat updates
+if [ -f /etc/sudoers.d/deploy-pm2 ] && ! grep -q "restart fact" /etc/sudoers.d/deploy-pm2; then
+    echo "Configuring passwordless PM2 reload for deploy user..."
+    sed -i 's/$/\, \/usr\/bin\/pm2 restart fact --update-env/' /etc/sudoers.d/deploy-pm2
+fi
+
 echo "=== [6/6] Production Deployment Status ==="
 sudo -u www-data pm2 status fact
 
