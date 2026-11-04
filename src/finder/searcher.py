@@ -271,7 +271,8 @@ class PaperFinder:
         system_instruction: str,
         json_mode: bool = False,
         preferred_model: Optional[str] = None,
-        thinking_level: Optional[str] = None
+        thinking_level: Optional[str] = None,
+        timeout: int = 35
     ) -> Tuple[str, str]:
         """Invoke Gemini with automated GA fallback ladder, rate-limit backoff, and dynamic thinkingConfig."""
         if not self.api_key:
@@ -302,7 +303,7 @@ class PaperFinder:
 
             for attempt in range(3):
                 try:
-                    resp = requests.post(url, json=payload, timeout=15)
+                    resp = requests.post(url, json=payload, timeout=timeout)
                     if resp.status_code == 200:
                         data = resp.json()
                         candidates = data.get("candidates", [])
@@ -893,12 +894,12 @@ class PaperFinder:
         candidates: List[Dict[str, Any]],
         entities: Dict[str, Any],
         user_query: str,
-        eval_limit: int = 25
+        eval_limit: int = 15
     ) -> List[Dict[str, Any]]:
         """
         Verify candidates in a single high-efficiency batch call to prevent RPM throttling.
         Prioritizes foundational primary outcome trials over secondary biomarker sub-studies.
-        Falls back to individual verification if batch call fails.
+        Falls back to bounded parallel verification if batch call fails.
         """
         if not candidates:
             return []
@@ -975,7 +976,7 @@ class PaperFinder:
 
         try:
             thinking_level = self.determine_thinking_level(user_query, entities)
-            raw_json, _ = self._invoke_gemini(user_prompt, system_instruction, json_mode=True, thinking_level=thinking_level)
+            raw_json, _ = self._invoke_gemini(user_prompt, system_instruction, json_mode=True, thinking_level=thinking_level, timeout=40)
             evals = json.loads(raw_json)
             if not isinstance(evals, list):
                 if isinstance(evals, dict) and "evaluations" in evals:
@@ -1005,14 +1006,20 @@ class PaperFinder:
             if verified_papers:
                 return verified_papers
         except Exception as e:
-            print(f"[Finder:BatchVerify] Batch verification failed, falling back to individual verification: {e}")
+            print(f"[Finder:BatchVerify] Batch verification failed, falling back to parallel individual verification: {e}")
 
-        # Fallback to individual evaluation if batch fails
+        # Fallback to bounded parallel verification if batch fails
         verified_papers = []
-        for cand in prefiltered:
-            res = self.verify_and_score_candidate(cand, entities, user_query)
-            if res:
-                verified_papers.append(res)
+        fallback_candidates = prefiltered[:min(8, max_results)]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_cand = {executor.submit(self.verify_and_score_candidate, cand, entities, user_query): cand for cand in fallback_candidates}
+            for future in concurrent.futures.as_completed(future_to_cand):
+                try:
+                    res = future.result()
+                    if res:
+                        verified_papers.append(res)
+                except Exception as fe:
+                    print(f"[Finder:FallbackVerify] Candidate eval error: {fe}")
         return verified_papers
 
     def find_papers(self, query: str, max_results: int = 10, force_refresh: bool = False) -> Dict[str, Any]:
@@ -1050,7 +1057,7 @@ class PaperFinder:
         source_db = "PubMed"
         is_fallback = False
 
-        fetch_limit = max(50, max_results * 4)
+        fetch_limit = min(35, max(20, max_results * 2 + 5))
 
         # Step 2: Execute 4-Tier Programmatic Relaxation Ladder
         # --- TIER 1: Full Strict Query ---

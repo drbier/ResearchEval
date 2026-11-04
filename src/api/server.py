@@ -2374,6 +2374,21 @@ def index_page():
                             user_email: currentUser ? currentUser.email : 'unauthenticated'
                         })
                     });
+                    
+                    if (!resp.ok) {
+                        const errText = await resp.text();
+                        let msg = `Server returned HTTP ${resp.status}`;
+                        try {
+                            const errJson = JSON.parse(errText);
+                            if (errJson.detail) msg = errJson.detail;
+                            else if (errJson.message) msg = errJson.message;
+                        } catch (_) {
+                            if (resp.status === 504 || resp.status === 524) {
+                                msg = "Gateway Timeout: Literature search took longer than 60s. Please refine your query.";
+                            }
+                        }
+                        throw new Error(msg);
+                    }
                     const data = await resp.json();
 
                     window.ResearchAppState.finderResults = data.qualifying_papers || [];
@@ -2707,6 +2722,21 @@ def index_page():
                             user_email: currentUser ? currentUser.email : 'unauthenticated'
                         })
                     });
+                    
+                    if (!resp.ok) {
+                        const errText = await resp.text();
+                        let msg = `Server returned HTTP ${resp.status}`;
+                        try {
+                            const errJson = JSON.parse(errText);
+                            if (errJson.detail) msg = errJson.detail;
+                            else if (errJson.message) msg = errJson.message;
+                        } catch (_) {
+                            if (resp.status === 504 || resp.status === 524) {
+                                msg = "Gateway Timeout: Literature search took longer than 60s. Please refine your query.";
+                            }
+                        }
+                        throw new Error(msg);
+                    }
                     const data = await resp.json();
 
                     if (data.status === 'success') {
