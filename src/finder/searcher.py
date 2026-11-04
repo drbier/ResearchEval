@@ -1,13 +1,3 @@
-"""
-ResearchEval - Zero-Trust Paper Finder Module
-Implements precision medical literature retrieval with:
-1. 4-tier programmatic query relaxation ladder (NCBI Entrez -> Semantic Scholar fallback)
-2. Strict Binary Clinical Gate (Intervention AND Condition) with 50% baseline cutoff
-3. Zero-Trust URL integrity (no generated or hallucinated PMIDs/URLs)
-4. Strict null-handling for missing abstracts
-5. Timeout and retry backoff against HTTP 429 / 503 rate limits
-"""
-
 import os
 import sys
 import re
@@ -19,7 +9,7 @@ import concurrent.futures
 import sqlite3
 import hashlib
 from contextlib import contextmanager
-from typing import Dict, List, Optional, Tuple, Any, Generator
+from typing import Dict, List, Optional, Tuple, Any, Generator, Set
 import requests
 import xml.etree.ElementTree as ET
 
@@ -34,14 +24,56 @@ if hasattr(sys.stdout, 'reconfigure'):
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
+# Cache Logic Version - incrementing forces fresh evaluation across heuristic updates
+CACHE_LOGIC_VERSION = "v2.2"
+
+# Model Hierarchy (Verified Active GA Endpoints)
+# Primary: gemini-3.8-flash (Active stable generation model, released Sep 2, 2026, no retirement date)
+# Fallback 1: gemini-3.5-flash-lite (Active stable generation model, released Jul 21, 2026, no retirement date)
+# Fallback 2: gemini-3-flash-preview (Active preview fast resilience fallback)
+MODEL_DESIGNATION = "Gemini flash"
+MODEL_HIERARCHY = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3-flash-preview"
+]
+PRIMARY_MODEL = MODEL_HIERARCHY[0]
+FALLBACK_MODEL = MODEL_HIERARCHY[1]
+
+# Stopwords to filter out of clinical intervention terms
+SEARCH_STOPWORDS = {
+    "combo", "combination", "supplementation", "supplement", "supplements",
+    "therapy", "therapies", "treatment", "treatments", "trial", "trials",
+    "study", "studies", "reduced", "reduces", "reducing", "reduction",
+    "effect", "effects", "effective", "efficacy", "versus", "vs", "and", "or"
+}
+
+# Ambiguous short acronyms that collide with staging or statistical symbols
+# These are strictly prohibited as bare search terms to prevent false positives (e.g. 'T4' tumor staging)
+AMBIGUOUS_ACRONYMS = {
+    "t4", "t3", "hr", "er", "pr", "cr", "or", "rr", "ci", "sd", "se"
+}
+
+# Intermediate surrogate biomarker terms to deprioritize when searching for hard clinical endpoints
+# NOTE: 'thyroid' is permanently excluded so valid endocrine treatments are never penalized.
+SURROGATE_BIOMARKER_TERMS = [
+    "microrna", "telomere", "fibrosis", "fgf-23", "fibroblast growth factor",
+    "d-dimer", "copeptin", "sirt1", "glutathione", "osteopontin", "selectin",
+    "metabolic profile", "glycation", "renal function", "structural equation modelling",
+    "point of view", "mr-proadm", "igf-1", "insulin-like", "oxidative stress",
+    "redox status", "micro-rna", "fructosamine"
+]
+
 
 class SearchQueryCache:
     """
     SQLite Query Cache for F.A.C.T. Paper Finder.
     Enforces:
-    1. Normalization: extract, lowercase, and alphabetize query terms before SHA-256 hash.
-    2. Concurrency Safety: WAL mode (Write-Ahead Logging) and connection timeouts for multi-worker Uvicorn.
-    3. Cache-Bypass: force_refresh support.
+    1. Normalization: extract, lowercase, and alphabetize query terms with logic versioning.
+    2. Concurrency Safety: WAL mode (Write-Ahead Logging) and connection timeouts.
+    3. Degraded Result Suppression: never caches partial/degraded results or empty sets.
+    4. Cache-Bypass: force_refresh support.
+    5. TTL Cleanup: automated expiration pruning.
     """
     def __init__(self, db_path: str = "data/search_cache.db", default_ttl: int = 86400):
         self.db_path = db_path
@@ -79,14 +111,14 @@ class SearchQueryCache:
     @staticmethod
     def normalize_query(query: str) -> Tuple[str, str]:
         """
-        Constraint 3: Extract, lowercase, and alphabetize query terms
-        before applying the SHA-256 hash to ensure structurally equivalent queries
-        hit the same cache entry.
+        Extract, lowercase, and alphabetize query terms, prepending CACHE_LOGIC_VERSION
+        before applying the SHA-256 hash to invalidate stale heuristic formats.
         """
         words = re.findall(r'[a-z0-9]+', query.lower())
         sorted_words = sorted(words)
         normalized = " ".join(sorted_words)
-        query_hash = hashlib.sha256(normalized.encode('utf-8')).hexdigest()
+        versioned = f"{CACHE_LOGIC_VERSION}:{normalized}"
+        query_hash = hashlib.sha256(versioned.encode('utf-8')).hexdigest()
         return normalized, query_hash
 
     def get(self, query: str, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
@@ -119,12 +151,20 @@ class SearchQueryCache:
             return None
 
     def set(self, query: str, results: Dict[str, Any], ttl: Optional[int] = None):
-        """Store results with SHA-256 hash key."""
+        """Store results with SHA-256 hash key. Refuses to cache degraded or partial outputs."""
+        # Never cache degraded, partial, error, or empty result sets
+        if (
+            results.get("is_degraded")
+            or results.get("partial_results")
+            or results.get("status") in ("error", "timeout")
+            or results.get("qualifying_count", 0) == 0
+        ):
+            return
+
         normalized, query_hash = self.normalize_query(query)
         ttl_val = ttl or self.default_ttl
         now = time.time()
 
-        # Sanitize payload so from_cache metadata isn't stored inside raw cache
         save_data = {k: v for k, v in results.items() if k not in ("from_cache", "cached_at")}
         results_json = json.dumps(save_data)
 
@@ -145,55 +185,32 @@ class SearchQueryCache:
         except Exception as e:
             print(f"[SearchCache] Error writing cache: {e}")
 
-# Model Hierarchy (Verified Active GA Endpoints)
-# Primary: gemini-3.8-flash (Google's flagship flash model for clinical reasoning & entity extraction)
-# Fallback: gemini-3.5-flash-lite (Active low-latency high-throughput resilience fallback)
-# Extended: gemini-3-flash-preview (Active preview fast resilience fallback)
-MODEL_DESIGNATION = "Gemini flash"
-MODEL_HIERARCHY = [
-    "gemini-3.8-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3-flash-preview"
-]
-PRIMARY_MODEL = MODEL_HIERARCHY[0]
-FALLBACK_MODEL = MODEL_HIERARCHY[1]
-
-# Stopwords to filter out of clinical intervention terms
-SEARCH_STOPWORDS = {
-    "combo", "combination", "supplementation", "supplement", "supplements",
-    "therapy", "therapies", "treatment", "treatments", "trial", "trials",
-    "study", "studies", "reduced", "reduces", "reducing", "reduction",
-    "effect", "effects", "effective", "efficacy", "versus", "vs", "and", "or"
-}
-
-# Intermediate surrogate biomarker terms to deprioritize when searching for hard clinical endpoints
-SURROGATE_BIOMARKER_TERMS = [
-    "microrna", "telomere", "fibrosis", "fgf-23", "fibroblast growth factor",
-    "d-dimer", "copeptin", "sirt1", "glutathione", "osteopontin", "selectin",
-    "thyroid", "metabolic profile", "glycation", "renal function", "structural equation modelling",
-    "point of view", "mr-proadm", "igf-1", "insulin-like", "oxidative stress",
-    "redox status", "micro-rna", "fructosamine"
-]
+    def cleanup_expired(self):
+        """Prune expired rows from the cache database."""
+        try:
+            with self._get_connection() as conn:
+                now = time.time()
+                conn.execute("DELETE FROM search_cache WHERE (? - created_at) > ttl_seconds", (now,))
+                conn.commit()
+        except Exception as e:
+            print(f"[SearchCache] Error cleaning up expired cache: {e}")
 
 
 def resilient_request(
     url: str,
     method: str = "GET",
-    headers: Optional[Dict[str, str]] = None,
     params: Optional[Dict[str, Any]] = None,
     json_data: Optional[Dict[str, Any]] = None,
-    timeout: int = 15,
+    headers: Optional[Dict[str, str]] = None,
     max_retries: int = 3,
-    base_delay: float = 1.0
+    base_delay: float = 0.5,
+    timeout: int = 15
 ) -> requests.Response:
-    """Execute HTTP request with exponential backoff on HTTP 429 and 503 rate limits."""
+    """Network wrapper with exponential backoff and rate-limit handling."""
     req_headers = {
-        "User-Agent": "ResearchEval-Finder/2.0 (Medical Appraisal Workbench; mailto:clinical-research@antigravity.local)",
-        "User-Agent": "FACT-Finder/2.0 (Medical Appraisal Workbench; mailto:clinical-research@antigravity.local)",
-        "Accept": "application/json,application/xml,text/xml,*/*"
+        "User-Agent": "FACT-ResearchEval/2.2 (Clinical Evidence System; mailto:info@wonkproject.com)",
+        **(headers or {})
     }
-    if headers:
-        req_headers.update(headers)
 
     last_exc = None
     for attempt in range(max_retries):
@@ -203,22 +220,19 @@ def resilient_request(
             else:
                 resp = requests.get(url, headers=req_headers, params=params, timeout=timeout)
 
-            # Handle rate limiting (429) or temporary server unavailability (503)
-            if resp.status_code in (429, 503):
-                retry_after = resp.headers.get("Retry-After")
-                if retry_after and retry_after.isdigit():
-                    sleep_time = float(retry_after)
-                else:
-                    sleep_time = base_delay * (2 ** attempt) + random.uniform(0.1, 0.4)
-                print(f"[Finder:HTTP] Rate limit encountered ({resp.status_code}). Backing off for {sleep_time:.2f}s (Attempt {attempt+1}/{max_retries})...")
+            if resp.status_code == 200:
+                return resp
+            elif resp.status_code in (429, 500, 502, 503, 504):
+                sleep_time = base_delay * (2 ** attempt) + random.uniform(0.1, 0.4)
+                print(f"[Finder:HTTP] Status {resp.status_code} from {url}. Retrying in {sleep_time:.2f}s...")
                 time.sleep(sleep_time)
                 continue
-
-            return resp
+            else:
+                return resp
         except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
             last_exc = e
             sleep_time = base_delay * (2 ** attempt) + random.uniform(0.1, 0.4)
-            print(f"[Finder:HTTP] Network warning: {str(e)}. Retrying in {sleep_time:.2f}s (Attempt {attempt+1}/{max_retries})...")
+            print(f"[Finder:HTTP] Network warning: {str(e)}. Retrying in {sleep_time:.2f}s...")
             time.sleep(sleep_time)
 
     if last_exc:
@@ -228,8 +242,8 @@ def resilient_request(
 
 class PaperFinder:
     """
-    Precision-focused Research Paper Finder enforcing zero-trust URL invariants
-    and binary clinical gate qualification.
+    Precision-focused Research Paper Finder enforcing bidirectional entity expansion,
+    zero-trust URL invariants, deterministic pre-ranking, and binary clinical qualification.
     """
 
     NEGATION_TOKENS = [
@@ -244,14 +258,10 @@ class PaperFinder:
         self.s2_search_url = "https://api.semanticscholar.org/graph/v1/paper/search"
         self.model_designation = MODEL_DESIGNATION
         self.cache = SearchQueryCache(db_path=cache_db_path)
+        self.cache.cleanup_expired()
 
     def determine_thinking_level(self, query: str, entities: Optional[Dict[str, Any]] = None) -> str:
-        """
-        Constraint 1: Dynamic thinkingLevel heuristic.
-        - Escalate to 'medium' if query contains explicit medical negation/exclusion,
-          high syntactic complexity (> 120 chars), or complex multi-agent differential logic.
-        - Default to 'low' for standard keyword / associative retrieval.
-        """
+        """Dynamic thinkingLevel heuristic: escalates to 'medium' for complex or comparative queries."""
         q_lower = query.lower()
         if any(neg in q_lower for neg in self.NEGATION_TOKENS):
             return "medium"
@@ -259,10 +269,8 @@ class PaperFinder:
             return "medium"
         if any(comp in q_lower for comp in [" vs ", " vs. ", " versus ", " compared to ", " superiority "]):
             return "medium"
-        if entities:
-            int_agents = entities.get("intervention_agents", [])
-            if len(int_agents) > 2:
-                return "medium"
+        if entities and entities.get("is_combination"):
+            return "medium"
         return "low"
 
     def _invoke_gemini(
@@ -291,7 +299,7 @@ class PaperFinder:
                 "systemInstruction": {"parts": [{"text": system_instruction}]},
                 "generationConfig": {
                     "temperature": 0.1,
-                    "maxOutputTokens": 4096
+                    "maxOutputTokens": 8192
                 }
             }
             if thinking_level:
@@ -313,9 +321,8 @@ class PaperFinder:
                             return text, model
                     elif resp.status_code in (429, 503):
                         err_body = resp.text.lower()
-                        # If daily quota limit is hit, do not waste time retrying this model
                         if "quota" in err_body or "resource_exhausted" in err_body:
-                            print(f"[Finder:Gemini] Model {model} exceeded daily quota. Failing over to next model in hierarchy...")
+                            print(f"[Finder:Gemini] Model {model} exceeded daily quota. Failing over to next model...")
                             break
                         sleep_time = (2 ** attempt) + random.uniform(0.2, 0.6)
                         print(f"[Finder:Gemini] Model {model} received HTTP {resp.status_code}. Backing off {sleep_time:.2f}s...")
@@ -335,8 +342,9 @@ class PaperFinder:
     def extract_clinical_entities(self, query: str) -> Dict[str, Any]:
         """
         Extract clinical search entities (Intervention, Condition, Population, Geography).
-        Supports multi-agent combination therapies (e.g. CoQ10 AND Selenium),
-        filters generic stopwords, and identifies landmark study names / key authors.
+        Performs Bidirectional Entity Expansion: expands downward to specific chemical/brand synonyms
+        and upward to parent therapeutic classes (e.g. levothyroxine -> thyroid hormone, THRT)
+        and MeSH terms. Strictly filters out bare ambiguous abbreviations like 'T4'.
         """
         system_prompt = (
             "You are a medical literature search expert. Extract clinical search entities from the user's natural language query.\n"
@@ -346,24 +354,30 @@ class PaperFinder:
             '  "intervention_agents": [\n'
             '    {\n'
             '      "agent": "Primary name of distinct compound/drug/intervention",\n'
-            '      "synonyms": ["list", "of", "biochemical", "and", "medical", "synonyms"]\n'
+            '      "synonyms": ["list", "of", "specific", "chemical", "and", "brand", "synonyms"],\n'
+            '      "parent_classes": ["list", "of", "broader", "therapeutic", "umbrella", "terms", "and", "clinical", "classes"],\n'
+            '      "mesh_terms": ["list", "of", "authoritative", "MeSH", "headings"]\n'
             '    }\n'
             '  ],\n'
-            '  "known_study_names": ["list of recognized clinical trial names or acronyms if implied, e.g. KiSel-10, Q-SYMBIO"],\n'
-            '  "lead_investigators": ["list of key landmark investigators/authors if known for this specific intervention, e.g. Alehagen"],\n'
-            '  "condition": ["list", "of", "diseases", "outcomes", "or", "endpoints"],\n'
+            '  "known_study_names": ["list of recognized clinical trial names or acronyms, e.g. KiSel-10, Q-SYMBIO"],\n'
+            '  "lead_investigators": ["list of key landmark investigators/authors, e.g. Alehagen"],\n'
+            '  "condition": ["core primary disease or pathological condition, e.g. breast cancer, breast neoplasms"],\n'
+            '  "endpoints": ["clinical outcomes, prognostic metrics, or endpoints, e.g. progression, proliferation, survival, mortality, recurrence, resistance"],\n'
             '  "population": ["list", "of", "demographics", "or", "gender", "or", "patient", "groups"],\n'
             '  "geography": ["list", "of", "countries", "or", "regions"],\n'
             '  "study_design": ["list", "of", "study", "types"]\n'
             "}\n"
             "Rules:\n"
-            "- If the query asks for a combination of two or more distinct compounds (e.g. 'CoQ10 and selenium'), set is_combination to true and create a SEPARATE object in intervention_agents for EACH distinct compound.\n"
-            "- CRITICAL: DO NOT include generic meta-words like 'combo', 'combination', 'supplementation', 'supplement', 'therapy', 'trial', 'study', 'reduced' as agents or synonyms.\n"
-            "- Include common medical/biochemical synonyms (e.g. 'CoQ10' -> ['coenzyme Q10', 'CoQ10', 'ubiquinone']).\n"
-            "- If the query refers to a known landmark trial or publication (e.g. CoQ10 + selenium for cardiovascular mortality is the famous KiSel-10 trial by Alehagen), include the trial name in known_study_names and the lead investigator in lead_investigators.\n"
-            "- Expand geographic adjectives to both noun and demonym (e.g. 'Scandinavian' -> ['Sweden', 'Swedish', 'Denmark', 'Danish', 'Norway', 'Norwegian', 'Scandinavian']).\n"
+            "- Perform BIDIRECTIONAL EXPANSION for medications: expand downwards (brands, salts) AND upwards to the parent therapeutic class.\n"
+            "  * Example: for 'levothyroxine', synonyms: ['L-thyroxine', 'synthroid', 'levoxyl', 'thyroxine'], parent_classes: ['thyroid hormone', 'thyroid hormones', 'exogenous thyroid hormone', 'thyroid hormone replacement therapy', 'THRT'], mesh_terms: ['Thyroxine', 'Thyroid Hormones'].\n"
+            "- CRITICAL DECOUPLING OF CONDITION VS ENDPOINTS: Decouple the core disease/condition from clinical outcomes or biological endpoints.\n"
+            "  * 'condition': Core primary disease or pathological condition (e.g. ['breast cancer', 'breast neoplasms']). DO NOT attach outcome words to condition phrases.\n"
+            "  * 'endpoints': Specific clinical outcomes, prognostic metrics, or endpoints mentioned or implied (e.g. if query mentions 'progression', include ['progression', 'proliferation', 'survival', 'mortality', 'recurrence', 'resistance']). If no endpoints are mentioned or implied, leave [] empty.\n"
+            "- CRITICAL GUARDRAIL: DO NOT include bare ambiguous abbreviations like 'T4', 'T3', 'HR', 'PR', 'CR' in synonyms (they collide with cancer staging and statistical metrics).\n"
+            "- DO NOT include generic meta-words like 'combo', 'combination', 'supplementation', 'supplement', 'therapy', 'trial', 'study', 'reduced' as agents or synonyms.\n"
+            "- Expand geographic adjectives to both noun and demonym (e.g. 'Scandinavian' -> ['Sweden', 'Swedish', 'Denmark', 'Danish', 'Norway', 'Norwegian']).\n"
             "- If an entity category is not mentioned or implied, leave its array empty [].\n"
-            "- DO NOT output any narrative text, explanations, or markdown fences outside the JSON."
+            "- DO NOT output narrative text outside the JSON."
         )
 
         user_prompt = f"Extract clinical entities for search: \"{query.strip()}\""
@@ -376,42 +390,53 @@ class PaperFinder:
             clean_json = re.sub(r"^```(?:json)?|```$", "", raw_json.strip(), flags=re.MULTILINE).strip()
             entities = json.loads(clean_json)
 
-        # Parse intervention agents
+        # Parse intervention agents with parent classes and mesh terms
         raw_agents = entities.get("intervention_agents", [])
         parsed_agents = []
         flat_interventions = []
+        flat_parent_classes = []
 
         if isinstance(raw_agents, list):
             for item in raw_agents:
                 if isinstance(item, dict):
                     agent_name = str(item.get("agent", "")).strip()
                     synonyms = [str(s).strip() for s in item.get("synonyms", []) if str(s).strip()]
-                    agent_clean = agent_name if agent_name.lower() not in SEARCH_STOPWORDS else ""
-                    synonyms_clean = [s for s in synonyms if s.lower() not in SEARCH_STOPWORDS]
-                    if agent_clean or synonyms_clean:
+                    parent_classes = [str(p).strip() for p in item.get("parent_classes", []) if str(p).strip()]
+                    mesh_terms = [str(m).strip() for m in item.get("mesh_terms", []) if str(m).strip()]
+
+                    # Clean stopwords and ambiguous acronyms
+                    agent_clean = agent_name if (agent_name.lower() not in SEARCH_STOPWORDS and agent_name.lower() not in AMBIGUOUS_ACRONYMS) else ""
+                    synonyms_clean = [s for s in synonyms if s.lower() not in SEARCH_STOPWORDS and s.lower() not in AMBIGUOUS_ACRONYMS]
+                    parent_clean = [p for p in parent_classes if p.lower() not in SEARCH_STOPWORDS and p.lower() not in AMBIGUOUS_ACRONYMS]
+                    mesh_clean = [m for m in mesh_terms if m.lower() not in SEARCH_STOPWORDS and m.lower() not in AMBIGUOUS_ACRONYMS]
+
+                    if agent_clean or synonyms_clean or parent_clean:
                         parsed_agents.append({
-                            "agent": agent_clean or (synonyms_clean[0] if synonyms_clean else ""),
-                            "synonyms": synonyms_clean
+                            "agent": agent_clean or (synonyms_clean[0] if synonyms_clean else (parent_clean[0] if parent_clean else "")),
+                            "synonyms": synonyms_clean,
+                            "parent_classes": parent_clean,
+                            "mesh_terms": mesh_clean
                         })
                         if agent_clean:
                             flat_interventions.append(agent_clean)
                         flat_interventions.extend(synonyms_clean)
+                        flat_parent_classes.extend(parent_clean)
                 elif isinstance(item, str) and item.strip():
                     val = item.strip()
-                    if val.lower() not in SEARCH_STOPWORDS:
-                        parsed_agents.append({"agent": val, "synonyms": []})
+                    if val.lower() not in SEARCH_STOPWORDS and val.lower() not in AMBIGUOUS_ACRONYMS:
+                        parsed_agents.append({"agent": val, "synonyms": [], "parent_classes": [], "mesh_terms": []})
                         flat_interventions.append(val)
 
-        # Backward compatibility fallback if LLM returned old "intervention" key
+        # Backward compatibility fallback
         if not parsed_agents and entities.get("intervention"):
             for item in entities.get("intervention", []):
                 val = str(item).strip()
-                if val and val.lower() not in SEARCH_STOPWORDS:
+                if val and val.lower() not in SEARCH_STOPWORDS and val.lower() not in AMBIGUOUS_ACRONYMS:
                     flat_interventions.append(val)
             if flat_interventions:
-                parsed_agents.append({"agent": flat_interventions[0], "synonyms": flat_interventions[1:]})
+                parsed_agents.append({"agent": flat_interventions[0], "synonyms": flat_interventions[1:], "parent_classes": [], "mesh_terms": []})
 
-        # Deduplicate flat interventions preserving order
+        # Deduplicate
         seen = set()
         dedup_flat = []
         for term in flat_interventions:
@@ -420,38 +445,73 @@ class PaperFinder:
                 seen.add(low)
                 dedup_flat.append(term)
 
+        seen_pc = set()
+        dedup_parent = []
+        for term in flat_parent_classes:
+            low = term.lower()
+            if low not in seen_pc:
+                seen_pc.add(low)
+                dedup_parent.append(term)
+
+        raw_endpoints = entities.get("endpoints", [])
+        if isinstance(raw_endpoints, str):
+            raw_endpoints = [raw_endpoints]
+        endpoints_clean = [
+            str(t).strip() for t in raw_endpoints
+            if str(t).strip() and str(t).lower() not in SEARCH_STOPWORDS and str(t).lower() not in AMBIGUOUS_ACRONYMS
+        ]
+
         is_combination = bool(entities.get("is_combination", False)) or len(parsed_agents) > 1
 
         return {
             "is_combination": is_combination,
             "intervention_agents": parsed_agents,
             "intervention": dedup_flat,
+            "parent_classes": dedup_parent,
             "known_study_names": [str(t).strip() for t in entities.get("known_study_names", []) if str(t).strip()],
             "lead_investigators": [str(t).strip() for t in entities.get("lead_investigators", []) if str(t).strip()],
             "condition": [str(t).strip() for t in entities.get("condition", []) if str(t).strip() and str(t).lower() not in SEARCH_STOPWORDS],
+            "endpoints": endpoints_clean,
             "population": [str(t).strip() for t in entities.get("population", []) if str(t).strip()],
             "geography": [str(t).strip() for t in entities.get("geography", []) if str(t).strip()],
             "study_design": [str(t).strip() for t in entities.get("study_design", []) if str(t).strip()]
         }
 
-    def _format_term_group(self, terms: List[str], field_tag: str = "[tiab]") -> str:
+    def _format_term_group(
+        self,
+        terms: List[str],
+        field_tag: str = "[tw]",
+        mesh_terms: Optional[List[str]] = None
+    ) -> str:
         """Format a group of alternative synonyms with field tags and boolean OR."""
         cleaned = []
+        seen = set()
         for term in terms:
             t = term.strip().replace('"', '')
-            if not t or t.lower() in SEARCH_STOPWORDS:
+            if not t or t.lower() in SEARCH_STOPWORDS or t.lower() in AMBIGUOUS_ACRONYMS:
                 continue
-            cleaned.append(f'"{t}"{field_tag}')
+            if t.lower() not in seen:
+                seen.add(t.lower())
+                cleaned.append(f'"{t}"{field_tag}')
+
+        if mesh_terms:
+            for m in mesh_terms:
+                m_clean = m.strip().replace('"', '')
+                if m_clean and m_clean.lower() not in seen:
+                    seen.add(m_clean.lower())
+                    cleaned.append(f'"{m_clean}"[MeSH Terms]')
+
         if not cleaned:
             return ""
         if len(cleaned) == 1:
             return cleaned[0]
         return f"({' OR '.join(cleaned)})"
 
-    def _format_intervention_query(self, entities: Dict[str, Any]) -> str:
+    def _format_intervention_query(self, entities: Dict[str, Any], include_parent_class: bool = True, field_tag: str = "[tw]") -> str:
         """
         Format intervention query enforcing conjunction (AND) across distinct co-agents
         and disjunction (OR) across synonyms within each agent.
+        Includes parent classes and MeSH terms when include_parent_class is True.
         """
         agents = entities.get("intervention_agents", [])
         if agents and len(agents) > 0:
@@ -462,45 +522,63 @@ class PaperFinder:
                     terms.append(a["agent"])
                 if a.get("synonyms"):
                     terms.extend(a["synonyms"])
-                clause = self._format_term_group(terms)
+                if include_parent_class and a.get("parent_classes"):
+                    terms.extend(a["parent_classes"])
+
+                mesh = a.get("mesh_terms", []) if include_parent_class else []
+                clause = self._format_term_group(terms, field_tag=field_tag, mesh_terms=mesh)
                 if clause:
                     agent_clauses.append(clause)
             if agent_clauses:
-                # If combination, join distinct agents with AND; otherwise single clause
                 return " AND ".join(agent_clauses) if len(agent_clauses) > 1 else agent_clauses[0]
 
         # Fallback to flat intervention list
-        return self._format_term_group(entities.get("intervention", []))
+        flat_terms = list(entities.get("intervention", []))
+        if include_parent_class and entities.get("parent_classes"):
+            flat_terms.extend(entities.get("parent_classes", []))
+        return self._format_term_group(flat_terms, field_tag=field_tag)
 
-    def build_pubmed_query(self, entities: Dict[str, Any], tier: int) -> Optional[str]:
+    def build_pubmed_query(
+        self,
+        entities: Dict[str, Any],
+        tier: Any,
+        field_tag: str = "[tw]"
+    ) -> Optional[str]:
         """
-        Build programmatic Entrez query string adhering to the 4-tier relaxation ladder.
-        Invariant: Intervention and Condition are NEVER dropped.
-        For combination therapies, distinct agents are joined with AND.
+        Build programmatic Entrez query string adhering to the modernized ladder:
+        - Tier 1: Specific Drug terms + Condition + Endpoints + Geography + Population
+        - Tier 1b (Semantic Expansion): (Specific Drug OR Parent Classes OR MeSH) + Condition + Endpoints + Geo + Pop
+        - Tier 2 (Relax Geography): (Specific OR Parent Class) + Condition + Endpoints + Population
+        - Tier 3 (Core Clinical Only): (Specific OR Parent Class) + Condition (drops Endpoints, Geo, Pop)
+        - Tier 4: Handled via Semantic Scholar API
         """
-        int_group = self._format_intervention_query(entities)
-        cond_group = self._format_term_group(entities.get("condition", []))
+        tier_str = str(tier).lower().strip()
+        include_parent = tier_str in ("1b", "2", "3")
 
-        # Core clinical entities are mandatory
+        int_group = self._format_intervention_query(entities, include_parent_class=include_parent, field_tag=field_tag)
+        cond_group = self._format_term_group(entities.get("condition", []), field_tag=field_tag)
+        endpoints_group = self._format_term_group(entities.get("endpoints", []), field_tag=field_tag) if tier_str not in ("3", "3.0") else ""
+
         if not int_group and not cond_group:
             return None
         core_parts = [p for p in [int_group, cond_group] if p]
+        if endpoints_group and tier_str not in ("3", "3.0"):
+            core_parts.append(endpoints_group)
 
-        pop_group = self._format_term_group(entities.get("population", []))
-        geo_group = self._format_term_group(entities.get("geography", []))
+        pop_group = self._format_term_group(entities.get("population", []), field_tag=field_tag)
+        geo_group = self._format_term_group(entities.get("geography", []), field_tag=field_tag)
 
-        # Landmark boosts (e.g. KiSel-10 or Alehagen)
+        # Landmark study / investigator boosts
         landmark_parts = []
         for name in entities.get("known_study_names", []):
             if name.strip():
-                landmark_parts.append(f'"{name.strip()}"[tiab]')
+                landmark_parts.append(f'"{name.strip()}"[tw]')
         for auth in entities.get("lead_investigators", []):
             if auth.strip():
                 landmark_parts.append(f'"{auth.strip()}"[Author]')
         landmark_clause = f"({' OR '.join(landmark_parts)})" if landmark_parts else None
 
-        if tier == 1:
-            # Tier 1 (Strict): Intervention AND Condition AND Geography AND Population
+        if tier_str in ("1", "1.0"):
             parts = list(core_parts)
             if geo_group:
                 parts.append(geo_group)
@@ -511,8 +589,18 @@ class PaperFinder:
                 return f"({landmark_clause} OR ({base_t1}))"
             return base_t1
 
-        elif tier == 2:
-            # Tier 2 (Relax Geography): Intervention AND Condition AND Population
+        elif tier_str in ("1b", "1.5"):
+            parts = list(core_parts)
+            if geo_group:
+                parts.append(geo_group)
+            if pop_group:
+                parts.append(pop_group)
+            base_t1b = " AND ".join(parts)
+            if landmark_clause and cond_group:
+                return f"({landmark_clause} OR ({base_t1b}))"
+            return base_t1b
+
+        elif tier_str in ("2", "2.0"):
             parts = list(core_parts)
             if pop_group:
                 parts.append(pop_group)
@@ -521,152 +609,146 @@ class PaperFinder:
                 return f"({landmark_clause} OR ({base_t2}))"
             return base_t2
 
-        elif tier == 3:
-            # Tier 3 (Core Clinical Only): Intervention AND Condition
+        elif tier_str in ("3", "3.0"):
             base_t3 = " AND ".join(core_parts)
             if landmark_clause and cond_group:
                 return f"({landmark_clause} OR ({base_t3}))"
             return base_t3
 
-        # Tier 4 is handled via Semantic Scholar API
         return None
 
-        # Tier 4 is handled via Semantic Scholar API
-        return None
-
-    def search_ncbi_esearch(self, pubmed_query: str, retmax: int = 15) -> List[str]:
+    def search_ncbi_esearch(self, pubmed_query: str, retmax: int = 100, timeout: int = 15) -> List[str]:
         """Execute live NCBI Entrez ESearch query and retrieve authentic PMIDs."""
         params = {
             "db": "pubmed",
             "term": pubmed_query,
             "retmode": "json",
             "retmax": retmax,
-            "sort": "relevance"
+            "sort": "relevance",
+            "tool": "fact",
+            "email": "info@wonkproject.com"
         }
-        resp = resilient_request(self.ncbi_esearch_url, params=params, timeout=12)
+        resp = resilient_request(self.ncbi_esearch_url, params=params, timeout=timeout)
         if resp.status_code == 200:
             data = resp.json()
             id_list = data.get("esearchresult", {}).get("idlist", [])
             return [str(pid).strip() for pid in id_list if str(pid).strip()]
         return []
 
-    def fetch_pubmed_metadata(self, pmids: List[str]) -> List[Dict[str, Any]]:
+    def fetch_pubmed_metadata(self, pmids: List[str], timeout: int = 25) -> List[Dict[str, Any]]:
         """
-        Retrieve official XML metadata via NCBI EFetch for authentic PMIDs.
+        Retrieve official XML metadata via NCBI EFetch in chunks of 50.
         Extracts structured abstract sections, verbatim title, authors, year, and canonical URL.
         """
         if not pmids:
             return []
 
-        # Pacing to adhere to NCBI rate limits (<= 3 req/sec unauthenticated)
-        time.sleep(0.35)
-
-        params = {
-            "db": "pubmed",
-            "id": ",".join(pmids),
-            "retmode": "xml"
-        }
-        resp = resilient_request(self.ncbi_efetch_url, params=params, timeout=15)
-        if resp.status_code != 200:
-            return []
-
         candidates = []
-        try:
-            root = ET.fromstring(resp.content)
-            for article in root.findall(".//PubmedArticle"):
-                # 1. PMID
-                pmid_el = article.find(".//MedlineCitation/PMID")
-                pmid = pmid_el.text.strip() if pmid_el is not None and pmid_el.text else ""
-                if not pmid:
+        chunk_size = 50
+
+        for i in range(0, len(pmids), chunk_size):
+            chunk = pmids[i:i + chunk_size]
+            time.sleep(0.35)  # Respect NCBI 3 req/sec rate limit
+
+            params = {
+                "db": "pubmed",
+                "id": ",".join(chunk),
+                "retmode": "xml",
+                "tool": "fact",
+                "email": "info@wonkproject.com"
+            }
+            try:
+                resp = resilient_request(self.ncbi_efetch_url, method="POST", params=params, timeout=timeout)
+                if resp.status_code != 200:
                     continue
 
-                # 2. Verbatim Title
-                title_el = article.find(".//ArticleTitle")
-                title = "".join(title_el.itertext()).strip() if title_el is not None else f"PubMed Article {pmid}"
-
-                # 3. Publication Year
-                year = "Unknown"
-                year_el = article.find(".//JournalIssue/PubDate/Year")
-                if year_el is not None and year_el.text:
-                    year = year_el.text.strip()
-                else:
-                    medline_date = article.find(".//JournalIssue/PubDate/MedlineDate")
-                    if medline_date is not None and medline_date.text:
-                        match = re.search(r"\b(19\d\d|20\d\d)\b", medline_date.text)
-                        if match:
-                            year = match.group(1)
-
-                # 4. Authors
-                authors = []
-                for author in article.findall(".//AuthorList/Author"):
-                    last = author.find("LastName")
-                    init = author.find("Initials")
-                    if last is not None and last.text:
-                        name = last.text.strip()
-                        if init is not None and init.text:
-                            name += f" {init.text.strip()}"
-                        authors.append(name)
-
-                # 5. Structured Abstract Extraction
-                abstract_nodes = article.findall(".//Abstract/AbstractText")
-                abstract_sections = []
-                for node in abstract_nodes:
-                    label = node.attrib.get("Label") or node.attrib.get("NlmCategory")
-                    text = "".join(node.itertext()).strip()
-                    if not text:
+                root = ET.fromstring(resp.content)
+                for article in root.findall(".//PubmedArticle"):
+                    pmid_el = article.find(".//MedlineCitation/PMID")
+                    pmid = pmid_el.text.strip() if pmid_el is not None and pmid_el.text else ""
+                    if not pmid:
                         continue
-                    if label:
-                        abstract_sections.append(f"{label.upper()}: {text}")
+
+                    title_el = article.find(".//ArticleTitle")
+                    title = "".join(title_el.itertext()).strip() if title_el is not None else f"PubMed Article {pmid}"
+
+                    year = "Unknown"
+                    year_el = article.find(".//JournalIssue/PubDate/Year")
+                    if year_el is not None and year_el.text:
+                        year = year_el.text.strip()
                     else:
-                        abstract_sections.append(text)
+                        medline_date = article.find(".//JournalIssue/PubDate/MedlineDate")
+                        if medline_date is not None and medline_date.text:
+                            match = re.search(r"\b(19\d\d|20\d\d)\b", medline_date.text)
+                            if match:
+                                year = match.group(1)
 
-                abstract_text = "\n\n".join(abstract_sections) if abstract_sections else None
+                    authors = []
+                    for author in article.findall(".//AuthorList/Author"):
+                        last = author.find("LastName")
+                        init = author.find("Initials")
+                        if last is not None and last.text:
+                            name = last.text.strip()
+                            if init is not None and init.text:
+                                name += f" {init.text.strip()}"
+                            authors.append(name)
 
-                # 6. Journal
-                journal_el = article.find(".//Journal/Title") or article.find(".//Journal/ISOAbbreviation")
-                journal = journal_el.text.strip() if journal_el is not None and journal_el.text else "PubMed Indexed Journal"
+                    abstract_nodes = article.findall(".//Abstract/AbstractText")
+                    abstract_sections = []
+                    for node in abstract_nodes:
+                        label = node.attrib.get("Label") or node.attrib.get("NlmCategory")
+                        text = "".join(node.itertext()).strip()
+                        if not text:
+                            continue
+                        if label:
+                            abstract_sections.append(f"{label.upper()}: {text}")
+                        else:
+                            abstract_sections.append(text)
 
-                # 7. Identifier & Full-Text PMC Linkage (Article's own primary IDs)
-                pmcid = None
-                doi = None
-                for aid in article.findall(".//PubmedData/ArticleIdList/ArticleId"):
-                    id_type = aid.attrib.get("IdType")
-                    val = aid.text.strip() if aid.text else ""
-                    if not val:
-                        continue
-                    if id_type == "pmc":
-                        pmcid = val if val.upper().startswith("PMC") else f"PMC{val}"
-                    elif id_type == "doi" and not doi:
-                        doi = val
+                    abstract_text = "\n\n".join(abstract_sections) if abstract_sections else None
 
-                has_full_text = bool(pmcid)
-                pmc_url = f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/" if pmcid else None
+                    title_node = article.find(".//Journal/Title")
+                    iso_node = article.find(".//Journal/ISOAbbreviation")
+                    journal_el = title_node if title_node is not None else iso_node
+                    journal = journal_el.text.strip() if journal_el is not None and journal_el.text else "PubMed Indexed Journal"
 
-                candidates.append({
-                    "pmid": pmid,
-                    "title": title,
-                    "year": year,
-                    "authors": authors,
-                    "journal": journal,
-                    "abstract": abstract_text,
-                    "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
-                    "pmcid": pmcid,
-                    "doi": doi,
-                    "has_full_text": has_full_text,
-                    "pmc_url": pmc_url,
-                    "source": "PubMed",
-                    "is_fallback": False
-                })
-        except Exception as e:
-            print(f"[Finder:XML] Error parsing NCBI EFetch XML: {str(e)}")
+                    pmcid = None
+                    doi = None
+                    for aid in article.findall(".//PubmedData/ArticleIdList/ArticleId"):
+                        id_type = aid.attrib.get("IdType")
+                        val = aid.text.strip() if aid.text else ""
+                        if not val:
+                            continue
+                        if id_type == "pmc":
+                            pmcid = val if val.upper().startswith("PMC") else f"PMC{val}"
+                        elif id_type == "doi" and not doi:
+                            doi = val
+
+                    has_full_text = bool(pmcid)
+                    pmc_url = f"https://pmc.ncbi.nlm.nih.gov/articles/{pmcid}/" if pmcid else None
+
+                    candidates.append({
+                        "pmid": pmid,
+                        "title": title,
+                        "year": year,
+                        "authors": authors,
+                        "journal": journal,
+                        "abstract": abstract_text,
+                        "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+                        "pmcid": pmcid,
+                        "doi": doi,
+                        "has_full_text": has_full_text,
+                        "pmc_url": pmc_url,
+                        "source": "PubMed",
+                        "is_fallback": False
+                    })
+            except Exception as e:
+                print(f"[Finder:XML] Error parsing NCBI EFetch XML chunk: {str(e)}")
 
         return candidates
 
-    def search_semantic_scholar_fallback(self, entities: Dict[str, Any], retmax: int = 10) -> List[Dict[str, Any]]:
-        """
-        Tier 4 Fallback: Query Semantic Scholar API when PubMed yields zero candidates.
-        Enforces STRICT null-handling: any candidate lacking a structured abstract is immediately discarded.
-        """
+    def search_semantic_scholar_fallback(self, entities: Dict[str, Any], retmax: int = 15, timeout: int = 15) -> List[Dict[str, Any]]:
+        """Tier 4 Fallback: Query Semantic Scholar API when PubMed yields zero candidates."""
         int_agents = [a.get("agent", "") for a in entities.get("intervention_agents", []) if a.get("agent")]
         if not int_agents:
             int_agents = entities.get("intervention", [])[:2]
@@ -682,7 +764,7 @@ class PaperFinder:
         }
 
         try:
-            resp = resilient_request(self.s2_search_url, params=params, timeout=12)
+            resp = resilient_request(self.s2_search_url, params=params, timeout=timeout)
             if resp.status_code != 200:
                 return []
 
@@ -691,7 +773,6 @@ class PaperFinder:
             valid_candidates = []
 
             for p in raw_papers:
-                # STRICT NULL-HANDLING: Discard papers lacking abstracts
                 abstract = p.get("abstract")
                 if not abstract or not isinstance(abstract, str) or len(abstract.strip()) < 50:
                     continue
@@ -721,7 +802,7 @@ class PaperFinder:
                 elif p.get("url"):
                     verified_url = p.get("url")
                 else:
-                    continue  # Zero-Trust: If no canonical URL exists, do not guess
+                    continue
 
                 authors = [a.get("name", "") for a in p.get("authors", []) if a.get("name")]
                 venue = p.get("venue") or "Scholarly Publication"
@@ -758,39 +839,140 @@ class PaperFinder:
 
         if entities.get("is_combination") and entities.get("intervention_agents"):
             for agent_obj in entities["intervention_agents"]:
-                terms = [agent_obj.get("agent", "")] + agent_obj.get("synonyms", [])
-                clean_terms = [t.lower() for t in terms if t and t.lower() not in SEARCH_STOPWORDS]
+                terms = [agent_obj.get("agent", "")] + agent_obj.get("synonyms", []) + agent_obj.get("parent_classes", [])
+                clean_terms = [t.lower() for t in terms if t and t.lower() not in SEARCH_STOPWORDS and t.lower() not in AMBIGUOUS_ACRONYMS]
                 if clean_terms:
-                    # At least one synonym for this required agent must be mentioned in text
                     if not any(t in text for t in clean_terms):
                         return False
+            return True
 
         return True
 
-    def _score_clinical_priority(self, candidate: Dict[str, Any], entities: Dict[str, Any]) -> int:
+    def _score_clinical_priority(self, candidate: Dict[str, Any], entities: Dict[str, Any], query_str: str = "") -> int:
         """
-        Score clinical priority to elevate foundational RCTs and primary hard-endpoint trials
-        over exploratory surrogate biomarker sub-studies.
+        Score clinical priority to elevate foundational RCTs and primary hard-endpoint trials.
+        Dynamically exempts biomarker penalties if the biomarker is part of the query/entities.
         """
         title = (candidate.get("title") or "").lower()
+        abstract = (candidate.get("abstract") or "").lower()
         score = 0
         cond_terms = entities.get("condition", [])
+        endpoint_terms = entities.get("endpoints", [])
 
-        # Hard clinical endpoint explicitly featured in title
-        if any(c.lower() in title for c in cond_terms):
+        # Hard clinical endpoint explicitly featured in title or abstract
+        if any(c.lower() in title for c in cond_terms if len(c) > 3):
             score += 50
+        elif any(c.lower() in abstract for c in cond_terms if len(c) > 3):
+            score += 25
+
+        if endpoint_terms and any(e.lower() in title for e in endpoint_terms if len(e) > 3):
+            score += 25
+        elif endpoint_terms and any(e.lower() in abstract for e in endpoint_terms if len(e) > 3):
+            score += 15
+
         if any(w in title for w in ["mortality", "survival", "death", "deaths"]):
             score += 30
-        if any(w in title for w in ["follow-up", "follow up", "long-term", "long term"]):
+        if any(w in title for w in ["progression", "proliferat", "recurrence", "resistant", "resistance"]):
             score += 25
         if any(w in title for w in ["randomised", "randomized", "placebo-controlled", "trial", "clinical trial"]):
             score += 15
+        if any(w in title for w in ["cohort", "nationwide", "population-based", "prospective", "registry"]):
+            score += 15
 
-        # Demote secondary exploratory biomarker sub-studies whose main title subject is a surrogate
-        if any(b in title for b in SURROGATE_BIOMARKER_TERMS):
-            score -= 40
+        # Recency boost
+        try:
+            yr = int(candidate.get("year", 0))
+            if yr >= 2022:
+                score += 15
+            elif yr >= 2018:
+                score += 10
+            elif yr >= 2012:
+                score += 5
+        except (ValueError, TypeError):
+            pass
+
+        # Biomarker penalty: ONLY apply if the user query/entities do NOT involve this biomarker
+        query_and_entities_text = f"{query_str} {' '.join(entities.get('intervention', []))} {' '.join(entities.get('parent_classes', []))} {' '.join(cond_terms)} {' '.join(endpoint_terms)}".lower()
+        for b in SURROGATE_BIOMARKER_TERMS:
+            if b in query_and_entities_text:
+                continue
+            if b in title:
+                score -= 40
+                break
 
         return score
+
+    def _prerank_and_select_candidates(
+        self,
+        candidates: List[Dict[str, Any]],
+        entities: Dict[str, Any],
+        user_query: str,
+        total_limit: int = 20,
+        class_quota_ratio: float = 0.35
+    ) -> List[Dict[str, Any]]:
+        """
+        Pre-ranks candidates and reserves slots for class-only matches (e.g. 'thyroid hormone' / 'THRT')
+        so they are not crowded out by specific drug matches before batch LLM verification.
+        """
+        if not candidates:
+            return []
+
+        specific_terms = set()
+        for a in entities.get("intervention_agents", []):
+            if a.get("agent"):
+                specific_terms.add(a["agent"].lower())
+            for s in a.get("synonyms", []):
+                specific_terms.add(s.lower())
+        for t in entities.get("intervention", []):
+            specific_terms.add(t.lower())
+
+        class_terms = set()
+        for a in entities.get("intervention_agents", []):
+            for p in a.get("parent_classes", []):
+                class_terms.add(p.lower())
+        for p in entities.get("parent_classes", []):
+            class_terms.add(p.lower())
+
+        clean_spec = {t for t in specific_terms if t not in SEARCH_STOPWORDS and t not in AMBIGUOUS_ACRONYMS}
+        clean_class = {t for t in class_terms if t not in SEARCH_STOPWORDS and t not in AMBIGUOUS_ACRONYMS}
+
+        specific_cands = []
+        class_only_cands = []
+
+        for c in candidates:
+            abstract = c.get("abstract")
+            if not abstract or len(abstract.strip()) < 40:
+                continue
+            if not self._candidate_prefilter(c, entities):
+                continue
+
+            c["priority_score"] = self._score_clinical_priority(c, entities, user_query)
+            text = f"{c.get('title', '')} {abstract}".lower()
+
+            has_spec = any(t in text for t in clean_spec) if clean_spec else False
+            has_class = any(t in text for t in clean_class) if clean_class else False
+
+            c["is_class_only"] = has_class and not has_spec
+            if c["is_class_only"]:
+                class_only_cands.append(c)
+            else:
+                specific_cands.append(c)
+
+        specific_cands.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+        class_only_cands.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+
+        class_slots = int(total_limit * class_quota_ratio)
+        selected_class = class_only_cands[:class_slots]
+        remaining_slots = total_limit - len(selected_class)
+        selected_spec = specific_cands[:remaining_slots]
+
+        if len(selected_spec) < remaining_slots and len(class_only_cands) > class_slots:
+            extra_class = class_only_cands[class_slots: class_slots + (remaining_slots - len(selected_spec))]
+            selected_class.extend(extra_class)
+
+        combined = selected_spec + selected_class
+        combined.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+        return combined[:total_limit]
 
     def verify_and_score_candidate(
         self,
@@ -798,21 +980,11 @@ class PaperFinder:
         entities: Dict[str, Any],
         user_query: str
     ) -> Optional[Dict[str, Any]]:
-        """
-        Enforce the Strict Binary Clinical Gate:
-        1. Does the study evaluate target Intervention(s)?
-           - For combination queries, ALL required distinct agents MUST be evaluated in combination.
-           - Monotherapy studies evaluating only one agent are rejected with 0%.
-        2. Does the study evaluate target Condition/Endpoint?
-        If EITHER is false -> Match Score = 0% (Immediately Discarded).
-        If BOTH are true -> Base score 50% + secondary criteria weighting (up to 100%).
-        """
+        """Enforces the Strict Binary Clinical Gate for a single candidate."""
         abstract = candidate.get("abstract")
-        # Strict null handling: Discard immediately if no abstract text
         if not abstract or len(abstract.strip()) < 40:
             return None
 
-        # Zero-token deterministic pre-filter for combination co-interventions
         if not self._candidate_prefilter(candidate, entities):
             return None
 
@@ -825,17 +997,13 @@ class PaperFinder:
             "You are a precision clinical methodology verifier. Evaluate candidate studies against user criteria.\n"
             "MANDATORY CLINICAL DIRECTIVE:\n"
             "You MUST apply a strict BINARY CLINICAL GATE:\n"
-            "Question 1: Does this study explicitly evaluate the Target Intervention(s)? (true/false)\n"
-            "CRITICAL COMBINATION RULE: If the user query or target intervention specifies a COMBINATION of multiple distinct agents (e.g. CoQ10 AND selenium), ALL required agents must be evaluated in combination in the study. If the study only evaluates one agent alone as monotherapy (e.g. only CoQ10, or only selenium), Question 1 MUST BE FALSE and match_score MUST BE 0.\n"
-            "Question 2: Does this study explicitly evaluate the Target Condition or clinical outcome? (true/false)\n\n"
-            "If EITHER Question 1 OR Question 2 is false, the study FAILS the clinical gate.\n"
-            "The match_score MUST BE 0. Do NOT award points for matching demographic or geography if the medical compound or condition is mismatched.\n\n"
-            "If BOTH Question 1 AND Question 2 are true, the study passes the clinical gate:\n"
-            "- Baseline Qualified Score = 50%\n"
-            "- Secondary: Target Population / Gender / Cohort alignment: up to +20%\n"
-            "- Secondary: Target Geographic / Setting alignment: up to +20%\n"
-            "- Secondary: Clinical study design specificity (prospective trial/human cohort vs cell): up to +10%\n"
-            "Total Match Score = 50 to 100.\n\n"
+            "Question 1: Does this study explicitly evaluate the Target Intervention(s) or validated Parent Class? (true/false)\n"
+            "  * PARENT CLASS RULE: If the target intervention is a specific drug (e.g. levothyroxine) and the paper studies its broader validated therapeutic class (e.g. 'thyroid hormone replacement therapy', 'exogenous thyroid hormone', 'THRT'), Question 1 is TRUE.\n"
+            "  * COMBINATION RULE: If the user query specifies a combination of multiple distinct agents (e.g. CoQ10 AND selenium), ALL required agents must be evaluated in combination. Monotherapy fails.\n"
+            "Question 2: Does this study explicitly evaluate the Target Condition, clinical outcome, or overall malignancy cohort? (true/false)\n"
+            "  * COHORT RULE: If the paper is a multi-site subsequent primary cancer or nationwide cohort analyzing overall cancer risk/progression, Question 2 is TRUE.\n"
+            "If EITHER Question 1 OR Question 2 is false, match_score MUST BE 0.\n"
+            "If BOTH are true: Base score 50% + secondary alignment (up to 100%).\n"
             "Respond strictly in JSON matching this schema:\n"
             "{\n"
             '  "matches_intervention": bool,\n'
@@ -845,34 +1013,30 @@ class PaperFinder:
             '  "geography_match": bool,\n'
             '  "study_design_match": bool,\n'
             '  "match_score": int,\n'
-            '  "grounded_summary": "1-2 concise sentences summarizing the key benefits and findings based STRICTLY on the abstract text"\n'
+            '  "grounded_summary": "1-2 concise sentences summarizing findings based STRICTLY on the abstract"\n'
             "}"
         )
 
-        prompt = (
+        user_prompt = (
             f"USER QUERY: \"{user_query}\"\n"
             f"TARGET ENTITIES:\n"
             f"- Is Combination: {is_combo}\n"
             f"- Required Intervention Agents: {json.dumps(required_agents)}\n"
-            f"- Intervention Synonyms: {json.dumps(entities.get('intervention', []))}\n"
+            f"- Parent Classes: {json.dumps(entities.get('parent_classes', []))}\n"
             f"- Condition: {json.dumps(entities.get('condition', []))}\n"
-            f"- Population: {json.dumps(entities.get('population', []))}\n"
-            f"- Geography: {json.dumps(entities.get('geography', []))}\n\n"
-            f"CANDIDATE STUDY:\n"
-            f"Title: {candidate.get('title')}\n"
-            f"Year: {candidate.get('year')}\n"
-            f"Abstract:\n{abstract}"
+            f"- Endpoints: {json.dumps(entities.get('endpoints', []))}\n\n"
+            f"STUDY TITLE: {candidate.get('title')}\n"
+            f"STUDY ABSTRACT:\n{abstract}"
         )
 
         try:
             thinking_level = self.determine_thinking_level(user_query, entities)
-            raw_json, _ = self._invoke_gemini(prompt, system_instruction, json_mode=True, thinking_level=thinking_level)
+            raw_json, _ = self._invoke_gemini(user_prompt, system_instruction, json_mode=True, thinking_level=thinking_level, timeout=25)
             res = json.loads(raw_json)
 
             score = int(res.get("match_score", 0))
             gate_passed = bool(res.get("binary_gate_passed", False))
 
-            # Enforce 50% baseline qualification cutoff
             if not gate_passed or score < 50:
                 return None
 
@@ -883,41 +1047,21 @@ class PaperFinder:
             candidate["geography_match"] = bool(res.get("geography_match", False))
             candidate["study_design_match"] = bool(res.get("study_design_match", False))
             candidate["grounded_summary"] = (res.get("grounded_summary") or "").strip()
-
             return candidate
         except Exception as e:
-            print(f"[Finder:Verify] Verification error for '{candidate.get('title')[:40]}': {str(e)}")
+            print(f"[Finder:Verify] Single verify error: {e}")
             return None
 
-    def batch_verify_candidates(
+    def _verify_sub_batch(
         self,
-        candidates: List[Dict[str, Any]],
+        sub_batch: List[Dict[str, Any]],
         entities: Dict[str, Any],
         user_query: str,
-        eval_limit: int = 15
+        timeout: int = 30
     ) -> List[Dict[str, Any]]:
-        """
-        Verify candidates in a single high-efficiency batch call to prevent RPM throttling.
-        Prioritizes foundational primary outcome trials over secondary biomarker sub-studies.
-        Falls back to bounded parallel verification if batch call fails.
-        """
-        if not candidates:
+        """Verify a bounded sub-batch (up to 10 candidates) with strict JSON schema."""
+        if not sub_batch:
             return []
-
-        # 1. Deterministic zero-token pre-filter: discard papers missing required co-interventions
-        prefiltered = []
-        for c in candidates:
-            abstract = c.get("abstract")
-            if abstract and len(abstract.strip()) >= 40 and self._candidate_prefilter(c, entities):
-                c["priority_score"] = self._score_clinical_priority(c, entities)
-                prefiltered.append(c)
-
-        if not prefiltered:
-            return []
-
-        # 2. Sort prefiltered candidates by clinical priority so landmark & primary trials enter eval batch
-        prefiltered.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
-        eval_batch = prefiltered[:eval_limit]
 
         is_combo = bool(entities.get("is_combination", False))
         required_agents = [a.get("agent") for a in entities.get("intervention_agents", []) if a.get("agent")]
@@ -928,14 +1072,14 @@ class PaperFinder:
             "You are a precision clinical methodology verifier. Evaluate candidate studies against user criteria.\n"
             "MANDATORY CLINICAL DIRECTIVE:\n"
             "You MUST apply a strict BINARY CLINICAL GATE for EACH candidate study:\n"
-            "- matches_intervention: Does this study explicitly evaluate the Target Intervention(s)? (true/false)\n"
-            "  CRITICAL: If the query specifies a combination of multiple distinct agents (e.g. CoQ10 AND selenium), ALL required agents must be evaluated in combination. Monotherapy studies evaluate false.\n"
+            "- matches_intervention: Does this study explicitly evaluate the Target Intervention(s) or validated Parent Class? (true/false)\n"
+            "  * PARENT CLASS RULE: If the target intervention is a specific drug (e.g. levothyroxine) and the paper studies its validated therapeutic umbrella class (e.g. 'thyroid hormone replacement therapy', 'exogenous thyroid hormone', 'THRT'), matches_intervention is TRUE.\n"
+            "  * COMBINATION RULE: If the query specifies multiple distinct agents (e.g. CoQ10 AND selenium), ALL must be evaluated in combination. Monotherapy fails.\n"
             "- matches_condition: Does this study evaluate the Target Condition or clinical outcome? (true/false)\n"
+            "  * COHORT RULE: If the paper is a multi-site subsequent primary cancer or nationwide cohort analyzing overall cancer risk/progression, matches_condition is TRUE.\n"
             "- binary_gate_passed: true ONLY if both matches_intervention AND matches_condition are true. Otherwise false.\n"
             "- match_score: 0 if binary_gate_passed is false; 50-100 if true.\n"
-            "  EVIDENCE HIERARCHY DIRECTIVE:\n"
-            "  * Assign highest scores (95-100) to PRIMARY CLINICAL ENDPOINT trials, foundational RCTs, and long-term hard-endpoint survival follow-ups directly measuring the target clinical condition (e.g. mortality / survival).\n"
-            "  * Assign lower scores (65-80) to secondary exploratory biomarker sub-analyses (e.g. studies focusing primarily on intermediate surrogates like microRNA, telomeres, FGF-23, copeptin, or oxidative stress).\n"
+            "  * Assign highest scores (90-100) to foundational trials, survival endpoints, and direct clinical interactions.\n"
             "- grounded_summary: 1-2 concise sentences summarizing findings based strictly on the abstract.\n\n"
             "Respond strictly with a JSON array of evaluation objects matching this schema:\n"
             "[\n"
@@ -954,7 +1098,7 @@ class PaperFinder:
         )
 
         prompt_candidates = []
-        for i, c in enumerate(eval_batch):
+        for i, c in enumerate(sub_batch):
             prompt_candidates.append({
                 "candidate_index": i,
                 "title": c.get("title"),
@@ -967,16 +1111,16 @@ class PaperFinder:
             f"TARGET ENTITIES:\n"
             f"- Is Combination: {is_combo}\n"
             f"- Required Intervention Agents: {json.dumps(required_agents)}\n"
+            f"- Parent Classes: {json.dumps(entities.get('parent_classes', []))}\n"
             f"- Condition: {json.dumps(entities.get('condition', []))}\n"
-            f"- Population: {json.dumps(entities.get('population', []))}\n"
-            f"- Geography: {json.dumps(entities.get('geography', []))}\n\n"
+            f"- Endpoints: {json.dumps(entities.get('endpoints', []))}\n\n"
             f"CANDIDATES TO EVALUATE:\n"
             f"{json.dumps(prompt_candidates)}"
         )
 
         try:
             thinking_level = self.determine_thinking_level(user_query, entities)
-            raw_json, _ = self._invoke_gemini(user_prompt, system_instruction, json_mode=True, thinking_level=thinking_level, timeout=40)
+            raw_json, _ = self._invoke_gemini(user_prompt, system_instruction, json_mode=True, thinking_level=thinking_level, timeout=timeout)
             evals = json.loads(raw_json)
             if not isinstance(evals, list):
                 if isinstance(evals, dict) and "evaluations" in evals:
@@ -985,9 +1129,9 @@ class PaperFinder:
                     evals = []
 
             eval_map = {e.get("candidate_index"): e for e in evals if isinstance(e, dict)}
-            verified_papers = []
+            verified = []
 
-            for i, cand in enumerate(eval_batch):
+            for i, cand in enumerate(sub_batch):
                 ev = eval_map.get(i)
                 if not ev:
                     continue
@@ -1001,33 +1145,83 @@ class PaperFinder:
                     cand["geography_match"] = bool(ev.get("geography_match", False))
                     cand["study_design_match"] = bool(ev.get("study_design_match", False))
                     cand["grounded_summary"] = (ev.get("grounded_summary") or "").strip()
-                    verified_papers.append(cand)
-
-            if verified_papers:
-                return verified_papers
+                    verified.append(cand)
+            return verified
         except Exception as e:
-            print(f"[Finder:BatchVerify] Batch verification failed, falling back to parallel individual verification: {e}")
+            print(f"[Finder:SubBatch] Sub-batch evaluation failed: {e}")
+            return []
 
-        # Fallback to bounded parallel verification if batch fails
+    def batch_verify_candidates(
+        self,
+        candidates: List[Dict[str, Any]],
+        entities: Dict[str, Any],
+        user_query: str,
+        total_eval_limit: int = 20,
+        sub_batch_size: int = 10,
+        remaining_budget: float = 40.0
+    ) -> List[Dict[str, Any]]:
+        """
+        Verify candidates using deterministic pre-ranking (with reserved class slots)
+        and concurrent parallel sub-batches (2x10) to mitigate token truncation and latency.
+        """
+        if not candidates:
+            return []
+
+        eval_batch = self._prerank_and_select_candidates(
+            candidates,
+            entities,
+            user_query,
+            total_limit=total_eval_limit,
+            class_quota_ratio=0.35
+        )
+
+        if not eval_batch:
+            return []
+
+        batches = [eval_batch[i:i + sub_batch_size] for i in range(0, len(eval_batch), sub_batch_size)]
+        sub_timeout = min(30, max(12, int(remaining_budget * 0.7)))
+
         verified_papers = []
-        fallback_candidates = prefiltered[:min(8, max_results)]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            future_to_cand = {executor.submit(self.verify_and_score_candidate, cand, entities, user_query): cand for cand in fallback_candidates}
-            for future in concurrent.futures.as_completed(future_to_cand):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(2, len(batches))) as executor:
+            future_to_batch = {
+                executor.submit(self._verify_sub_batch, b, entities, user_query, sub_timeout): b
+                for b in batches
+            }
+            for fut in concurrent.futures.as_completed(future_to_batch):
                 try:
-                    res = future.result()
-                    if res:
-                        verified_papers.append(res)
-                except Exception as fe:
-                    print(f"[Finder:FallbackVerify] Candidate eval error: {fe}")
+                    res = fut.result()
+                    verified_papers.extend(res)
+                except Exception as e:
+                    print(f"[Finder:ParallelBatch] Batch future error: {e}")
+
+        # If parallel batch failed completely, fallback to bounded parallel single evaluation
+        if not verified_papers and eval_batch and remaining_budget > 10.0:
+            print("[Finder:BatchVerify] Batch verification returned empty; falling back to top candidates...")
+            fallback_cands = eval_batch[:min(6, len(eval_batch))]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                futures = [executor.submit(self.verify_and_score_candidate, c, entities, user_query) for c in fallback_cands]
+                for f in concurrent.futures.as_completed(futures):
+                    try:
+                        res = f.result()
+                        if res:
+                            verified_papers.append(res)
+                    except Exception as fe:
+                        print(f"[Finder:SingleVerify] Fallback candidate error: {fe}")
+
         return verified_papers
 
     def find_papers(self, query: str, max_results: int = 10, force_refresh: bool = False) -> Dict[str, Any]:
         """
-        Execute the 4-tier programmatic relaxation search workflow and return verified papers.
-        Supports SQLite query caching with force_refresh bypass.
-        Output format strictly adheres to the Zero-Trust URL Rule.
+        Execute the modernized relaxation ladder with parent-class expansion, strict time-budgeting (70s),
+        PMID pool merging across tiers, deterministic pre-ranking, and degraded-state handling.
         """
+        start_time = time.time()
+        TOTAL_TIME_BUDGET = 70.0  # seconds
+        CASCADE_VERIFIED_THRESHOLD = 5
+
+        def remaining_budget() -> float:
+            return max(3.0, TOTAL_TIME_BUDGET - (time.time() - start_time))
+
         query_clean = query.strip()
         if not query_clean:
             return {
@@ -1037,7 +1231,7 @@ class PaperFinder:
                 "formatted_output": "Search Failed: Empty query."
             }
 
-        # Step 0: SQLite Query Cache Check (Bypassed if force_refresh=True)
+        # Step 0: Cache Check
         cached = self.cache.get(query_clean, force_refresh=force_refresh)
         if cached:
             cached_copy = dict(cached)
@@ -1047,98 +1241,152 @@ class PaperFinder:
             cached_copy["from_cache"] = True
             return cached_copy
 
-        # Step 1: Entity Extraction via Gemini Flash
-        entities = self.extract_clinical_entities(query_clean)
+        # Step 1: Entity Extraction with Bidirectional Expansion
+        try:
+            entities = self.extract_clinical_entities(query_clean)
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Clinical entity extraction failed: {str(e)}",
+                "qualifying_papers": [],
+                "formatted_output": "Search Failed: Entity extraction error."
+            }
+
         has_geo = bool(entities.get("geography"))
         has_pop = bool(entities.get("population"))
+        has_parent_class = bool(entities.get("parent_classes"))
+        has_endpoints = bool(entities.get("endpoints"))
 
-        tier_used = 1
-        raw_candidates = []
+        tier_used_label = "Tier 1 (Strict Specific)"
         source_db = "PubMed"
         is_fallback = False
+        is_degraded = False
 
-        fetch_limit = min(35, max(20, max_results * 2 + 5))
+        # Cumulative verified papers map by PMID to prevent duplicate re-evaluations
+        verified_by_pmid: Dict[str, Dict[str, Any]] = {}
+        evaluated_pmids: Set[str] = set()
 
-        # Step 2: Execute 4-Tier Programmatic Relaxation Ladder
-        # --- TIER 1: Full Strict Query ---
-        t1_query = self.build_pubmed_query(entities, tier=1)
-        pmids = self.search_ncbi_esearch(t1_query, retmax=fetch_limit) if t1_query else []
+        # Step 2: Modernized Relaxation Ladder Execution
+        # --- TIER 1 & 1b: Primary Candidate Retrieval (Specific + Parent-Class Expansion) ---
+        pmids_to_fetch = []
+        t1_query = self.build_pubmed_query(entities, tier=1, field_tag="[tw]")
+        if t1_query and remaining_budget() > 20.0:
+            pmids_t1 = self.search_ncbi_esearch(t1_query, retmax=60, timeout=min(12, int(remaining_budget())))
+            for pid in pmids_t1:
+                if pid not in evaluated_pmids:
+                    evaluated_pmids.add(pid)
+                    pmids_to_fetch.append(pid)
 
-        if pmids:
-            tier_used = 1
-            raw_candidates = self.fetch_pubmed_metadata(pmids)
-        elif has_geo:
-            # --- TIER 2: Relax Geography ---
-            print("[Finder:Ladder] Tier 1 yielded 0 results. Cascading to Tier 2 (Relax Geography)...")
-            t2_query = self.build_pubmed_query(entities, tier=2)
-            pmids = self.search_ncbi_esearch(t2_query, retmax=fetch_limit) if t2_query else []
-            if pmids:
-                tier_used = 2
-                raw_candidates = self.fetch_pubmed_metadata(pmids)
+        # Include Tier 1b (Semantic Expansion) into candidate pool whenever parent classes exist
+        if has_parent_class and remaining_budget() > 20.0:
+            tier_used_label = "Tier 1b (Specific + Parent Classes)"
+            t1b_query = self.build_pubmed_query(entities, tier="1b", field_tag="[tw]")
+            if t1b_query:
+                pmids_1b = self.search_ncbi_esearch(t1b_query, retmax=100, timeout=min(15, int(remaining_budget())))
+                for pid in pmids_1b:
+                    if pid not in evaluated_pmids:
+                        evaluated_pmids.add(pid)
+                        pmids_to_fetch.append(pid)
 
-        if not raw_candidates and has_pop:
-            # --- TIER 3: Relax Population (Core Clinical Only) ---
-            print("[Finder:Ladder] Tier 2 yielded 0 results. Cascading to Tier 3 (Core Clinical Only)...")
-            t3_query = self.build_pubmed_query(entities, tier=3)
-            pmids = self.search_ncbi_esearch(t3_query, retmax=fetch_limit) if t3_query else []
-            if pmids:
-                tier_used = 3
-                raw_candidates = self.fetch_pubmed_metadata(pmids)
+        if pmids_to_fetch and remaining_budget() > 20.0:
+            candidates_pool = self.fetch_pubmed_metadata(pmids_to_fetch, timeout=min(22, int(remaining_budget())))
+            verified = self.batch_verify_candidates(
+                candidates_pool,
+                entities,
+                query_clean,
+                total_eval_limit=20,
+                remaining_budget=remaining_budget()
+            )
+            for p in verified:
+                p["tier_used"] = "1b" if p.get("is_class_only") else 1
+                pmid = p.get("pmid", str(len(verified_by_pmid)))
+                verified_by_pmid[pmid] = p
 
-        if not raw_candidates:
-            # --- TIER 4: Semantic Scholar Fallback ---
-            print("[Finder:Ladder] PubMed search yielded 0 results. Cascading to Tier 4 (Semantic Scholar Fallback)...")
-            tier_used = 4
+        # --- TIER 2: Relax Geography ---
+        if len(verified_by_pmid) < CASCADE_VERIFIED_THRESHOLD and has_geo and remaining_budget() > 18.0:
+            print("[Finder:Ladder] Cascading to Tier 2 (Relax Geography)...")
+            tier_used_label = "Tier 2 (Relax Geography)"
+            t2_query = self.build_pubmed_query(entities, tier=2, field_tag="[tw]")
+            if t2_query:
+                pmids_2 = self.search_ncbi_esearch(t2_query, retmax=60, timeout=min(12, int(remaining_budget())))
+                new_pmids = [pid for pid in pmids_2 if pid not in evaluated_pmids]
+                if new_pmids:
+                    candidates_2 = self.fetch_pubmed_metadata(new_pmids, timeout=min(18, int(remaining_budget())))
+                    for c in candidates_2:
+                        evaluated_pmids.add(c.get("pmid"))
+                    verified_2 = self.batch_verify_candidates(candidates_2, entities, query_clean, total_eval_limit=15, remaining_budget=remaining_budget())
+                    for p in verified_2:
+                        p["tier_used"] = 2
+                        pmid = p.get("pmid", str(len(verified_by_pmid)))
+                        if pmid not in verified_by_pmid or p.get("match_score", 0) > verified_by_pmid[pmid].get("match_score", 0):
+                            verified_by_pmid[pmid] = p
+
+        # --- TIER 3: Relax Population / Endpoints (Core Clinical Only) ---
+        if len(verified_by_pmid) < CASCADE_VERIFIED_THRESHOLD and (has_pop or has_endpoints) and remaining_budget() > 16.0:
+            print("[Finder:Ladder] Cascading to Tier 3 (Core Clinical Only)...")
+            tier_used_label = "Tier 3 (Core Clinical Only)"
+            t3_query = self.build_pubmed_query(entities, tier=3, field_tag="[tw]")
+            if t3_query:
+                pmids_3 = self.search_ncbi_esearch(t3_query, retmax=60, timeout=min(12, int(remaining_budget())))
+                new_pmids = [pid for pid in pmids_3 if pid not in evaluated_pmids]
+                if new_pmids:
+                    candidates_3 = self.fetch_pubmed_metadata(new_pmids, timeout=min(18, int(remaining_budget())))
+                    for c in candidates_3:
+                        evaluated_pmids.add(c.get("pmid"))
+                    verified_3 = self.batch_verify_candidates(candidates_3, entities, query_clean, total_eval_limit=15, remaining_budget=remaining_budget())
+                    for p in verified_3:
+                        p["tier_used"] = 3
+                        pmid = p.get("pmid", str(len(verified_by_pmid)))
+                        if pmid not in verified_by_pmid or p.get("match_score", 0) > verified_by_pmid[pmid].get("match_score", 0):
+                            verified_by_pmid[pmid] = p
+
+        # --- TIER 4: Semantic Scholar Fallback (Only if PubMed yielded 0 verified papers) ---
+        if not verified_by_pmid and remaining_budget() > 14.0:
+            print("[Finder:Ladder] PubMed search yielded 0 verified results. Cascading to Tier 4 (Semantic Scholar Fallback)...")
+            tier_used_label = "Tier 4 (Semantic Scholar Fallback)"
             source_db = "Semantic Scholar Fallback"
             is_fallback = True
-            raw_candidates = self.search_semantic_scholar_fallback(entities, retmax=fetch_limit)
+            raw_s2 = self.search_semantic_scholar_fallback(entities, retmax=20, timeout=min(12, int(remaining_budget())))
+            if raw_s2:
+                verified_s2 = self.batch_verify_candidates(raw_s2, entities, query_clean, total_eval_limit=15, remaining_budget=remaining_budget())
+                for p in verified_s2:
+                    p["tier_used"] = 4
+                    p["is_fallback"] = True
+                    verified_by_pmid[p.get("pmid") or p.get("url")] = p
 
-        if not raw_candidates:
+        # Check if time budget triggered degraded state
+        if remaining_budget() <= 5.0 and len(verified_by_pmid) < CASCADE_VERIFIED_THRESHOLD:
+            is_degraded = True
+
+        all_verified = list(verified_by_pmid.values())
+
+        if not all_verified:
             return {
                 "status": "not_found",
                 "message": "Search Failed: No literature candidates matching clinical criteria located across PubMed and Semantic Scholar.",
                 "query": query_clean,
                 "entities": entities,
-                "tier_used": tier_used,
+                "tier_used": tier_used_label,
                 "source_database": source_db,
                 "is_fallback": is_fallback,
+                "is_degraded": is_degraded,
                 "qualifying_papers": [],
                 "formatted_output": "Search Failed"
             }
 
-        # Step 3: Enforce Binary Clinical Gate via High-Efficiency Batch Verification
-        verified_papers = self.batch_verify_candidates(raw_candidates, entities, query_clean, eval_limit=min(25, max_results * 2 + 5))
-        for p in verified_papers:
-            p["tier_used"] = tier_used
-            p["is_fallback"] = is_fallback
-
-        # Step 4: Rank by Match Score & Clinical Priority (Descending) & Clamp to Max Results
-        verified_papers.sort(
+        # Sort combined candidate pool by Match Score & Clinical Priority
+        all_verified.sort(
             key=lambda x: (
                 x.get("match_score", 0),
                 x.get("priority_score", 0)
             ),
             reverse=True
         )
-        final_papers = verified_papers[:max_results]
+        final_papers = all_verified[:max_results]
 
-        if not final_papers:
-            return {
-                "status": "not_found",
-                "message": "Search Failed: Candidates were retrieved but failed the binary clinical gate (Intervention/Condition mismatch).",
-                "query": query_clean,
-                "entities": entities,
-                "tier_used": tier_used,
-                "source_database": source_db,
-                "is_fallback": is_fallback,
-                "qualifying_papers": [],
-                "formatted_output": "Search Failed"
-            }
-
-        # Step 5: Construct Strict Output Layout (Exact Gem Protocol)
+        # Construct Strict Formatted Output
         formatted_blocks = []
         for p in final_papers:
-            # Prefer canonical PMC URL when free full text is indexed, otherwise PubMed URL
             source_url = p.get("pmc_url") if (p.get("has_full_text") and p.get("pmc_url")) else p.get("url")
             block = (
                 f"Title: {p.get('title')} Year: {p.get('year')}\n"
@@ -1148,16 +1396,17 @@ class PaperFinder:
             formatted_blocks.append(block)
 
         strict_formatted_output = "\n\n".join(formatted_blocks)
-
         thinking_level = self.determine_thinking_level(query_clean, entities)
+
         result = {
             "status": "success",
             "query": query_clean,
             "entities": entities,
-            "tier_used": tier_used,
+            "tier_used": tier_used_label,
             "source_database": source_db,
             "is_fallback": is_fallback,
-            "total_evaluated": len(raw_candidates),
+            "is_degraded": is_degraded,
+            "total_evaluated": len(evaluated_pmids),
             "qualifying_count": len(final_papers),
             "qualifying_papers": final_papers,
             "formatted_output": strict_formatted_output,
@@ -1167,7 +1416,8 @@ class PaperFinder:
             "from_cache": False
         }
 
-        # Store in SQLite Query Cache
-        self.cache.set(query_clean, result)
-        return result
+        # Store in SQLite Query Cache if not degraded and not partial
+        if not is_degraded:
+            self.cache.set(query_clean, result)
 
+        return result

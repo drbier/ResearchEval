@@ -27,22 +27,22 @@ class TestPaperFinder(unittest.TestCase):
 
         # Tier 1: Includes all components
         t1 = self.finder.build_pubmed_query(entities, tier=1)
-        self.assertIn('"CoQ10"[tiab]', t1)
-        self.assertIn('"heart attack"[tiab]', t1)
-        self.assertIn('"Sweden"[tiab]', t1)
-        self.assertIn('"women"[tiab]', t1)
+        self.assertIn('"CoQ10"[tw]', t1)
+        self.assertIn('"heart attack"[tw]', t1)
+        self.assertIn('"Sweden"[tw]', t1)
+        self.assertIn('"women"[tw]', t1)
 
         # Tier 2: Relaxes Geography (drops Sweden/Scandinavian)
         t2 = self.finder.build_pubmed_query(entities, tier=2)
-        self.assertIn('"CoQ10"[tiab]', t2)
-        self.assertIn('"heart attack"[tiab]', t2)
-        self.assertIn('"women"[tiab]', t2)
+        self.assertIn('"CoQ10"[tw]', t2)
+        self.assertIn('"heart attack"[tw]', t2)
+        self.assertIn('"women"[tw]', t2)
         self.assertNotIn("Sweden", t2)
 
         # Tier 3: Core Clinical Only (drops Population and Geography)
         t3 = self.finder.build_pubmed_query(entities, tier=3)
-        self.assertIn('"CoQ10"[tiab]', t3)
-        self.assertIn('"heart attack"[tiab]', t3)
+        self.assertIn('"CoQ10"[tw]', t3)
+        self.assertIn('"heart attack"[tw]', t3)
         self.assertNotIn("women", t3)
         self.assertNotIn("Sweden", t3)
 
@@ -131,13 +131,13 @@ class TestPaperFinder(unittest.TestCase):
 
         t3 = self.finder.build_pubmed_query(entities, tier=3)
         # Verify both agents are joined with AND
-        self.assertIn('"CoQ10"[tiab]', t3)
-        self.assertIn('"selenium"[tiab]', t3)
+        self.assertIn('"CoQ10"[tw]', t3)
+        self.assertIn('"selenium"[tw]', t3)
         self.assertIn(' AND ', t3)
         # Verify landmark hint is included in query boost
-        self.assertIn('"KiSel-10"[tiab]', t3)
+        self.assertIn('"KiSel-10"[tw]', t3)
         self.assertIn('"Alehagen"[Author]', t3)
-        self.assertIn('"cardiovascular mortality"[tiab]', t3)
+        self.assertIn('"cardiovascular mortality"[tw]', t3)
 
     @patch.object(PaperFinder, "_invoke_gemini")
     def test_binary_clinical_gate_monotherapy_rejection_for_combination(self, mock_gemini):
