@@ -10,6 +10,8 @@ from src.triage.classifier import TriageEngine, TriageResult
 from src.appraisal.sanitizer import sanitize_and_verify_appraisal, SanitizationResult
 
 load_dotenv(r"D:\SSD-Drive\Antigravity\ResearchEval\.env")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 # Model Hierarchy (Verified endpoints in order of preference & active responsiveness)
 # Primary: gemini-3.8-flash (Active GA, Google's flagship flash model for autonomous reasoning & software analysis)

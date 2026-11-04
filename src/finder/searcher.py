@@ -189,6 +189,7 @@ def resilient_request(
     """Execute HTTP request with exponential backoff on HTTP 429 and 503 rate limits."""
     req_headers = {
         "User-Agent": "ResearchEval-Finder/2.0 (Medical Appraisal Workbench; mailto:clinical-research@antigravity.local)",
+        "User-Agent": "FACT-Finder/2.0 (Medical Appraisal Workbench; mailto:clinical-research@antigravity.local)",
         "Accept": "application/json,application/xml,text/xml,*/*"
     }
     if headers:

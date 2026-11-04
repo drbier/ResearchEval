@@ -30,6 +30,7 @@ from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONIN
 from src.appraisal.qa import PaperQAEngine
 from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_DESIGNATION
 from src.summarizer.engine import PaperSummarizer, MODEL_DESIGNATION as SUMMARIZER_MODEL_DESIGNATION
+from src.telemetry.tracker import log_usage, get_aggregated_usage, get_recent_usage_logs
 
 app = FastAPI(
     title="F.A.C.T. - Find · Analyze · Contextualize · Talk",
@@ -47,6 +48,8 @@ app.add_middleware(
 )
 
 DATA_DIR = os.getenv("RESEARCH_EVAL_DATA_DIR", r"D:\SSD-Drive\Antigravity\ResearchEval\data")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DATA_DIR = os.getenv("RESEARCH_EVAL_DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -116,11 +119,15 @@ class FinderSearchRequest(BaseModel):
     query: str
     max_results: Optional[int] = 10
     force_refresh: Optional[bool] = False
+    user_uid: Optional[str] = "anonymous"
+    user_email: Optional[str] = "unauthenticated"
 
 
 class SummarizerGenerateRequest(BaseModel):
     urls: List[str]
     max_batch_size: Optional[int] = 10
+    user_uid: Optional[str] = "anonymous"
+    user_email: Optional[str] = "unauthenticated"
 
 
 @app.post("/api/finder/search")
@@ -132,6 +139,17 @@ def api_finder_search(req: FinderSearchRequest):
             max_results=req.max_results or 10,
             force_refresh=bool(req.force_refresh)
         )
+        try:
+            log_usage(
+                uid=req.user_uid or "anonymous",
+                email=req.user_email or "unauthenticated",
+                feature="finder",
+                model=FINDER_MODEL_DESIGNATION,
+                prompt_tokens=420,
+                candidates_tokens=380
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -142,9 +160,62 @@ def api_summarizer_generate(req: SummarizerGenerateRequest):
     """Execute sequential structured multi-paper lay science communicator briefing."""
     try:
         res = summarizer.summarize_batch(raw_inputs=req.urls, max_batch_size=req.max_batch_size or 10)
+        try:
+            log_usage(
+                uid=req.user_uid or "anonymous",
+                email=req.user_email or "unauthenticated",
+                feature="contextualizer",
+                model=SUMMARIZER_MODEL_DESIGNATION,
+                prompt_tokens=1800 * max(1, len(req.urls)),
+                candidates_tokens=1200 * max(1, len(req.urls))
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+class TelemetryLogRequest(BaseModel):
+    user_uid: Optional[str] = "anonymous"
+    user_email: Optional[str] = "unauthenticated"
+    feature: str
+    model: str
+    prompt_tokens: int = 0
+    candidates_tokens: int = 0
+    latency_ms: Optional[int] = None
+
+@app.get("/api/admin/usage")
+def api_admin_usage():
+    """Retrieve aggregated usage telemetry per user for the Admin User Management panel."""
+    try:
+        usage = get_aggregated_usage()
+        return {"success": True, "usage": usage}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/telemetry/log")
+def api_telemetry_log(req: TelemetryLogRequest):
+    """Log LLM token usage and estimated cost."""
+    try:
+        cost = log_usage(
+            uid=req.user_uid or "anonymous",
+            email=req.user_email or "unauthenticated",
+            feature=req.feature,
+            model=req.model,
+            prompt_tokens=req.prompt_tokens,
+            candidates_tokens=req.candidates_tokens,
+            latency_ms=req.latency_ms
+        )
+        return {"success": True, "estimated_cost_usd": cost}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/firebase-applet-config.json")
+def get_firebase_config():
+    cfg_file = os.path.join(PROJECT_ROOT, "firebase-applet-config.json")
+    if os.path.exists(cfg_file):
+        return FileResponse(cfg_file, media_type="application/json")
+    raise HTTPException(status_code=404, detail="firebase-applet-config.json not found")
 
 @app.get("/health")
 def health_check():
@@ -181,7 +252,9 @@ def resolve_paper_url(url: str = Form(...)):
 def analyze_fetched_paper(
     filename: str = Form(...),
     model_override: Optional[str] = Form(None),
-    api_key: Optional[str] = Form(None)
+    api_key: Optional[str] = Form(None),
+    user_uid: Optional[str] = Form("anonymous"),
+    user_email: Optional[str] = Form("unauthenticated")
 ):
     """Run full appraisal pipeline on an already-resolved paper or abstract."""
     file_path = os.path.join(UPLOAD_DIR, filename)
@@ -220,6 +293,18 @@ def analyze_fetched_paper(
         except Exception:
             result["total_pages"] = max((m["page"] for m in anchor_data.values()), default=1)
         
+        try:
+            log_usage(
+                uid=user_uid or "anonymous",
+                email=user_email or "unauthenticated",
+                feature="appraisal",
+                model=model_override or PRIMARY_MODEL,
+                prompt_tokens=4500,
+                candidates_tokens=3200
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
+            
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -230,7 +315,9 @@ async def ask_paper(
     question: str = Form(...),
     history: Optional[str] = Form(None),
     model_override: Optional[str] = Form(None),
-    api_key: Optional[str] = Form(None)
+    api_key: Optional[str] = Form(None),
+    user_uid: Optional[str] = Form("anonymous"),
+    user_email: Optional[str] = Form("unauthenticated")
 ):
     """Answers clinical questions about a loaded manuscript with coordinate grounding."""
     file_path = os.path.join(UPLOAD_DIR, filename)
@@ -259,6 +346,19 @@ async def ask_paper(
             conversation_history=conv_history,
             model_override=model_override
         )
+        
+        try:
+            log_usage(
+                uid=user_uid or "anonymous",
+                email=user_email or "unauthenticated",
+                feature="ask_paper",
+                model=model_override or PRIMARY_MODEL,
+                prompt_tokens=2200,
+                candidates_tokens=900
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
+            
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -268,7 +368,9 @@ async def ask_paper(
 async def analyze_paper(
     file: UploadFile = File(...),
     model_override: Optional[str] = Form(None),
-    api_key: Optional[str] = Form(None)
+    api_key: Optional[str] = Form(None),
+    user_uid: Optional[str] = Form("anonymous"),
+    user_email: Optional[str] = Form("unauthenticated")
 ):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are currently supported.")
@@ -312,6 +414,18 @@ async def analyze_paper(
         except Exception:
             result["total_pages"] = max((m["page"] for m in anchor_data.values()), default=1)
         
+        try:
+            log_usage(
+                uid=user_uid or "anonymous",
+                email=user_email or "unauthenticated",
+                feature="appraisal",
+                model=model_override or PRIMARY_MODEL,
+                prompt_tokens=4500,
+                candidates_tokens=3200
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
+            
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -615,6 +729,10 @@ def index_page():
         <script src="https://cdn.tailwindcss.com"></script>
         <!-- Marked.js for rich markdown rendering -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+        <!-- Firebase 10.12.0 Compat SDKs -->
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
         <style>
             .anchor-pill {
                 cursor: pointer;
@@ -943,6 +1061,37 @@ def index_page():
                             </div>
                         </div>
                     </div>
+
+                    <!-- Auth & User Access Header Area -->
+                    <div id="authHeaderArea" class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                        <!-- Sign In Button (Shown when unauthenticated) -->
+                        <button id="signInHeaderBtn" onclick="openAuthModal()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
+                            <span>🔑</span> <span>Sign In</span>
+                        </button>
+
+                        <!-- User Profile Area (Shown when signed in) -->
+                        <div id="userProfileHeader" class="hidden flex items-center gap-2">
+                            <!-- Admin Shield & Live Pending Counter (Master Admin drbiernd@gmail.com only) -->
+                            <button id="adminUserMgmtBtn" onclick="openUserManagementModal()" class="hidden relative p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition" title="User Access & Token Governance">
+                                <span class="text-sm">🛡️</span>
+                                <span id="adminPendingBadge" class="hidden absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold leading-none shadow-xs">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                    <span id="adminPendingCountText" class="relative">0</span>
+                                </span>
+                            </button>
+
+                            <!-- User Initials Avatar & Email Pill -->
+                            <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-full py-1 pl-1.5 pr-2.5 text-xs">
+                                <div id="userAvatarCircle" class="w-5 h-5 rounded-full bg-sky-700 text-white font-bold text-[10px] flex items-center justify-center uppercase shadow-2xs">U</div>
+                                <span id="userEmailDisplay" class="font-medium text-slate-700 truncate max-w-[130px]">user</span>
+                            </div>
+
+                            <!-- Sign Out Button -->
+                            <button onclick="handleSignOut()" class="p-1.5 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100 transition" title="Sign Out">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -961,6 +1110,141 @@ def index_page():
                     <div class="flex justify-end gap-3 pt-2">
                         <button onclick="closeAbstractModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-md transition">Cancel</button>
                         <button onclick="proceedWithAbstractOnly()" class="px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-md transition shadow">Analyze Abstract Only</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Authentication Modal (Sign In / Register / Reset) -->
+            <div id="authModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">🔐</span>
+                            <h3 id="authModalTitle" class="text-base font-bold text-slate-900">Sign in to F.A.C.T.</h3>
+                        </div>
+                        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold p-1">✕</button>
+                    </div>
+
+                    <div id="authErrorBox" class="hidden p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs leading-relaxed"></div>
+                    <div id="authSuccessBox" class="hidden p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs leading-relaxed"></div>
+
+                    <!-- Google 1-Tap / Popup Button -->
+                    <button id="googleSignInBtn" onclick="handleGoogleSignIn()" class="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs py-2.5 px-4 rounded-xl border border-slate-300 shadow-2xs hover:shadow-xs transition">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                        </svg>
+                        <span>Continue with Google</span>
+                    </button>
+
+                    <div class="flex items-center gap-3">
+                        <div class="h-px bg-slate-200 flex-1"></div>
+                        <span class="text-[11px] text-slate-400 font-medium uppercase tracking-wider">or with email</span>
+                        <div class="h-px bg-slate-200 flex-1"></div>
+                    </div>
+
+                    <!-- Email & Password Form -->
+                    <form id="authEmailForm" onsubmit="handleEmailAuth(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Email address</label>
+                            <input type="email" id="authEmailInput" required placeholder="doctor@hospital.org" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition"/>
+                        </div>
+
+                        <div id="passwordFieldGroup">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                            <input type="password" id="authPasswordInput" placeholder="••••••••" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition"/>
+                        </div>
+
+                        <button type="submit" id="authSubmitBtn" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-center gap-2">
+                            <span id="authSubmitText">Sign In</span>
+                        </button>
+                    </form>
+
+                    <!-- Auth Mode Toggle Links -->
+                    <div class="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+                        <button type="button" id="authToggleModeBtn" onclick="toggleAuthMode()" class="text-sky-600 hover:text-sky-800 font-semibold transition">Need an account? Create one</button>
+                        <button type="button" id="authForgotBtn" onclick="toggleForgotMode()" class="text-slate-400 hover:text-slate-600 transition">Forgot password?</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Access Pending Approval Gatekeeper Modal -->
+            <div id="pendingApprovalModal" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 text-center space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                    <div class="w-14 h-14 mx-auto rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center text-2xl shadow-xs">
+                        ⏳
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-lg font-bold text-slate-900" id="pendingModalTitle">Access Authorization Pending</h3>
+                        <p class="text-xs text-slate-500" id="pendingModalUserEmail">Signed in as user@example.com</p>
+                    </div>
+                    <div class="bg-amber-50/80 border border-amber-200/80 rounded-xl p-4 text-xs text-amber-900 leading-relaxed text-left space-y-2">
+                        <p class="font-medium" id="pendingModalMessage">
+                            Your account has been registered in the F.A.C.T. clinician registry. An administrator must approve your account before you can analyze manuscripts or run searches.
+                        </p>
+                        <div class="flex items-center gap-2 text-[11px] text-amber-700 font-semibold pt-1 border-t border-amber-200/60">
+                            <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span>Live sync active: This screen unlocks automatically once approved.</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center gap-3 pt-2">
+                        <button onclick="checkUserStatusManual()" class="px-4 py-2 text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-lg transition">Check Status</button>
+                        <button onclick="handleSignOut()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Master Admin User Access & Token Governance Modal (drbiernd@gmail.com only) -->
+            <div id="userManagementModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-lg bg-sky-100 border border-sky-200 flex items-center justify-center text-lg">🛡️</div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-900">User Access & Token Governance</h3>
+                                <p class="text-xs text-slate-500">Manage clinician approval gates and inspect live LLM token telemetry.</p>
+                            </div>
+                        </div>
+                        <button onclick="closeUserManagementModal()" class="text-slate-400 hover:text-slate-600 text-sm font-bold p-1.5 rounded-lg hover:bg-slate-100 transition">✕</button>
+                    </div>
+
+                    <!-- Pre-Approval Whitelist Bar -->
+                    <div class="px-6 py-3 bg-sky-50/50 border-b border-sky-100 flex items-center gap-2 shrink-0">
+                        <span class="text-xs font-semibold text-sky-900 shrink-0">Pre-Approve Colleague:</span>
+                        <input type="email" id="preApproveEmailInput" placeholder="colleague@clinic.org" class="flex-1 text-xs bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"/>
+                        <button onclick="handlePreapproveEmail()" id="preApproveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg transition shadow-2xs shrink-0 flex items-center gap-1">
+                            <span>➕</span> <span>Pre-Approve</span>
+                        </button>
+                    </div>
+
+                    <!-- Tabs & Search Filter -->
+                    <div class="px-6 py-2.5 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-3 shrink-0">
+                        <div class="flex items-center gap-1.5 text-xs font-medium">
+                            <button id="adminTabPending" onclick="switchAdminTab('pending')" class="px-3 py-1.5 rounded-lg bg-sky-100 text-sky-800 font-bold transition flex items-center gap-1.5">
+                                <span>Pending</span>
+                                <span id="adminTabPendingCount" class="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">0</span>
+                            </button>
+                            <button id="adminTabApproved" onclick="switchAdminTab('approved')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-1.5">
+                                <span>Approved</span>
+                                <span id="adminTabApprovedCount" class="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-semibold">0</span>
+                            </button>
+                            <button id="adminTabDenied" onclick="switchAdminTab('denied-revoked')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-1.5">
+                                <span>Denied / Revoked</span>
+                                <span id="adminTabDeniedCount" class="px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 text-[10px] font-semibold">0</span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <input type="text" id="adminSearchInput" oninput="filterAdminUserList()" placeholder="Filter by email or UID..." class="text-xs bg-slate-50 border border-slate-200 rounded-lg pl-7 pr-3 py-1.2 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"/>
+                            <span class="absolute left-2.5 top-1.5 text-slate-400 text-xs">🔍</span>
+                        </div>
+                    </div>
+
+                    <!-- User Cards Scrollable Container -->
+                    <div id="adminUserListContainer" class="p-6 overflow-y-auto space-y-3 flex-1 bg-slate-50/40">
+                        <div class="text-center py-8 text-xs text-slate-400">Loading user registry...</div>
                     </div>
                 </div>
             </div>
@@ -1255,6 +1539,655 @@ def index_page():
         </div>
 
         <script>
+            // --- Firebase Auth & Token Governance Client State ---
+            const MASTER_ADMIN_EMAIL = 'drbiernd@gmail.com';
+            let fbApp = null;
+            let fbAuth = null;
+            let fbDb = null;
+            let currentUser = null;
+            let isApproved = false;
+            let isAdmin = false;
+            let authMode = 'signin'; // 'signin' | 'signup' | 'forgot'
+            let adminUsersList = [];
+            let adminUsageStats = {};
+            let currentAdminTab = 'pending'; // 'pending' | 'approved' | 'denied-revoked'
+            let pendingListenerUnsub = null;
+            let userDocListenerUnsub = null;
+
+            const FALLBACK_FIREBASE_CONFIG = {
+                apiKey: "AIzaSyD5p8zLS4Wbx36ShxdgqdBOiHE-t3JTHsQ",
+                authDomain: "fact-wonk.firebaseapp.com",
+                projectId: "fact-wonk",
+                storageBucket: "fact-wonk.firebasestorage.app",
+                messagingSenderId: "624524249455",
+                appId: "1:624524249455:web:7ebb30a4179afd512d009a",
+                measurementId: "G-SDB2HK4SPF"
+            };
+
+            async function initFirebaseAuth() {
+                try {
+                    let config = FALLBACK_FIREBASE_CONFIG;
+                    try {
+                        const r = await fetch('/firebase-applet-config.json');
+                        if (r.ok) {
+                            const c = await r.json();
+                            if (c && c.apiKey) config = c;
+                        }
+                    } catch (e) {
+                        // fallback used
+                    }
+
+                    if (window.firebase) {
+                        if (!firebase.apps.length) {
+                            fbApp = firebase.initializeApp(config);
+                        } else {
+                            fbApp = firebase.app();
+                        }
+                        fbAuth = firebase.auth();
+                        fbDb = firebase.firestore();
+
+                        fbAuth.onAuthStateChanged(handleAuthStateChanged);
+                    } else {
+                        console.warn("Firebase SDK not loaded yet.");
+                    }
+                } catch (err) {
+                    console.error("Firebase initialization failed:", err);
+                }
+            }
+
+            async function handleAuthStateChanged(user) {
+                if (userDocListenerUnsub) {
+                    userDocListenerUnsub();
+                    userDocListenerUnsub = null;
+                }
+                if (pendingListenerUnsub) {
+                    pendingListenerUnsub();
+                    pendingListenerUnsub = null;
+                }
+
+                currentUser = user;
+                const signInHeaderBtn = document.getElementById('signInHeaderBtn');
+                const userProfileHeader = document.getElementById('userProfileHeader');
+                const adminUserMgmtBtn = document.getElementById('adminUserMgmtBtn');
+                const userAvatarCircle = document.getElementById('userAvatarCircle');
+                const userEmailDisplay = document.getElementById('userEmailDisplay');
+                const pendingApprovalModal = document.getElementById('pendingApprovalModal');
+
+                if (!user) {
+                    isApproved = false;
+                    isAdmin = false;
+                    if (signInHeaderBtn) signInHeaderBtn.classList.remove('hidden');
+                    if (userProfileHeader) userProfileHeader.classList.add('hidden');
+                    if (adminUserMgmtBtn) adminUserMgmtBtn.classList.add('hidden');
+                    if (pendingApprovalModal) pendingApprovalModal.classList.add('hidden');
+                    return;
+                }
+
+                // Authenticated
+                if (signInHeaderBtn) signInHeaderBtn.classList.add('hidden');
+                if (userProfileHeader) userProfileHeader.classList.remove('hidden');
+                if (userEmailDisplay) userEmailDisplay.innerText = user.email || 'Clinician';
+                if (userAvatarCircle) {
+                    const initial = (user.email || 'U').charAt(0).toUpperCase();
+                    userAvatarCircle.innerText = initial;
+                }
+
+                const emailLower = (user.email || '').toLowerCase().trim();
+                const isMasterAdmin = emailLower === MASTER_ADMIN_EMAIL.toLowerCase();
+
+                if (isMasterAdmin) {
+                    isAdmin = true;
+                    isApproved = true;
+                    if (adminUserMgmtBtn) adminUserMgmtBtn.classList.remove('hidden');
+                    if (pendingApprovalModal) pendingApprovalModal.classList.add('hidden');
+                    closeAuthModal();
+
+                    try {
+                        await fbDb.collection('users').doc(user.uid).set({
+                            uid: user.uid,
+                            email: user.email,
+                            approved: true,
+                            status: 'approved',
+                            role: 'admin',
+                            lastLoginAt: new Date().toISOString()
+                        }, { merge: true });
+                    } catch (e) {
+                        console.warn("Admin record sync:", e);
+                    }
+
+                    setupPendingUsersListener();
+                    return;
+                }
+
+                // Standard user: check preapproved whitelist first
+                let preapproved = false;
+                try {
+                    const preDoc = await fbDb.collection('preapproved_emails').doc(emailLower).get();
+                    if (preDoc.exists && preDoc.data() && preDoc.data().approved) {
+                        preapproved = true;
+                    }
+                } catch (pe) {
+                    console.warn("Preapproval check:", pe);
+                }
+
+                if (preapproved) {
+                    isApproved = true;
+                    isAdmin = false;
+                    if (adminUserMgmtBtn) adminUserMgmtBtn.classList.add('hidden');
+                    if (pendingApprovalModal) pendingApprovalModal.classList.add('hidden');
+                    closeAuthModal();
+
+                    try {
+                        await fbDb.collection('users').doc(user.uid).set({
+                            uid: user.uid,
+                            email: user.email,
+                            approved: true,
+                            status: 'approved',
+                            role: 'user',
+                            lastLoginAt: new Date().toISOString()
+                        }, { merge: true });
+                    } catch (e) {
+                        console.warn("Preapproved user sync:", e);
+                    }
+                    return;
+                }
+
+                // Standard user: sync and attach reactive onSnapshot listener
+                try {
+                    const userDocRef = fbDb.collection('users').doc(user.uid);
+                    const docSnap = await userDocRef.get();
+                    if (!docSnap.exists) {
+                        await userDocRef.set({
+                            uid: user.uid,
+                            email: user.email,
+                            approved: false,
+                            status: 'pending',
+                            role: 'user',
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+
+                    userDocListenerUnsub = userDocRef.onSnapshot((snapshot) => {
+                        const data = snapshot.data();
+                        const approved = Boolean(data && data.approved);
+                        const status = (data && data.status) ? data.status : (approved ? 'approved' : 'pending');
+                        isApproved = approved;
+
+                        if (isApproved) {
+                            if (pendingApprovalModal) pendingApprovalModal.classList.add('hidden');
+                            closeAuthModal();
+                        } else {
+                            if (pendingApprovalModal) {
+                                pendingApprovalModal.classList.remove('hidden');
+                                const emailEl = document.getElementById('pendingModalUserEmail');
+                                const msgEl = document.getElementById('pendingModalMessage');
+                                if (emailEl) emailEl.innerText = `Signed in as ${user.email}`;
+                                if (msgEl) {
+                                    if (status === 'denied' || status === 'revoked') {
+                                        msgEl.innerText = 'Your access to F.A.C.T. has been denied or revoked by the system administrator. Please contact drbiernd@gmail.com for access reinstatement.';
+                                    } else {
+                                        msgEl.innerText = 'Your account has been registered in the F.A.C.T. clinician registry. An administrator must approve your account before you can analyze manuscripts or run precision searches.';
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (ue) {
+                    console.error("User listener attachment failed:", ue);
+                }
+            }
+
+            function setupPendingUsersListener() {
+                if (!fbDb || !isAdmin) return;
+                try {
+                    pendingListenerUnsub = fbDb.collection('users').onSnapshot((snapshot) => {
+                        let pendingCount = 0;
+                        snapshot.forEach((doc) => {
+                            const data = doc.data();
+                            const email = (data.email || '').toLowerCase();
+                            if (email === MASTER_ADMIN_EMAIL.toLowerCase()) return;
+                            const isApp = Boolean(data.approved);
+                            const st = data.status || (isApp ? 'approved' : 'pending');
+                            if (!isApp && st !== 'denied' && st !== 'revoked') {
+                                pendingCount++;
+                            }
+                        });
+
+                        const badge = document.getElementById('adminPendingBadge');
+                        const countText = document.getElementById('adminPendingCountText');
+                        const tabPendingCount = document.getElementById('adminTabPendingCount');
+                        if (badge && countText) {
+                            if (pendingCount > 0) {
+                                badge.classList.remove('hidden');
+                                countText.innerText = pendingCount;
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        }
+                        if (tabPendingCount) tabPendingCount.innerText = pendingCount;
+                    });
+                } catch (e) {
+                    console.warn("Failed to attach pending listener:", e);
+                }
+            }
+
+            function openAuthModal() {
+                const m = document.getElementById('authModal');
+                const errBox = document.getElementById('authErrorBox');
+                const succBox = document.getElementById('authSuccessBox');
+                if (errBox) errBox.classList.add('hidden');
+                if (succBox) succBox.classList.add('hidden');
+                if (m) m.classList.remove('hidden');
+            }
+
+            function closeAuthModal() {
+                const m = document.getElementById('authModal');
+                if (m) m.classList.add('hidden');
+            }
+
+            function toggleAuthMode() {
+                const title = document.getElementById('authModalTitle');
+                const submitText = document.getElementById('authSubmitText');
+                const toggleBtn = document.getElementById('authToggleModeBtn');
+                const pwdGroup = document.getElementById('passwordFieldGroup');
+                const forgotBtn = document.getElementById('authForgotBtn');
+
+                if (authMode === 'signin') {
+                    authMode = 'signup';
+                    if (title) title.innerText = 'Create your F.A.C.T. account';
+                    if (submitText) submitText.innerText = 'Create Account';
+                    if (toggleBtn) toggleBtn.innerText = 'Already have an account? Sign in';
+                    if (pwdGroup) pwdGroup.classList.remove('hidden');
+                    if (forgotBtn) forgotBtn.classList.add('hidden');
+                } else {
+                    authMode = 'signin';
+                    if (title) title.innerText = 'Sign in to F.A.C.T.';
+                    if (submitText) submitText.innerText = 'Sign In';
+                    if (toggleBtn) toggleBtn.innerText = 'Need an account? Create one';
+                    if (pwdGroup) pwdGroup.classList.remove('hidden');
+                    if (forgotBtn) forgotBtn.classList.remove('hidden');
+                }
+            }
+
+            function toggleForgotMode() {
+                authMode = 'forgot';
+                const title = document.getElementById('authModalTitle');
+                const submitText = document.getElementById('authSubmitText');
+                const toggleBtn = document.getElementById('authToggleModeBtn');
+                const pwdGroup = document.getElementById('passwordFieldGroup');
+                const forgotBtn = document.getElementById('authForgotBtn');
+
+                if (title) title.innerText = 'Reset your password';
+                if (submitText) submitText.innerText = 'Send Reset Email';
+                if (toggleBtn) toggleBtn.innerText = 'Back to Sign In';
+                if (pwdGroup) pwdGroup.classList.add('hidden');
+                if (forgotBtn) forgotBtn.classList.add('hidden');
+            }
+
+            async function handleGoogleSignIn() {
+                const errBox = document.getElementById('authErrorBox');
+                if (errBox) errBox.classList.add('hidden');
+                try {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    provider.setCustomParameters({ prompt: 'select_account' });
+                    await fbAuth.signInWithPopup(provider);
+                    closeAuthModal();
+                } catch (err) {
+                    console.error("Google sign in error:", err);
+                    if (errBox) {
+                        errBox.innerText = err.message || 'Google Sign-In failed.';
+                        errBox.classList.remove('hidden');
+                    }
+                }
+            }
+
+            async function handleEmailAuth(e) {
+                e.preventDefault();
+                const emailInput = document.getElementById('authEmailInput');
+                const pwdInput = document.getElementById('authPasswordInput');
+                const errBox = document.getElementById('authErrorBox');
+                const succBox = document.getElementById('authSuccessBox');
+                if (errBox) errBox.classList.add('hidden');
+                if (succBox) succBox.classList.add('hidden');
+
+                const email = emailInput ? emailInput.value.trim() : '';
+                const pwd = pwdInput ? pwdInput.value : '';
+
+                try {
+                    if (authMode === 'signin') {
+                        await fbAuth.signInWithEmailAndPassword(email, pwd);
+                        closeAuthModal();
+                    } else if (authMode === 'signup') {
+                        await fbAuth.createUserWithEmailAndPassword(email, pwd);
+                        closeAuthModal();
+                    } else if (authMode === 'forgot') {
+                        await fbAuth.sendPasswordResetEmail(email);
+                        if (succBox) {
+                            succBox.innerText = `Password reset link sent to ${email}. Check your inbox.`;
+                            succBox.classList.remove('hidden');
+                        }
+                    }
+                } catch (err) {
+                    console.error("Email auth error:", err);
+                    if (errBox) {
+                        errBox.innerText = err.message || 'Authentication failed.';
+                        errBox.classList.remove('hidden');
+                    }
+                }
+            }
+
+            async function handleSignOut() {
+                try {
+                    if (fbAuth) await fbAuth.signOut();
+                } catch (err) {
+                    console.error("Sign out error:", err);
+                }
+            }
+
+            async function checkUserStatusManual() {
+                if (currentUser && fbDb) {
+                    try {
+                        const snap = await fbDb.collection('users').doc(currentUser.uid).get();
+                        if (snap.exists && snap.data() && snap.data().approved) {
+                            isApproved = true;
+                            const pendingModal = document.getElementById('pendingApprovalModal');
+                            if (pendingModal) pendingModal.classList.add('hidden');
+                        } else {
+                            alert('Account is still pending administrator approval.');
+                        }
+                    } catch (e) {
+                        alert('Could not verify status: ' + e.message);
+                    }
+                }
+            }
+
+            // --- Admin Governance & LLM Token Telemetry Modal ---
+            async function openUserManagementModal() {
+                if (!isAdmin) {
+                    alert('Access restricted to Master Administrator (drbiernd@gmail.com).');
+                    return;
+                }
+                const modal = document.getElementById('userManagementModal');
+                if (modal) modal.classList.remove('hidden');
+
+                // 1. Fetch live aggregated usage telemetry from SQLite
+                try {
+                    const usageRes = await fetch('/api/admin/usage');
+                    if (usageRes.ok) {
+                        const usageData = await usageRes.json();
+                        if (usageData && usageData.success && Array.isArray(usageData.usage)) {
+                            const map = {};
+                            usageData.usage.forEach(u => {
+                                if (u.uid) map[u.uid] = u;
+                                if (u.email) map[u.email.toLowerCase()] = u;
+                            });
+                            adminUsageStats = map;
+                        }
+                    }
+                } catch (ue) {
+                    console.warn("Telemetry fetch error:", ue);
+                }
+
+                // 2. Fetch users from Firestore
+                loadAdminUserList();
+            }
+
+            function closeUserManagementModal() {
+                const modal = document.getElementById('userManagementModal');
+                if (modal) modal.classList.add('hidden');
+            }
+
+            function switchAdminTab(tab) {
+                currentAdminTab = tab;
+                const tabPending = document.getElementById('adminTabPending');
+                const tabApproved = document.getElementById('adminTabApproved');
+                const tabDenied = document.getElementById('adminTabDenied');
+
+                if (tabPending) tabPending.className = tab === 'pending' ?
+                    "px-3 py-1.5 rounded-lg bg-sky-100 text-sky-800 font-bold transition flex items-center gap-1.5" :
+                    "px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-1.5";
+                if (tabApproved) tabApproved.className = tab === 'approved' ?
+                    "px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-900 font-bold transition flex items-center gap-1.5" :
+                    "px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-1.5";
+                if (tabDenied) tabDenied.className = tab === 'denied-revoked' ?
+                    "px-3 py-1.5 rounded-lg bg-slate-200 text-slate-900 font-bold transition flex items-center gap-1.5" :
+                    "px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition flex items-center gap-1.5";
+
+                renderAdminUserList();
+            }
+
+            function filterAdminUserList() {
+                const searchInput = document.getElementById('adminSearchInput');
+                const q = (searchInput ? searchInput.value : '').toLowerCase().trim();
+                renderAdminUserList(q);
+            }
+
+            async function loadAdminUserList() {
+                const container = document.getElementById('adminUserListContainer');
+                if (!fbDb) return;
+                try {
+                    const snap = await fbDb.collection('users').get();
+                    const list = [];
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        list.push({
+                            uid: doc.id,
+                            email: d.email || 'No Email',
+                            approved: Boolean(d.approved),
+                            status: d.status || (Boolean(d.approved) ? 'approved' : 'pending'),
+                            role: d.role || 'user',
+                            createdAt: d.createdAt,
+                            lastLoginAt: d.lastLoginAt
+                        });
+                    });
+                    adminUsersList = list;
+                    updateAdminTabCounts();
+                    renderAdminUserList();
+                } catch (e) {
+                    if (container) container.innerHTML = `<div class="text-rose-600 text-xs p-4 bg-rose-50 rounded-lg">Error loading registry: ${e.message}</div>`;
+                }
+            }
+
+            function updateAdminTabCounts() {
+                let pending = 0;
+                let approved = 0;
+                let denied = 0;
+                adminUsersList.forEach(u => {
+                    const email = (u.email || '').toLowerCase();
+                    if (email === MASTER_ADMIN_EMAIL.toLowerCase()) return;
+                    if (u.approved) {
+                        approved++;
+                    } else if (u.status === 'denied' || u.status === 'revoked') {
+                        denied++;
+                    } else {
+                        pending++;
+                    }
+                });
+
+                const pEl = document.getElementById('adminTabPendingCount');
+                const aEl = document.getElementById('adminTabApprovedCount');
+                const dEl = document.getElementById('adminTabDeniedCount');
+                if (pEl) pEl.innerText = pending;
+                if (aEl) aEl.innerText = approved;
+                if (dEl) dEl.innerText = denied;
+            }
+
+            function renderAdminUserList(queryOverride) {
+                const container = document.getElementById('adminUserListContainer');
+                if (!container) return;
+
+                const searchInput = document.getElementById('adminSearchInput');
+                const q = queryOverride !== undefined ? queryOverride : (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+                let filtered = adminUsersList.filter(u => {
+                    const email = (u.email || '').toLowerCase();
+                    if (email === MASTER_ADMIN_EMAIL.toLowerCase()) return false;
+                    if (q) {
+                        const matchesQuery = email.includes(q) || u.uid.toLowerCase().includes(q);
+                        if (!matchesQuery) return false;
+                    }
+                    if (currentAdminTab === 'pending') {
+                        return !u.approved && u.status !== 'denied' && u.status !== 'revoked';
+                    } else if (currentAdminTab === 'approved') {
+                        return u.approved;
+                    } else if (currentAdminTab === 'denied-revoked') {
+                        return !u.approved && (u.status === 'denied' || u.status === 'revoked');
+                    }
+                    return true;
+                });
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-10 bg-white rounded-xl border border-dashed border-slate-200">
+                            <p class="text-xs font-semibold text-slate-500">No clinicians found in this tab.</p>
+                            <p class="text-[11px] text-slate-400 mt-1">Pre-approve an email above or share the link with colleagues.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(u => {
+                    const email = u.email || 'No email';
+                    const emailKey = email.toLowerCase();
+                    const stats = adminUsageStats[u.uid] || adminUsageStats[emailKey] || {
+                        total_requests: 0,
+                        total_tokens: 0,
+                        total_cost: 0.0,
+                        last_active_at: null
+                    };
+
+                    const reqCount = stats.total_requests || 0;
+                    const tokenCount = (stats.total_tokens || 0).toLocaleString();
+                    const costFormatted = `$${(stats.total_cost || 0).toFixed(4)}`;
+                    const lastActive = stats.last_active_at ? new Date(stats.last_active_at).toLocaleDateString() : 'None';
+
+                    let actionsHtml = '';
+                    if (currentAdminTab === 'pending') {
+                        actionsHtml = `
+                            <button onclick="handleSetUserApproval('${u.uid}', '${email}', true, 'approved')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition shadow-2xs">
+                                ✔ Approve
+                            </button>
+                            <button onclick="handleSetUserApproval('${u.uid}', '${email}', false, 'denied')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs rounded-lg transition">
+                                ✕ Deny
+                            </button>
+                        `;
+                    } else if (currentAdminTab === 'approved') {
+                        actionsHtml = `
+                            <button onclick="handleSetUserApproval('${u.uid}', '${email}', false, 'revoked')" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-semibold text-xs rounded-lg transition">
+                                Revoke Access
+                            </button>
+                        `;
+                    } else {
+                        actionsHtml = `
+                            <button onclick="handleSetUserApproval('${u.uid}', '${email}', true, 'approved')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition shadow-2xs">
+                                ✔ Re-Approve
+                            </button>
+                        `;
+                    }
+
+                    return `
+                        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+                            <div class="space-y-1.5 flex-1 min-w-[280px]">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-xs text-slate-900">${email}</span>
+                                    <span class="text-[10px] px-2 py-0.2 rounded-full font-semibold ${u.approved ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : (u.status === 'denied' || u.status === 'revoked' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200')}">
+                                        ${u.approved ? 'Approved' : (u.status === 'denied' ? 'Denied' : (u.status === 'revoked' ? 'Revoked' : 'Pending'))}
+                                    </span>
+                                </div>
+                                <div class="text-[11px] text-slate-400 font-mono">UID: ${u.uid}</div>
+                                <!-- Live Token & Cost Telemetry Badges -->
+                                <div class="flex flex-wrap items-center gap-2 pt-1">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 border border-sky-100 text-[10px] font-semibold text-sky-800" title="Total API requests">
+                                        <span>📊</span> <span>${reqCount} reqs</span>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-[10px] font-semibold text-indigo-800" title="Total Tokens Consumed">
+                                        <span>🪙</span> <span>${tokenCount} tokens</span>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-semibold text-emerald-800" title="Estimated USD Cost">
+                                        <span>💵</span> <span>${costFormatted}</span>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[10px] text-slate-500" title="Last Active">
+                                        <span>🕒</span> <span>${lastActive}</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                ${actionsHtml}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            async function handleSetUserApproval(targetUid, targetEmail, approved, status) {
+                // Optimistic Local State Update (Zero Wipeout Guard)
+                const prevList = [...adminUsersList];
+                adminUsersList = adminUsersList.map(u => {
+                    if (u.uid === targetUid || (targetEmail && u.email && u.email.toLowerCase() === targetEmail.toLowerCase())) {
+                        return { ...u, approved, status };
+                    }
+                    return u;
+                });
+                updateAdminTabCounts();
+                renderAdminUserList();
+
+                try {
+                    await fbDb.collection('users').doc(targetUid).set({
+                        approved,
+                        status,
+                        role: 'user',
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+
+                    if (targetEmail) {
+                        await fbDb.collection('preapproved_emails').doc(targetEmail.toLowerCase().trim()).set({
+                            email: targetEmail.toLowerCase().trim(),
+                            approved,
+                            updatedAt: new Date().toISOString()
+                        }, { merge: true });
+                    }
+                } catch (err) {
+                    console.error("Failed to update user approval:", err);
+                    alert("Error saving approval status: " + err.message);
+                    adminUsersList = prevList;
+                    updateAdminTabCounts();
+                    renderAdminUserList();
+                }
+            }
+
+            async function handlePreapproveEmail() {
+                const input = document.getElementById('preApproveEmailInput');
+                const btn = document.getElementById('preApproveBtn');
+                const email = (input ? input.value : '').toLowerCase().trim();
+                if (!email || !email.includes('@')) {
+                    alert('Please enter a valid email address.');
+                    return;
+                }
+
+                if (btn) btn.disabled = true;
+                try {
+                    await fbDb.collection('preapproved_emails').doc(email).set({
+                        email: email,
+                        approved: true,
+                        preapprovedAt: new Date().toISOString(),
+                        preapprovedBy: MASTER_ADMIN_EMAIL
+                    }, { merge: true });
+
+                    // Check if user is already registered in users list
+                    const match = adminUsersList.find(u => u.email && u.email.toLowerCase() === email);
+                    if (match) {
+                        await handleSetUserApproval(match.uid, email, true, 'approved');
+                    } else {
+                        alert(`Email ${email} has been pre-approved! They will have instant full access upon signing in.`);
+                    }
+                    if (input) input.value = '';
+                } catch (err) {
+                    alert('Error pre-approving email: ' + err.message);
+                } finally {
+                    if (btn) btn.disabled = false;
+                }
+            }
+
             // Global Encapsulated Cross-Tab State
             window.ResearchAppState = {
                 currentMasterMode: 'appraisal', // 'finder' | 'summarizer' | 'appraisal'
@@ -1324,6 +2257,16 @@ def index_page():
             }
 
             async function executeFinderSearch() {
+                if (!currentUser) {
+                    openAuthModal();
+                    return;
+                }
+                if (!isApproved) {
+                    const pendingModal = document.getElementById('pendingApprovalModal');
+                    if (pendingModal) pendingModal.classList.remove('hidden');
+                    return;
+                }
+
                 const input = document.getElementById('finderSearchInput');
                 const query = input ? input.value.trim() : '';
                 if (!query) {
@@ -1353,7 +2296,13 @@ def index_page():
                     const resp = await fetch('/api/finder/search', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: query, max_results: 10, force_refresh: forceRefresh })
+                        body: JSON.stringify({
+                            query: query,
+                            max_results: 10,
+                            force_refresh: forceRefresh,
+                            user_uid: currentUser ? currentUser.uid : 'anonymous',
+                            user_email: currentUser ? currentUser.email : 'unauthenticated'
+                        })
                     });
                     const data = await resp.json();
 
@@ -1634,6 +2583,16 @@ def index_page():
             }
 
             async function executeSummarizerBatch() {
+                if (!currentUser) {
+                    openAuthModal();
+                    return;
+                }
+                if (!isApproved) {
+                    const pendingModal = document.getElementById('pendingApprovalModal');
+                    if (pendingModal) pendingModal.classList.remove('hidden');
+                    return;
+                }
+
                 const textarea = document.getElementById('summarizerUrlsInput');
                 const rawVal = textarea ? textarea.value.trim() : '';
                 const lines = rawVal.split(/\n+/).map(l => l.trim()).filter(Boolean);
@@ -1671,7 +2630,12 @@ def index_page():
                     const resp = await fetch('/api/summarizer/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ urls: lines, max_batch_size: 10 })
+                        body: JSON.stringify({
+                            urls: lines,
+                            max_batch_size: 10,
+                            user_uid: currentUser ? currentUser.uid : 'anonymous',
+                            user_email: currentUser ? currentUser.email : 'unauthenticated'
+                        })
                     });
                     const data = await resp.json();
 
@@ -2581,6 +3545,16 @@ ${escapeHtml(thought)}
             }
 
             async function startUrlResolution() {
+                if (!currentUser) {
+                    openAuthModal();
+                    return;
+                }
+                if (!isApproved) {
+                    const pendingModal = document.getElementById('pendingApprovalModal');
+                    if (pendingModal) pendingModal.classList.remove('hidden');
+                    return;
+                }
+
                 closeSectionPopup();
                 const urlInput = document.getElementById('paperUrl');
                 const rawUrl = urlInput.value.trim();
@@ -2670,6 +3644,10 @@ ${escapeHtml(thought)}
 
                 const formData = new FormData();
                 formData.append('filename', filename);
+                if (currentUser) {
+                    formData.append('user_uid', currentUser.uid);
+                    formData.append('user_email', currentUser.email);
+                }
 
                 try {
                     const res = await fetch('/appraise-fetched', { method: 'POST', body: formData });
@@ -3040,6 +4018,16 @@ ${escapeHtml(thought)}
             }
 
             async function startAppraisal() {
+                if (!currentUser) {
+                    openAuthModal();
+                    return;
+                }
+                if (!isApproved) {
+                    const pendingModal = document.getElementById('pendingApprovalModal');
+                    if (pendingModal) pendingModal.classList.remove('hidden');
+                    return;
+                }
+
                 closeSectionPopup();
                 const fileInput = document.getElementById('pdfFile');
                 if (!fileInput.files[0]) {
@@ -3074,6 +4062,10 @@ ${escapeHtml(thought)}
 
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
+                if (currentUser) {
+                    formData.append('user_uid', currentUser.uid);
+                    formData.append('user_email', currentUser.email);
+                }
 
                 try {
                     statusText.innerText = 'Executing Stage 2 Triage & Stage 3 Scoped Synthesis...';
@@ -3121,6 +4113,16 @@ ${escapeHtml(thought)}
             }
 
             async function executeAskQuery() {
+                if (!currentUser) {
+                    openAuthModal();
+                    return;
+                }
+                if (!isApproved) {
+                    const pendingModal = document.getElementById('pendingApprovalModal');
+                    if (pendingModal) pendingModal.classList.remove('hidden');
+                    return;
+                }
+
                 const inp = document.getElementById('askQuestionInput');
                 const btn = document.getElementById('askSubmitBtn');
                 const feed = document.getElementById('askChatFeed');
@@ -3177,6 +4179,10 @@ ${escapeHtml(thought)}
                     formData.append('filename', currentFilename);
                     formData.append('question', question);
                     formData.append('history', JSON.stringify(askConversationHistory.slice(-4)));
+                    if (currentUser) {
+                        formData.append('user_uid', currentUser.uid);
+                        formData.append('user_email', currentUser.email);
+                    }
 
                     const apiKeyInput = document.getElementById('apiKey');
                     if (apiKeyInput && apiKeyInput.value.trim()) {
@@ -3360,6 +4366,9 @@ ${escapeHtml(thought)}
                 setTimeout(() => repositionHitbox(true), 80);
                 setTimeout(() => repositionHitbox(true), 250);
             }
+
+            // Initialize Firebase Authentication & Governance on Load
+            initFirebaseAuth();
         </script>
     </body>
     </html>
