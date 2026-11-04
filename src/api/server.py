@@ -1091,10 +1091,22 @@ def index_page():
                                 </span>
                             </button>
 
-                            <!-- User Initials Avatar & Email Pill -->
-                            <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-full py-1 pl-1.5 pr-2.5 text-xs">
-                                <div id="userAvatarCircle" class="w-5 h-5 rounded-full bg-sky-700 text-white font-bold text-[10px] flex items-center justify-center uppercase shadow-2xs">U</div>
-                                <span id="userEmailDisplay" class="font-medium text-slate-700 truncate max-w-[130px]">user</span>
+                            <!-- User Avatar (Google Photo or Initial Badge) with Hover Tooltip -->
+                            <div id="userProfilePill" class="relative group flex items-center cursor-pointer" title="">
+                                <img id="userAvatarImg" 
+                                     class="hidden w-7 h-7 rounded-full object-cover border border-slate-300 shadow-2xs hover:ring-2 hover:ring-sky-400 transition" 
+                                     referrerpolicy="no-referrer" 
+                                     alt="Profile Avatar"
+                                     onerror="this.classList.add('hidden'); const c = document.getElementById('userAvatarCircle'); if(c) c.classList.remove('hidden');" />
+                                <div id="userAvatarCircle" 
+                                     class="w-7 h-7 rounded-full bg-sky-700 text-white font-bold text-xs flex items-center justify-center uppercase shadow-2xs hover:ring-2 hover:ring-sky-400 transition">
+                                    U
+                                </div>
+                                <!-- Floating Hover Card (Reveals user name & email on hover) -->
+                                <div class="hidden group-hover:flex absolute right-0 top-full mt-2 z-50 flex-col items-start whitespace-nowrap bg-slate-900/95 backdrop-blur-xs text-white text-[11px] py-1.5 px-3 rounded-lg shadow-xl border border-slate-700 pointer-events-none transition-all">
+                                    <span id="userTooltipName" class="font-semibold text-slate-100"></span>
+                                    <span id="userTooltipEmail" class="text-slate-300 font-mono text-[10px]"></span>
+                                </div>
                             </div>
 
                             <!-- Sign Out Button -->
@@ -1620,8 +1632,11 @@ def index_page():
                 const signInHeaderBtn = document.getElementById('signInHeaderBtn');
                 const userProfileHeader = document.getElementById('userProfileHeader');
                 const adminUserMgmtBtn = document.getElementById('adminUserMgmtBtn');
+                const userProfilePill = document.getElementById('userProfilePill');
+                const userAvatarImg = document.getElementById('userAvatarImg');
                 const userAvatarCircle = document.getElementById('userAvatarCircle');
-                const userEmailDisplay = document.getElementById('userEmailDisplay');
+                const userTooltipName = document.getElementById('userTooltipName');
+                const userTooltipEmail = document.getElementById('userTooltipEmail');
                 const pendingApprovalModal = document.getElementById('pendingApprovalModal');
 
                 if (!user) {
@@ -1637,10 +1652,34 @@ def index_page():
                 // Authenticated
                 if (signInHeaderBtn) signInHeaderBtn.classList.add('hidden');
                 if (userProfileHeader) userProfileHeader.classList.remove('hidden');
-                if (userEmailDisplay) userEmailDisplay.innerText = user.email || 'Clinician';
-                if (userAvatarCircle) {
-                    const initial = (user.email || 'U').charAt(0).toUpperCase();
+                
+                const emailStr = user.email || 'Clinician';
+                const nameStr = user.displayName || '';
+                const photoStr = user.photoURL || '';
+
+                if (userProfilePill) {
+                    userProfilePill.setAttribute('title', nameStr ? `${nameStr} (${emailStr})` : emailStr);
+                }
+                if (userTooltipEmail) userTooltipEmail.innerText = emailStr;
+                if (userTooltipName) {
+                    if (nameStr) {
+                        userTooltipName.innerText = nameStr;
+                        userTooltipName.classList.remove('hidden');
+                    } else {
+                        userTooltipName.innerText = '';
+                        userTooltipName.classList.add('hidden');
+                    }
+                }
+
+                if (photoStr && userAvatarImg && userAvatarCircle) {
+                    userAvatarImg.src = photoStr;
+                    userAvatarImg.classList.remove('hidden');
+                    userAvatarCircle.classList.add('hidden');
+                } else if (userAvatarCircle) {
+                    const initial = (emailStr || 'U').charAt(0).toUpperCase();
                     userAvatarCircle.innerText = initial;
+                    userAvatarCircle.classList.remove('hidden');
+                    if (userAvatarImg) userAvatarImg.classList.add('hidden');
                 }
 
                 const emailLower = (user.email || '').toLowerCase().trim();
@@ -1657,6 +1696,8 @@ def index_page():
                         await fbDb.collection('users').doc(user.uid).set({
                             uid: user.uid,
                             email: user.email,
+                            displayName: user.displayName || '',
+                            photoURL: user.photoURL || '',
                             approved: true,
                             status: 'approved',
                             role: 'admin',
@@ -1692,6 +1733,8 @@ def index_page():
                         await fbDb.collection('users').doc(user.uid).set({
                             uid: user.uid,
                             email: user.email,
+                            displayName: user.displayName || '',
+                            photoURL: user.photoURL || '',
                             approved: true,
                             status: 'approved',
                             role: 'user',
@@ -1711,11 +1754,19 @@ def index_page():
                         await userDocRef.set({
                             uid: user.uid,
                             email: user.email,
+                            displayName: user.displayName || '',
+                            photoURL: user.photoURL || '',
                             approved: false,
                             status: 'pending',
                             role: 'user',
                             createdAt: new Date().toISOString()
                         });
+                    } else {
+                        await userDocRef.set({
+                            displayName: user.displayName || '',
+                            photoURL: user.photoURL || '',
+                            lastLoginAt: new Date().toISOString()
+                        }, { merge: true });
                     }
 
                     userDocListenerUnsub = userDocRef.onSnapshot((snapshot) => {
@@ -2096,30 +2147,38 @@ def index_page():
                         `;
                     }
 
+                    const userInitial = (email.charAt(0) || 'U').toUpperCase();
+                    const avatarHtml = u.photoURL ? 
+                        `<img src="${u.photoURL}" class="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs shrink-0" referrerpolicy="no-referrer" alt="${email}" onerror="this.outerHTML='<div class=\\'w-8 h-8 rounded-full bg-sky-700 text-white font-bold text-xs flex items-center justify-center uppercase shadow-2xs shrink-0\\'>${userInitial}</div>'" />` :
+                        `<div class="w-8 h-8 rounded-full bg-sky-700 text-white font-bold text-xs flex items-center justify-center uppercase shadow-2xs shrink-0">${userInitial}</div>`;
+
                     return `
                         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-                            <div class="space-y-1.5 flex-1 min-w-[280px]">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-bold text-xs text-slate-900">${email}</span>
-                                    <span class="text-[10px] px-2 py-0.2 rounded-full font-semibold ${u.approved ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : (u.status === 'denied' || u.status === 'revoked' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200')}">
-                                        ${u.approved ? 'Approved' : (u.status === 'denied' ? 'Denied' : (u.status === 'revoked' ? 'Revoked' : 'Pending'))}
-                                    </span>
-                                </div>
-                                <div class="text-[11px] text-slate-400 font-mono">UID: ${u.uid}</div>
-                                <!-- Live Token & Cost Telemetry Badges -->
-                                <div class="flex flex-wrap items-center gap-2 pt-1">
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 border border-sky-100 text-[10px] font-semibold text-sky-800" title="Total API requests">
-                                        <span>📊</span> <span>${reqCount} reqs</span>
-                                    </span>
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-[10px] font-semibold text-indigo-800" title="Total Tokens Consumed">
-                                        <span>🪙</span> <span>${tokenCount} tokens</span>
-                                    </span>
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-semibold text-emerald-800" title="Estimated USD Cost">
-                                        <span>💵</span> <span>${costFormatted}</span>
-                                    </span>
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[10px] text-slate-500" title="Last Active">
-                                        <span>🕒</span> <span>${lastActive}</span>
-                                    </span>
+                            <div class="flex items-start gap-3 flex-1 min-w-[280px]">
+                                ${avatarHtml}
+                                <div class="space-y-1.5 flex-1 min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-xs text-slate-900 truncate">${u.displayName ? u.displayName + ' · ' : ''}${email}</span>
+                                        <span class="text-[10px] px-2 py-0.2 rounded-full font-semibold shrink-0 ${u.approved ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : (u.status === 'denied' || u.status === 'revoked' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200')}">
+                                            ${u.approved ? 'Approved' : (u.status === 'denied' ? 'Denied' : (u.status === 'revoked' ? 'Revoked' : 'Pending'))}
+                                        </span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 font-mono">UID: ${u.uid}</div>
+                                    <!-- Live Token & Cost Telemetry Badges -->
+                                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 border border-sky-100 text-[10px] font-semibold text-sky-800" title="Total API requests">
+                                            <span>📊</span> <span>${reqCount} reqs</span>
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-100 text-[10px] font-semibold text-indigo-800" title="Total Tokens Consumed">
+                                            <span>🪙</span> <span>${tokenCount} tokens</span>
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-semibold text-emerald-800" title="Estimated USD Cost">
+                                            <span>💵</span> <span>${costFormatted}</span>
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[10px] text-slate-500" title="Last Active">
+                                            <span>🕒</span> <span>${lastActive}</span>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
