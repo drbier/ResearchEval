@@ -56,8 +56,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
-PUBLIC_DIR = os.path.join(PROJECT_ROOT, "public")
-ICONS_DIR = os.path.join(PUBLIC_DIR, "icons")
+PUBLIC_DIR = os.path.join(PROJECT_ROOT, "Public") if os.path.exists(os.path.join(PROJECT_ROOT, "Public")) else os.path.join(PROJECT_ROOT, "public")
+ICONS_DIR = os.path.join(PUBLIC_DIR, "icons") if os.path.exists(os.path.join(PUBLIC_DIR, "icons")) else os.path.join(STATIC_DIR, "icons")
 
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -70,39 +70,49 @@ if os.path.exists(ICONS_DIR):
 
 @app.get("/manifest.json")
 def get_manifest():
-    manifest_file = os.path.join(PUBLIC_DIR, "manifest.json")
-    if os.path.exists(manifest_file):
-        return FileResponse(manifest_file, media_type="application/manifest+json")
+    for m in [os.path.join(PUBLIC_DIR, "manifest.json"), os.path.join(STATIC_DIR, "manifest.json")]:
+        if os.path.exists(m):
+            return FileResponse(m, media_type="application/manifest+json")
     raise HTTPException(status_code=404, detail="Manifest not found")
 
 @app.get("/FACT-Elf.jpeg")
 @app.get("/FAST-Elf.jpeg")
+@app.get("/elf-thinker.png")
+@app.get("/fast-elf.png")
 def get_fast_elf_image():
-    elf_file = os.path.join(PUBLIC_DIR, "FAST-Elf.jpeg")
-    if os.path.exists(elf_file):
-        return FileResponse(elf_file, media_type="image/jpeg")
-    raise HTTPException(status_code=404, detail="Elf image not found")
+    for candidate in [
+        os.path.join(PUBLIC_DIR, "FACT-Elf.jpeg"),
+        os.path.join(PUBLIC_DIR, "FAST-Elf.jpeg"),
+        os.path.join(STATIC_DIR, "FACT-Elf.jpeg"),
+        os.path.join(STATIC_DIR, "elf-thinker.png"),
+        os.path.join(STATIC_DIR, "fast-elf.png"),
+        os.path.join(PUBLIC_DIR, "icons", "icon-512.png")
+    ]:
+        if os.path.exists(candidate):
+            mtype = "image/png" if candidate.endswith(".png") else "image/jpeg"
+            return FileResponse(candidate, media_type=mtype)
+    raise HTTPException(status_code=404, detail="Elf thinker logo not found")
 
 @app.get("/logo.png")
-@app.get("/elf-thinker.png")
 def get_logo():
-    # Return new FAST icon
-    fast_icon = os.path.join(PUBLIC_DIR, "icons", "icon-512.png")
-    if os.path.exists(fast_icon):
-        return FileResponse(fast_icon, media_type="image/png")
-    logo_file = os.path.join(STATIC_DIR, "fast-elf.png")
-    if os.path.exists(logo_file):
-        return FileResponse(logo_file, media_type="image/png")
+    for candidate in [
+        os.path.join(PUBLIC_DIR, "icons", "icon-512.png"),
+        os.path.join(STATIC_DIR, "elf-thinker.png"),
+        os.path.join(STATIC_DIR, "fast-elf.png"),
+        os.path.join(PUBLIC_DIR, "FACT-Elf.jpeg"),
+        os.path.join(PUBLIC_DIR, "FAST-Elf.jpeg")
+    ]:
+        if os.path.exists(candidate):
+            mtype = "image/png" if candidate.endswith(".png") else "image/jpeg"
+            return FileResponse(candidate, media_type=mtype)
     raise HTTPException(status_code=404, detail="Logo not found")
 
 @app.get("/favicon.ico")
 def get_favicon():
-    favicon_file = os.path.join(PUBLIC_DIR, "favicon.ico")
-    if os.path.exists(favicon_file):
-        return FileResponse(favicon_file, media_type="image/x-icon")
-    alt_file = os.path.join(STATIC_DIR, "favicon.ico")
-    if os.path.exists(alt_file):
-        return FileResponse(alt_file, media_type="image/x-icon")
+    for f in [os.path.join(PUBLIC_DIR, "favicon.ico"), os.path.join(STATIC_DIR, "favicon.ico")]:
+        if os.path.exists(f):
+            return FileResponse(f, media_type="image/x-icon")
+    raise HTTPException(status_code=404, detail="Favicon not found")
     raise HTTPException(status_code=404, detail="Favicon not found")
 
 engine = SynthesisEngine(DATA_DIR)
