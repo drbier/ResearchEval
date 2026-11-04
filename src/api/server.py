@@ -1,10 +1,11 @@
+from __future__ import annotations
 import os
 import sys
 import shutil
 import io
 import urllib.parse
 import re
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from pydantic import BaseModel
 
 try:
