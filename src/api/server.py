@@ -749,27 +749,106 @@ def index_page():
                 try {
                     const savedMode = localStorage.getItem('fact_theme_mode');
                     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    if (savedMode === 'dark' || (!savedMode && prefersDark)) {
+                    const isDark = savedMode === 'dark' || (!savedMode && prefersDark);
+                    if (isDark) {
                         document.documentElement.classList.add('dark');
                     } else {
                         document.documentElement.classList.remove('dark');
                     }
                     const savedColor = localStorage.getItem('fact_highlight_color') || 'amber';
                     const palettes = {
-                        amber: { border: '#d97706', bg: 'rgba(245, 158, 11, 0.28)', ring: 'rgba(251, 191, 36, 0.5)', glow: 'rgba(245, 158, 11, 0.4)', ringPulse: 'rgba(251, 191, 36, 0.8)', glowPulse: 'rgba(245, 158, 11, 0.9)', pillBg: '#d97706', pillBorder: '#b45309', hex: '#d97706' },
-                        emerald: { border: '#059669', bg: 'rgba(16, 185, 129, 0.26)', ring: 'rgba(52, 211, 153, 0.5)', glow: 'rgba(16, 185, 129, 0.4)', ringPulse: 'rgba(52, 211, 153, 0.8)', glowPulse: 'rgba(16, 185, 129, 0.9)', pillBg: '#059669', pillBorder: '#047857', hex: '#059669' },
-                        teal: { border: '#0d9488', bg: 'rgba(20, 184, 166, 0.26)', ring: 'rgba(45, 212, 191, 0.5)', glow: 'rgba(20, 184, 166, 0.4)', ringPulse: 'rgba(45, 212, 191, 0.8)', glowPulse: 'rgba(20, 184, 166, 0.9)', pillBg: '#0d9488', pillBorder: '#0f766e', hex: '#0d9488' },
-                        blue: { border: '#2563eb', bg: 'rgba(37, 99, 235, 0.25)', ring: 'rgba(96, 165, 250, 0.5)', glow: 'rgba(37, 99, 235, 0.4)', ringPulse: 'rgba(96, 165, 250, 0.8)', glowPulse: 'rgba(37, 99, 235, 0.9)', pillBg: '#2563eb', pillBorder: '#1d4ed8', hex: '#2563eb' },
-                        indigo: { border: '#4f46e5', bg: 'rgba(79, 70, 229, 0.25)', ring: 'rgba(129, 140, 248, 0.5)', glow: 'rgba(79, 70, 229, 0.4)', ringPulse: 'rgba(129, 140, 248, 0.8)', glowPulse: 'rgba(79, 70, 229, 0.9)', pillBg: '#4f46e5', pillBorder: '#4338ca', hex: '#4f46e5' },
-                        violet: { border: '#7c3aed', bg: 'rgba(124, 58, 237, 0.25)', ring: 'rgba(167, 139, 250, 0.5)', glow: 'rgba(124, 58, 237, 0.4)', ringPulse: 'rgba(167, 139, 250, 0.8)', glowPulse: 'rgba(124, 58, 237, 0.9)', pillBg: '#7c3aed', pillBorder: '#6d28d9', hex: '#7c3aed' },
-                        rose: { border: '#e11d48', bg: 'rgba(225, 29, 72, 0.25)', ring: 'rgba(251, 113, 133, 0.5)', glow: 'rgba(225, 29, 72, 0.4)', ringPulse: 'rgba(251, 113, 133, 0.8)', glowPulse: 'rgba(225, 29, 72, 0.9)', pillBg: '#e11d48', pillBorder: '#be123c', hex: '#e11d48' },
-                        slate: { border: '#475569', bg: 'rgba(71, 85, 105, 0.3)', ring: 'rgba(148, 163, 184, 0.5)', glow: 'rgba(71, 85, 105, 0.4)', ringPulse: 'rgba(148, 163, 184, 0.8)', glowPulse: 'rgba(71, 85, 105, 0.9)', pillBg: '#475569', pillBorder: '#334155', hex: '#475569' }
+                        amber: { 
+                            primary: '#d97706', primaryHover: '#b45309', 
+                            textLight: '#b45309', textDark: '#fbbf24', 
+                            ring: 'rgba(217, 119, 6, 0.4)', 
+                            borderLight: 'rgba(217, 119, 6, 0.3)', borderDark: 'rgba(217, 119, 6, 0.45)',
+                            softBgLight: 'rgba(245, 158, 11, 0.12)', softBgDark: 'rgba(245, 158, 11, 0.22)',
+                            border: '#d97706', bg: 'rgba(245, 158, 11, 0.28)', ringGlow: 'rgba(251, 191, 36, 0.5)', 
+                            glow: 'rgba(245, 158, 11, 0.4)', ringPulse: 'rgba(251, 191, 36, 0.8)', glowPulse: 'rgba(245, 158, 11, 0.9)', 
+                            pillBg: '#d97706', pillBorder: '#b45309', hex: '#d97706' 
+                        },
+                        emerald: { 
+                            primary: '#059669', primaryHover: '#047857', 
+                            textLight: '#047857', textDark: '#34d399', 
+                            ring: 'rgba(5, 150, 105, 0.4)', 
+                            borderLight: 'rgba(5, 150, 105, 0.3)', borderDark: 'rgba(5, 150, 105, 0.45)',
+                            softBgLight: 'rgba(16, 185, 129, 0.12)', softBgDark: 'rgba(16, 185, 129, 0.22)',
+                            border: '#059669', bg: 'rgba(16, 185, 129, 0.26)', ringGlow: 'rgba(52, 211, 153, 0.5)', 
+                            glow: 'rgba(16, 185, 129, 0.4)', ringPulse: 'rgba(52, 211, 153, 0.8)', glowPulse: 'rgba(16, 185, 129, 0.9)', 
+                            pillBg: '#059669', pillBorder: '#047857', hex: '#059669' 
+                        },
+                        teal: { 
+                            primary: '#0d9488', primaryHover: '#0f766e', 
+                            textLight: '#0f766e', textDark: '#2dd4bf', 
+                            ring: 'rgba(13, 148, 136, 0.4)', 
+                            borderLight: 'rgba(13, 148, 136, 0.3)', borderDark: 'rgba(13, 148, 136, 0.45)',
+                            softBgLight: 'rgba(20, 184, 166, 0.12)', softBgDark: 'rgba(20, 184, 166, 0.22)',
+                            border: '#0d9488', bg: 'rgba(20, 184, 166, 0.26)', ringGlow: 'rgba(45, 212, 191, 0.5)', 
+                            glow: 'rgba(20, 184, 166, 0.4)', ringPulse: 'rgba(45, 212, 191, 0.8)', glowPulse: 'rgba(20, 184, 166, 0.9)', 
+                            pillBg: '#0d9488', pillBorder: '#0f766e', hex: '#0d9488' 
+                        },
+                        blue: { 
+                            primary: '#0284c7', primaryHover: '#0369a1', 
+                            textLight: '#0369a1', textDark: '#38bdf8', 
+                            ring: 'rgba(2, 132, 199, 0.4)', 
+                            borderLight: 'rgba(2, 132, 199, 0.3)', borderDark: 'rgba(2, 132, 199, 0.45)',
+                            softBgLight: 'rgba(2, 132, 199, 0.12)', softBgDark: 'rgba(2, 132, 199, 0.22)',
+                            border: '#0284c7', bg: 'rgba(2, 132, 199, 0.25)', ringGlow: 'rgba(56, 189, 248, 0.5)', 
+                            glow: 'rgba(2, 132, 199, 0.4)', ringPulse: 'rgba(56, 189, 248, 0.8)', glowPulse: 'rgba(2, 132, 199, 0.9)', 
+                            pillBg: '#0284c7', pillBorder: '#0369a1', hex: '#0284c7' 
+                        },
+                        indigo: { 
+                            primary: '#4f46e5', primaryHover: '#4338ca', 
+                            textLight: '#4338ca', textDark: '#818cf8', 
+                            ring: 'rgba(79, 70, 229, 0.4)', 
+                            borderLight: 'rgba(79, 70, 229, 0.3)', borderDark: 'rgba(79, 70, 229, 0.45)',
+                            softBgLight: 'rgba(79, 70, 229, 0.12)', softBgDark: 'rgba(79, 70, 229, 0.22)',
+                            border: '#4f46e5', bg: 'rgba(79, 70, 229, 0.25)', ringGlow: 'rgba(129, 140, 248, 0.5)', 
+                            glow: 'rgba(79, 70, 229, 0.4)', ringPulse: 'rgba(129, 140, 248, 0.8)', glowPulse: 'rgba(79, 70, 229, 0.9)', 
+                            pillBg: '#4f46e5', pillBorder: '#4338ca', hex: '#4f46e5' 
+                        },
+                        violet: { 
+                            primary: '#7c3aed', primaryHover: '#6d28d9', 
+                            textLight: '#6d28d9', textDark: '#a78bfa', 
+                            ring: 'rgba(124, 58, 237, 0.4)', 
+                            borderLight: 'rgba(124, 58, 237, 0.3)', borderDark: 'rgba(124, 58, 237, 0.45)',
+                            softBgLight: 'rgba(124, 58, 237, 0.12)', softBgDark: 'rgba(124, 58, 237, 0.22)',
+                            border: '#7c3aed', bg: 'rgba(124, 58, 237, 0.25)', ringGlow: 'rgba(167, 139, 250, 0.5)', 
+                            glow: 'rgba(124, 58, 237, 0.4)', ringPulse: 'rgba(167, 139, 250, 0.8)', glowPulse: 'rgba(124, 58, 237, 0.9)', 
+                            pillBg: '#7c3aed', pillBorder: '#6d28d9', hex: '#7c3aed' 
+                        },
+                        rose: { 
+                            primary: '#e11d48', primaryHover: '#be123c', 
+                            textLight: '#be123c', textDark: '#fb7185', 
+                            ring: 'rgba(225, 29, 72, 0.4)', 
+                            borderLight: 'rgba(225, 29, 72, 0.3)', borderDark: 'rgba(225, 29, 72, 0.45)',
+                            softBgLight: 'rgba(225, 29, 72, 0.12)', softBgDark: 'rgba(225, 29, 72, 0.22)',
+                            border: '#e11d48', bg: 'rgba(225, 29, 72, 0.25)', ringGlow: 'rgba(251, 113, 133, 0.5)', 
+                            glow: 'rgba(225, 29, 72, 0.4)', ringPulse: 'rgba(251, 113, 133, 0.8)', glowPulse: 'rgba(225, 29, 72, 0.9)', 
+                            pillBg: '#e11d48', pillBorder: '#be123c', hex: '#e11d48' 
+                        },
+                        slate: { 
+                            primary: '#475569', primaryHover: '#334155', 
+                            textLight: '#334155', textDark: '#94a3b8', 
+                            ring: 'rgba(71, 85, 105, 0.4)', 
+                            borderLight: 'rgba(71, 85, 105, 0.3)', borderDark: 'rgba(71, 85, 105, 0.45)',
+                            softBgLight: 'rgba(71, 85, 105, 0.12)', softBgDark: 'rgba(71, 85, 105, 0.22)',
+                            border: '#475569', bg: 'rgba(71, 85, 105, 0.3)', ringGlow: 'rgba(148, 163, 184, 0.5)', 
+                            glow: 'rgba(71, 85, 105, 0.4)', ringPulse: 'rgba(148, 163, 184, 0.8)', glowPulse: 'rgba(71, 85, 105, 0.9)', 
+                            pillBg: '#475569', pillBorder: '#334155', hex: '#475569' 
+                        }
                     };
                     const p = palettes[savedColor] || palettes.amber;
                     const r = document.documentElement;
+                    r.style.setProperty('--accent-primary', p.primary);
+                    r.style.setProperty('--accent-hover', p.primaryHover);
+                    r.style.setProperty('--accent-text', isDark ? p.textDark : p.textLight);
+                    r.style.setProperty('--accent-ring', p.ring);
+                    r.style.setProperty('--accent-border', isDark ? p.borderDark : p.borderLight);
+                    r.style.setProperty('--accent-soft-bg', isDark ? p.softBgDark : p.softBgLight);
                     r.style.setProperty('--highlight-border', p.border);
                     r.style.setProperty('--highlight-bg', p.bg);
-                    r.style.setProperty('--highlight-ring', p.ring);
+                    r.style.setProperty('--highlight-ring', p.ringGlow);
                     r.style.setProperty('--highlight-glow', p.glow);
                     r.style.setProperty('--highlight-ring-pulse', p.ringPulse);
                     r.style.setProperty('--highlight-glow-pulse', p.glowPulse);
@@ -787,6 +866,12 @@ def index_page():
         <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
         <style>
             :root {
+                --accent-primary: #d97706;
+                --accent-hover: #b45309;
+                --accent-text: #b45309;
+                --accent-ring: rgba(217, 119, 6, 0.4);
+                --accent-border: rgba(217, 119, 6, 0.3);
+                --accent-soft-bg: rgba(245, 158, 11, 0.12);
                 --highlight-border: #d97706;
                 --highlight-bg: rgba(245, 158, 11, 0.28);
                 --highlight-ring: rgba(251, 191, 36, 0.5);
@@ -796,6 +881,82 @@ def index_page():
                 --highlight-pill-bg: #d97706;
                 --highlight-pill-border: #b45309;
                 --highlight-hex: #d97706;
+            }
+            html.dark {
+                --accent-text: #fbbf24;
+                --accent-border: rgba(217, 119, 6, 0.45);
+                --accent-soft-bg: rgba(245, 158, 11, 0.22);
+            }
+            /* Dynamic Accent Color Utility Classes linked to Highlight Palette */
+            .btn-primary-accent,
+            button#runBtn,
+            button#resolveBtn,
+            button#finderSubmitBtn,
+            button#summarizerSubmitBtn,
+            button#askSubmitBtn,
+            button#signInHeaderBtn,
+            button#preApproveBtn,
+            button#authSubmitBtn,
+            button#settingsDoneBtn,
+            #abstractModal button.bg-sky-600 {
+                background-color: var(--accent-primary, #0284c7) !important;
+                color: #ffffff !important;
+                border-color: var(--accent-primary, #0284c7) !important;
+                cursor: pointer;
+            }
+            .btn-primary-accent:hover,
+            button#runBtn:hover,
+            button#resolveBtn:hover,
+            button#finderSubmitBtn:hover,
+            button#summarizerSubmitBtn:hover,
+            button#askSubmitBtn:hover,
+            button#signInHeaderBtn:hover,
+            button#preApproveBtn:hover,
+            button#authSubmitBtn:hover,
+            button#settingsDoneBtn:hover,
+            #abstractModal button.bg-sky-600:hover {
+                background-color: var(--accent-hover, #0369a1) !important;
+                border-color: var(--accent-hover, #0369a1) !important;
+            }
+
+            #pdfFile::file-selector-button {
+                background-color: var(--accent-primary, #0284c7) !important;
+                color: #ffffff !important;
+                border: 0 !important;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 0.75rem;
+                padding: 0.25rem 0.75rem;
+                border-radius: 0.25rem;
+                margin-right: 0.625rem;
+                transition: background-color 0.15s ease;
+            }
+            #pdfFile::file-selector-button:hover {
+                background-color: var(--accent-hover, #0369a1) !important;
+            }
+
+            .fact-brand-title {
+                color: var(--accent-text, #0369a1) !important;
+            }
+
+            .tab-active-accent {
+                color: var(--accent-text, #0369a1) !important;
+                font-weight: 700 !important;
+            }
+
+            #paperUrl:focus,
+            #finderSearchInput:focus,
+            #summarizerUrlsInput:focus,
+            #askQuestionInput:focus,
+            #preApproveEmailInput:focus,
+            #adminSearchInput:focus {
+                outline: none !important;
+                border-color: var(--accent-primary, #0284c7) !important;
+                box-shadow: 0 0 0 2px var(--accent-ring, rgba(2, 132, 199, 0.4)) !important;
+            }
+
+            #summarizerBatchBadge {
+                background-color: var(--accent-primary, #0284c7) !important;
             }
             .anchor-pill {
                 cursor: pointer;
@@ -823,7 +984,7 @@ def index_page():
             #outputMarkdown h2 {
                 font-size: 1.125rem !important;
                 font-weight: 700 !important;
-                color: #0369a1 !important; /* sky-700 */
+                color: var(--accent-text, #0369a1) !important;
                 margin-top: 1.25rem !important;
                 margin-bottom: 0.5rem !important;
                 letter-spacing: -0.01em !important;
@@ -856,7 +1017,7 @@ def index_page():
                 color: #f8fafc !important;
             }
             html.dark #outputMarkdown h2 {
-                color: #38bdf8 !important;
+                color: var(--accent-text, #38bdf8) !important;
             }
             html.dark #outputMarkdown h3 {
                 color: #cbd5e1 !important;
@@ -874,15 +1035,15 @@ def index_page():
                 background-color: #334155 !important;
             }
             html.dark .resizer:hover, html.dark .resizer.resizing {
-                background-color: #38bdf8 !important;
+                background-color: var(--accent-primary, #38bdf8) !important;
             }
             html.dark #sectionPopup {
                 background: #0f172a !important;
-                border-color: #0284c7 !important;
+                border-color: var(--accent-primary, #0284c7) !important;
                 color: #f8fafc !important;
             }
             html.dark #popupHeader {
-                background: #1e293b !important;
+                background: var(--accent-hover, #1e293b) !important;
                 border-bottom: 1px solid #334155 !important;
             }
             html.dark #popupTitle {
@@ -911,7 +1072,7 @@ def index_page():
                 border-radius: 4px;
             }
             .resizer:hover, .resizer.resizing {
-                background-color: #0284c7;
+                background-color: var(--accent-primary, #0284c7) !important;
             }
             /* Hover highlight popover box on the manuscript page */
             #imageContainer {
@@ -947,7 +1108,7 @@ def index_page():
                 max-width: calc(100vw - 20px);
                 max-height: calc(100vh - 20px);
                 background: #ffffff;
-                border: 2px solid #0284c7;
+                border: 2px solid var(--accent-primary, #0284c7);
                 border-radius: 12px;
                 box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 10px 20px -5px rgba(0, 0, 0, 0.2);
                 overflow: hidden;
@@ -1106,7 +1267,7 @@ def index_page():
                         </div>
                     </div>
                     <div class="flex flex-col items-center text-center">
-                        <h1 class="text-xl font-bold text-sky-800 dark:text-sky-400 tracking-tight leading-none text-center">F.A.C.T.</h1>
+                        <h1 class="text-xl font-bold fact-brand-title tracking-tight leading-none text-center">F.A.C.T.</h1>
                         <p class="text-slate-500 dark:text-slate-400 text-[11px] font-medium mt-1 text-center whitespace-nowrap">Find<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Analyze<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Contextualize<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Talk</p>
                     </div>
                 </div>
@@ -1116,7 +1277,7 @@ def index_page():
                     <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
                         <span>🔍</span> <span>Find</span>
                     </button>
-                    <button id="masterTabAppraisal" onclick="switchMasterMode('appraisal')" class="px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs">
+                    <button id="masterTabAppraisal" onclick="switchMasterMode('appraisal')" class="px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-bold transition flex items-center gap-1.5 text-xs">
                         <span>🔬</span> <span>Analyze</span>
                     </button>
                     <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
@@ -1129,20 +1290,20 @@ def index_page():
                 <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-850 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex-1 max-w-2xl">
                     <!-- Mode Switch Buttons -->
                     <div class="flex bg-slate-200/80 dark:bg-slate-800 p-0.5 rounded text-xs font-medium shrink-0">
-                        <button id="tabPdfBtn" onclick="switchInputTab('pdf')" class="px-2.5 py-1 rounded bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-semibold transition">📄 PDF</button>
+                        <button id="tabPdfBtn" onclick="switchInputTab('pdf')" class="px-2.5 py-1 rounded bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-semibold transition">📄 PDF</button>
                         <button id="tabUrlBtn" onclick="switchInputTab('url')" class="px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition">🔗 Link / PMID</button>
                     </div>
 
                     <!-- PDF Input Control -->
                     <div id="tabPdf" class="flex items-center gap-2 flex-1">
-                        <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-xs text-slate-600 dark:text-slate-300 file:mr-2.5 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700"/>
-                        <button onclick="startAppraisal()" id="runBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Analyze</button>
+                        <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-xs text-slate-600 dark:text-slate-300 cursor-pointer bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700"/>
+                        <button onclick="startAppraisal()" id="runBtn" class="btn-primary-accent text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Analyze</button>
                     </div>
 
                     <!-- URL / PMID Input Control -->
                     <div id="tabUrl" class="hidden flex items-center gap-2 flex-1">
-                        <input type="text" id="paperUrl" placeholder="Paste PubMed URL, PMID (e.g. 37726553), PMC ID, or DOI" class="block w-full text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500"/>
-                        <button onclick="startUrlResolution()" id="resolveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Fetch & Analyze</button>
+                        <input type="text" id="paperUrl" placeholder="Paste PubMed URL, PMID (e.g. 37726553), PMC ID, or DOI" class="block w-full text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 focus:outline-none"/>
+                        <button onclick="startUrlResolution()" id="resolveBtn" class="btn-primary-accent text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Fetch & Analyze</button>
                     </div>
                 </div>
 
@@ -1187,7 +1348,7 @@ def index_page():
                         </button>
 
                         <!-- Sign In Button (Shown when unauthenticated) -->
-                        <button id="signInHeaderBtn" onclick="openAuthModal()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
+                        <button id="signInHeaderBtn" onclick="openAuthModal()" class="btn-primary-accent px-3 py-1.5 rounded-lg text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
                             <span>🔑</span> <span>Sign In</span>
                         </button>
 
@@ -1243,7 +1404,7 @@ def index_page():
                     <p class="text-xs font-semibold text-slate-700">Would you like to analyze the abstract only?</p>
                     <div class="flex justify-end gap-3 pt-2">
                         <button onclick="closeAbstractModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-md transition">Cancel</button>
-                        <button onclick="proceedWithAbstractOnly()" class="px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-md transition shadow">Analyze Abstract Only</button>
+                        <button onclick="proceedWithAbstractOnly()" class="btn-primary-accent px-4 py-2 text-xs font-semibold text-white rounded-md transition shadow">Analyze Abstract Only</button>
                     </div>
                 </div>
             </div>
@@ -1291,7 +1452,7 @@ def index_page():
                             <input type="password" id="authPasswordInput" placeholder="••••••••" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition"/>
                         </div>
 
-                        <button type="submit" id="authSubmitBtn" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-center gap-2">
+                        <button type="submit" id="authSubmitBtn" class="btn-primary-accent w-full text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-center gap-2">
                             <span id="authSubmitText">Sign In</span>
                         </button>
                     </form>
@@ -1349,7 +1510,7 @@ def index_page():
                     <div class="px-6 py-3 bg-sky-50/50 border-b border-sky-100 flex items-center gap-2 shrink-0">
                         <span class="text-xs font-semibold text-sky-900 shrink-0">Pre-Approve Colleague:</span>
                         <input type="email" id="preApproveEmailInput" placeholder="colleague@clinic.org" class="flex-1 text-xs bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500"/>
-                        <button onclick="handlePreapproveEmail()" id="preApproveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg transition shadow-2xs shrink-0 flex items-center gap-1">
+                        <button onclick="handlePreapproveEmail()" id="preApproveBtn" class="btn-primary-accent text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg transition shadow-2xs shrink-0 flex items-center gap-1 cursor-pointer">
                             <span>➕</span> <span>Pre-Approve</span>
                         </button>
                     </div>
@@ -1482,7 +1643,7 @@ def index_page():
 
                     <!-- Modal Footer -->
                     <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-end">
-                        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer">
+                        <button id="settingsDoneBtn" onclick="closeSettingsModal()" class="btn-primary-accent px-4 py-2 rounded-lg text-white font-semibold text-xs shadow-xs transition cursor-pointer">
                             Done
                         </button>
                     </div>
@@ -1525,7 +1686,7 @@ def index_page():
                             <button 
                                 id="finderSubmitBtn" 
                                 onclick="executeFinderSearch()" 
-                                class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-5 py-3 rounded-lg transition shadow-xs flex items-center gap-2 shrink-0"
+                                class="btn-primary-accent text-white font-semibold text-xs px-5 py-3 rounded-lg transition shadow-xs flex items-center gap-2 shrink-0 cursor-pointer"
                             >
                                 <span id="finderBtnIcon">🔍</span>
                                 <span id="finderBtnText">Find Verified Papers</span>
@@ -1596,7 +1757,7 @@ def index_page():
                             <button 
                                 id="summarizerSubmitBtn" 
                                 onclick="executeSummarizerBatch()" 
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition shadow-xs flex items-center gap-2 cursor-pointer"
+                                class="btn-primary-accent text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition shadow-xs flex items-center gap-2 cursor-pointer"
                             >
                                 <span id="summarizerBtnIcon">🚀</span>
                                 <span id="summarizerBtnText">Generate Science Briefing</span>
@@ -1637,7 +1798,7 @@ def index_page():
                         <div class="sticky top-0 bg-white dark:bg-slate-900 z-10 pb-3 border-b border-slate-200 dark:border-slate-800 mb-4 flex flex-wrap justify-between items-center gap-2">
                             <div class="flex items-center gap-2">
                                 <div class="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium">
-                                    <button id="leftTabAppraisalBtn" onclick="switchLeftTab('appraisal')" class="px-3 py-1 rounded-md bg-white dark:bg-slate-900 text-sky-800 dark:text-sky-300 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                                    <button id="leftTabAppraisalBtn" onclick="switchLeftTab('appraisal')" class="px-3 py-1 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
                                         <span>📄</span> <span>Clinical Analysis</span>
                                     </button>
                                     <button id="leftTabAskBtn" onclick="switchLeftTab('ask')" class="px-3 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center gap-1.5 cursor-pointer">
@@ -1684,7 +1845,7 @@ def index_page():
                             <!-- Question Input Box -->
                             <div class="flex-shrink-0 flex gap-2 pt-1">
                                 <input type="text" id="askQuestionInput" onkeydown="if(event.key==='Enter') executeAskQuery();" placeholder="Ask a question about this paper (e.g. 'What was the blinding method?')..." class="flex-1 text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs"/>
-                                <button id="askSubmitBtn" onclick="executeAskQuery()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
+                                <button id="askSubmitBtn" onclick="executeAskQuery()" class="btn-primary-accent px-4 py-2 text-white font-semibold text-xs rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
                                     <span>Send</span> <span>➤</span>
                                 </button>
                             </div>
@@ -2475,9 +2636,18 @@ def index_page():
                     name: 'Warm Amber',
                     desc: 'Apothecary ochre',
                     hex: '#d97706',
+                    primary: '#d97706',
+                    primaryHover: '#b45309',
+                    textLight: '#b45309',
+                    textDark: '#fbbf24',
+                    ring: 'rgba(217, 119, 6, 0.4)',
+                    borderLight: 'rgba(217, 119, 6, 0.3)',
+                    borderDark: 'rgba(217, 119, 6, 0.45)',
+                    softBgLight: 'rgba(245, 158, 11, 0.12)',
+                    softBgDark: 'rgba(245, 158, 11, 0.22)',
                     border: '#d97706',
                     bg: 'rgba(245, 158, 11, 0.28)',
-                    ring: 'rgba(251, 191, 36, 0.5)',
+                    ringGlow: 'rgba(251, 191, 36, 0.5)',
                     glow: 'rgba(245, 158, 11, 0.4)',
                     ringPulse: 'rgba(251, 191, 36, 0.8)',
                     glowPulse: 'rgba(245, 158, 11, 0.9)',
@@ -2489,9 +2659,18 @@ def index_page():
                     name: 'Emerald Green',
                     desc: 'Botanical herbal',
                     hex: '#059669',
+                    primary: '#059669',
+                    primaryHover: '#047857',
+                    textLight: '#047857',
+                    textDark: '#34d399',
+                    ring: 'rgba(5, 150, 105, 0.4)',
+                    borderLight: 'rgba(5, 150, 105, 0.3)',
+                    borderDark: 'rgba(5, 150, 105, 0.45)',
+                    softBgLight: 'rgba(16, 185, 129, 0.12)',
+                    softBgDark: 'rgba(16, 185, 129, 0.22)',
                     border: '#059669',
                     bg: 'rgba(16, 185, 129, 0.26)',
-                    ring: 'rgba(52, 211, 153, 0.5)',
+                    ringGlow: 'rgba(52, 211, 153, 0.5)',
                     glow: 'rgba(16, 185, 129, 0.4)',
                     ringPulse: 'rgba(52, 211, 153, 0.8)',
                     glowPulse: 'rgba(16, 185, 129, 0.9)',
@@ -2503,9 +2682,18 @@ def index_page():
                     name: 'Teal Ocean',
                     desc: 'Medical cyan',
                     hex: '#0d9488',
+                    primary: '#0d9488',
+                    primaryHover: '#0f766e',
+                    textLight: '#0f766e',
+                    textDark: '#2dd4bf',
+                    ring: 'rgba(13, 148, 136, 0.4)',
+                    borderLight: 'rgba(13, 148, 136, 0.3)',
+                    borderDark: 'rgba(13, 148, 136, 0.45)',
+                    softBgLight: 'rgba(20, 184, 166, 0.12)',
+                    softBgDark: 'rgba(20, 184, 166, 0.22)',
                     border: '#0d9488',
                     bg: 'rgba(20, 184, 166, 0.26)',
-                    ring: 'rgba(45, 212, 191, 0.5)',
+                    ringGlow: 'rgba(45, 212, 191, 0.5)',
                     glow: 'rgba(20, 184, 166, 0.4)',
                     ringPulse: 'rgba(45, 212, 191, 0.8)',
                     glowPulse: 'rgba(20, 184, 166, 0.9)',
@@ -2516,24 +2704,42 @@ def index_page():
                     id: 'blue',
                     name: 'Medical Blue',
                     desc: 'Clinical cobalt',
-                    hex: '#2563eb',
-                    border: '#2563eb',
-                    bg: 'rgba(37, 99, 235, 0.25)',
-                    ring: 'rgba(96, 165, 250, 0.5)',
-                    glow: 'rgba(37, 99, 235, 0.4)',
-                    ringPulse: 'rgba(96, 165, 250, 0.8)',
-                    glowPulse: 'rgba(37, 99, 235, 0.9)',
-                    pillBg: '#2563eb',
-                    pillBorder: '#1d4ed8'
+                    hex: '#0284c7',
+                    primary: '#0284c7',
+                    primaryHover: '#0369a1',
+                    textLight: '#0369a1',
+                    textDark: '#38bdf8',
+                    ring: 'rgba(2, 132, 199, 0.4)',
+                    borderLight: 'rgba(2, 132, 199, 0.3)',
+                    borderDark: 'rgba(2, 132, 199, 0.45)',
+                    softBgLight: 'rgba(2, 132, 199, 0.12)',
+                    softBgDark: 'rgba(2, 132, 199, 0.22)',
+                    border: '#0284c7',
+                    bg: 'rgba(2, 132, 199, 0.25)',
+                    ringGlow: 'rgba(56, 189, 248, 0.5)',
+                    glow: 'rgba(2, 132, 199, 0.4)',
+                    ringPulse: 'rgba(56, 189, 248, 0.8)',
+                    glowPulse: 'rgba(2, 132, 199, 0.9)',
+                    pillBg: '#0284c7',
+                    pillBorder: '#0369a1'
                 },
                 indigo: {
                     id: 'indigo',
                     name: 'Royal Indigo',
                     desc: 'Scholastic navy',
                     hex: '#4f46e5',
+                    primary: '#4f46e5',
+                    primaryHover: '#4338ca',
+                    textLight: '#4338ca',
+                    textDark: '#818cf8',
+                    ring: 'rgba(79, 70, 229, 0.4)',
+                    borderLight: 'rgba(79, 70, 229, 0.3)',
+                    borderDark: 'rgba(79, 70, 229, 0.45)',
+                    softBgLight: 'rgba(79, 70, 229, 0.12)',
+                    softBgDark: 'rgba(79, 70, 229, 0.22)',
                     border: '#4f46e5',
                     bg: 'rgba(79, 70, 229, 0.25)',
-                    ring: 'rgba(129, 140, 248, 0.5)',
+                    ringGlow: 'rgba(129, 140, 248, 0.5)',
                     glow: 'rgba(79, 70, 229, 0.4)',
                     ringPulse: 'rgba(129, 140, 248, 0.8)',
                     glowPulse: 'rgba(79, 70, 229, 0.9)',
@@ -2545,9 +2751,18 @@ def index_page():
                     name: 'Amethyst Violet',
                     desc: 'Diagnostic purple',
                     hex: '#7c3aed',
+                    primary: '#7c3aed',
+                    primaryHover: '#6d28d9',
+                    textLight: '#6d28d9',
+                    textDark: '#a78bfa',
+                    ring: 'rgba(124, 58, 237, 0.4)',
+                    borderLight: 'rgba(124, 58, 237, 0.3)',
+                    borderDark: 'rgba(124, 58, 237, 0.45)',
+                    softBgLight: 'rgba(124, 58, 237, 0.12)',
+                    softBgDark: 'rgba(124, 58, 237, 0.22)',
                     border: '#7c3aed',
                     bg: 'rgba(124, 58, 237, 0.25)',
-                    ring: 'rgba(167, 139, 250, 0.5)',
+                    ringGlow: 'rgba(167, 139, 250, 0.5)',
                     glow: 'rgba(124, 58, 237, 0.4)',
                     ringPulse: 'rgba(167, 139, 250, 0.8)',
                     glowPulse: 'rgba(124, 58, 237, 0.9)',
@@ -2559,9 +2774,18 @@ def index_page():
                     name: 'Rose Coral',
                     desc: 'Vivid crimson',
                     hex: '#e11d48',
+                    primary: '#e11d48',
+                    primaryHover: '#be123c',
+                    textLight: '#be123c',
+                    textDark: '#fb7185',
+                    ring: 'rgba(225, 29, 72, 0.4)',
+                    borderLight: 'rgba(225, 29, 72, 0.3)',
+                    borderDark: 'rgba(225, 29, 72, 0.45)',
+                    softBgLight: 'rgba(225, 29, 72, 0.12)',
+                    softBgDark: 'rgba(225, 29, 72, 0.22)',
                     border: '#e11d48',
                     bg: 'rgba(225, 29, 72, 0.25)',
-                    ring: 'rgba(251, 113, 133, 0.5)',
+                    ringGlow: 'rgba(251, 113, 133, 0.5)',
                     glow: 'rgba(225, 29, 72, 0.4)',
                     ringPulse: 'rgba(251, 113, 133, 0.8)',
                     glowPulse: 'rgba(225, 29, 72, 0.9)',
@@ -2573,9 +2797,18 @@ def index_page():
                     name: 'Monochrome Slate',
                     desc: 'Graphite steel',
                     hex: '#475569',
+                    primary: '#475569',
+                    primaryHover: '#334155',
+                    textLight: '#334155',
+                    textDark: '#94a3b8',
+                    ring: 'rgba(71, 85, 105, 0.4)',
+                    borderLight: 'rgba(71, 85, 105, 0.3)',
+                    borderDark: 'rgba(71, 85, 105, 0.45)',
+                    softBgLight: 'rgba(71, 85, 105, 0.12)',
+                    softBgDark: 'rgba(71, 85, 105, 0.22)',
                     border: '#475569',
                     bg: 'rgba(71, 85, 105, 0.3)',
-                    ring: 'rgba(148, 163, 184, 0.5)',
+                    ringGlow: 'rgba(148, 163, 184, 0.5)',
                     glow: 'rgba(71, 85, 105, 0.4)',
                     ringPulse: 'rgba(148, 163, 184, 0.8)',
                     glowPulse: 'rgba(71, 85, 105, 0.9)',
@@ -2595,6 +2828,7 @@ def index_page():
                     document.documentElement.classList.remove('dark');
                 }
                 localStorage.setItem('fact_theme_mode', mode);
+                applyHighlightColor(currentHighlightColor);
                 updateThemeModalUI();
             }
 
@@ -2605,10 +2839,17 @@ def index_page():
             function applyHighlightColor(colorId) {
                 currentHighlightColor = HIGHLIGHT_PALETTES[colorId] ? colorId : 'amber';
                 const p = HIGHLIGHT_PALETTES[currentHighlightColor];
+                const isDark = document.documentElement.classList.contains('dark');
                 const r = document.documentElement;
+                r.style.setProperty('--accent-primary', p.primary);
+                r.style.setProperty('--accent-hover', p.primaryHover);
+                r.style.setProperty('--accent-text', isDark ? p.textDark : p.textLight);
+                r.style.setProperty('--accent-ring', p.ring);
+                r.style.setProperty('--accent-border', isDark ? p.borderDark : p.borderLight);
+                r.style.setProperty('--accent-soft-bg', isDark ? p.softBgDark : p.softBgLight);
                 r.style.setProperty('--highlight-border', p.border);
                 r.style.setProperty('--highlight-bg', p.bg);
-                r.style.setProperty('--highlight-ring', p.ring);
+                r.style.setProperty('--highlight-ring', p.ringGlow || p.ring);
                 r.style.setProperty('--highlight-glow', p.glow);
                 r.style.setProperty('--highlight-ring-pulse', p.ringPulse);
                 r.style.setProperty('--highlight-glow-pulse', p.glowPulse);
@@ -2623,7 +2864,7 @@ def index_page():
                 if (prevHitbox) {
                     prevHitbox.style.borderColor = p.border;
                     prevHitbox.style.backgroundColor = p.bg;
-                    prevHitbox.style.boxShadow = `0 0 0 2px ${p.ring}, 0 0 10px ${p.glow}`;
+                    prevHitbox.style.boxShadow = `0 0 0 2px ${p.ringGlow || p.ring}, 0 0 10px ${p.glow}`;
                 }
 
                 localStorage.setItem('fact_highlight_color', currentHighlightColor);
@@ -2659,6 +2900,13 @@ def index_page():
                 const nameEl = document.getElementById('activeHighlightName');
                 if (nameEl) nameEl.innerText = curPal.name;
 
+                const badgeEl = document.getElementById('activeHighlightBadge');
+                if (badgeEl) {
+                    badgeEl.style.backgroundColor = isDark ? curPal.softBgDark : curPal.softBgLight;
+                    badgeEl.style.color = isDark ? curPal.textDark : curPal.textLight;
+                    badgeEl.style.borderColor = isDark ? curPal.borderDark : curPal.borderLight;
+                }
+
                 const grid = document.getElementById('highlightColorGrid');
                 if (grid) {
                     grid.innerHTML = Object.values(HIGHLIGHT_PALETTES).map(pal => {
@@ -2669,9 +2917,10 @@ def index_page():
                                 onclick="setHighlightColor('${pal.id}')"
                                 class="p-3 rounded-xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
                                     isSelected
-                                        ? 'border-sky-500 bg-sky-50/60 dark:bg-slate-800 ring-2 ring-sky-500/40 shadow-xs font-bold'
+                                        ? 'shadow-xs font-bold'
                                         : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
                                 }"
+                                style="${isSelected ? `border-color: ${pal.primary}; background-color: ${isDark ? pal.softBgDark : pal.softBgLight}; box-shadow: 0 0 0 2px ${pal.ring};` : ''}"
                             >
                                 <div class="w-6 h-6 rounded-full flex items-center justify-center text-white shrink-0 shadow-2xs text-xs font-bold" style="background-color: ${pal.hex};">
                                     ${isSelected ? '✓' : ''}
@@ -2732,14 +2981,14 @@ def index_page():
 
                 if (mode === 'finder') {
                     if (finderCont) finderCont.classList.remove('hidden');
-                    if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
                 } else if (mode === 'summarizer') {
                     if (summarizerCont) summarizerCont.classList.remove('hidden');
-                    if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
                     syncSummarizerInputFromBatch();
                 } else {
                     // Mode 'appraisal'
-                    if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
                     // Only unhide resultBox if appraisal content has already been generated
                     if (currentFilename) {
                         if (resultBox) resultBox.classList.remove('hidden');
@@ -3789,7 +4038,7 @@ def index_page():
                 const tabPdfBtn = document.getElementById('tabPdfBtn');
                 const tabUrlBtn = document.getElementById('tabUrlBtn');
 
-                const activeClass = "px-2.5 py-1 rounded bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-semibold transition";
+                const activeClass = "px-2.5 py-1 rounded bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-semibold transition";
                 const inactiveClass = "px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition";
 
                 if (tab === 'pdf') {
@@ -3824,7 +4073,7 @@ def index_page():
                 const tabThinkingBtn = document.getElementById('leftTabThinkingBtn');
                 const hint = document.getElementById('leftPaneHint');
 
-                const activeClass = "px-3 py-1 rounded-md bg-white dark:bg-slate-900 text-sky-800 dark:text-sky-300 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer";
+                const activeClass = "px-3 py-1 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer";
                 const inactiveClass = "px-3 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center gap-1.5 cursor-pointer";
 
                 if (appraisalView) appraisalView.classList.add('hidden');
