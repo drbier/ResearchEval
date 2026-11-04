@@ -738,6 +738,47 @@ def index_page():
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
         <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                darkMode: 'class'
+            };
+        </script>
+        <script>
+            // Anti-FOUC instantaneous theme & highlight accent initializer
+            (function() {
+                try {
+                    const savedMode = localStorage.getItem('fact_theme_mode');
+                    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (savedMode === 'dark' || (!savedMode && prefersDark)) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                    const savedColor = localStorage.getItem('fact_highlight_color') || 'amber';
+                    const palettes = {
+                        amber: { border: '#d97706', bg: 'rgba(245, 158, 11, 0.28)', ring: 'rgba(251, 191, 36, 0.5)', glow: 'rgba(245, 158, 11, 0.4)', ringPulse: 'rgba(251, 191, 36, 0.8)', glowPulse: 'rgba(245, 158, 11, 0.9)', pillBg: '#d97706', pillBorder: '#b45309', hex: '#d97706' },
+                        emerald: { border: '#059669', bg: 'rgba(16, 185, 129, 0.26)', ring: 'rgba(52, 211, 153, 0.5)', glow: 'rgba(16, 185, 129, 0.4)', ringPulse: 'rgba(52, 211, 153, 0.8)', glowPulse: 'rgba(16, 185, 129, 0.9)', pillBg: '#059669', pillBorder: '#047857', hex: '#059669' },
+                        teal: { border: '#0d9488', bg: 'rgba(20, 184, 166, 0.26)', ring: 'rgba(45, 212, 191, 0.5)', glow: 'rgba(20, 184, 166, 0.4)', ringPulse: 'rgba(45, 212, 191, 0.8)', glowPulse: 'rgba(20, 184, 166, 0.9)', pillBg: '#0d9488', pillBorder: '#0f766e', hex: '#0d9488' },
+                        blue: { border: '#2563eb', bg: 'rgba(37, 99, 235, 0.25)', ring: 'rgba(96, 165, 250, 0.5)', glow: 'rgba(37, 99, 235, 0.4)', ringPulse: 'rgba(96, 165, 250, 0.8)', glowPulse: 'rgba(37, 99, 235, 0.9)', pillBg: '#2563eb', pillBorder: '#1d4ed8', hex: '#2563eb' },
+                        indigo: { border: '#4f46e5', bg: 'rgba(79, 70, 229, 0.25)', ring: 'rgba(129, 140, 248, 0.5)', glow: 'rgba(79, 70, 229, 0.4)', ringPulse: 'rgba(129, 140, 248, 0.8)', glowPulse: 'rgba(79, 70, 229, 0.9)', pillBg: '#4f46e5', pillBorder: '#4338ca', hex: '#4f46e5' },
+                        violet: { border: '#7c3aed', bg: 'rgba(124, 58, 237, 0.25)', ring: 'rgba(167, 139, 250, 0.5)', glow: 'rgba(124, 58, 237, 0.4)', ringPulse: 'rgba(167, 139, 250, 0.8)', glowPulse: 'rgba(124, 58, 237, 0.9)', pillBg: '#7c3aed', pillBorder: '#6d28d9', hex: '#7c3aed' },
+                        rose: { border: '#e11d48', bg: 'rgba(225, 29, 72, 0.25)', ring: 'rgba(251, 113, 133, 0.5)', glow: 'rgba(225, 29, 72, 0.4)', ringPulse: 'rgba(251, 113, 133, 0.8)', glowPulse: 'rgba(225, 29, 72, 0.9)', pillBg: '#e11d48', pillBorder: '#be123c', hex: '#e11d48' },
+                        slate: { border: '#475569', bg: 'rgba(71, 85, 105, 0.3)', ring: 'rgba(148, 163, 184, 0.5)', glow: 'rgba(71, 85, 105, 0.4)', ringPulse: 'rgba(148, 163, 184, 0.8)', glowPulse: 'rgba(71, 85, 105, 0.9)', pillBg: '#475569', pillBorder: '#334155', hex: '#475569' }
+                    };
+                    const p = palettes[savedColor] || palettes.amber;
+                    const r = document.documentElement;
+                    r.style.setProperty('--highlight-border', p.border);
+                    r.style.setProperty('--highlight-bg', p.bg);
+                    r.style.setProperty('--highlight-ring', p.ring);
+                    r.style.setProperty('--highlight-glow', p.glow);
+                    r.style.setProperty('--highlight-ring-pulse', p.ringPulse);
+                    r.style.setProperty('--highlight-glow-pulse', p.glowPulse);
+                    r.style.setProperty('--highlight-pill-bg', p.pillBg);
+                    r.style.setProperty('--highlight-pill-border', p.pillBorder);
+                    r.style.setProperty('--highlight-hex', p.hex);
+                } catch(e) {}
+            })();
+        </script>
         <!-- Marked.js for rich markdown rendering -->
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <!-- Firebase 10.12.0 Compat SDKs -->
@@ -745,6 +786,17 @@ def index_page():
         <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
         <style>
+            :root {
+                --highlight-border: #d97706;
+                --highlight-bg: rgba(245, 158, 11, 0.28);
+                --highlight-ring: rgba(251, 191, 36, 0.5);
+                --highlight-glow: rgba(245, 158, 11, 0.4);
+                --highlight-ring-pulse: rgba(251, 191, 36, 0.8);
+                --highlight-glow-pulse: rgba(245, 158, 11, 0.9);
+                --highlight-pill-bg: #d97706;
+                --highlight-pill-border: #b45309;
+                --highlight-hex: #d97706;
+            }
             .anchor-pill {
                 cursor: pointer;
                 transition: all 0.15s ease-in-out;
@@ -754,9 +806,9 @@ def index_page():
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             }
             .anchor-pill.active {
-                background-color: #0284c7 !important;
+                background-color: var(--highlight-pill-bg, #0284c7) !important;
                 color: #ffffff !important;
-                border-color: #0369a1 !important;
+                border-color: var(--highlight-pill-border, #0369a1) !important;
             }
             /* Rich Typography for Clinical Analysis Markdown */
             #outputMarkdown h1 {
@@ -796,6 +848,58 @@ def index_page():
                 font-weight: 700 !important;
                 text-decoration: underline !important;
             }
+            /* Dark Mode Overrides for Rich Markdown & Document UI */
+            html.dark #outputMarkdown {
+                color: #e2e8f0 !important;
+            }
+            html.dark #outputMarkdown h1 {
+                color: #f8fafc !important;
+            }
+            html.dark #outputMarkdown h2 {
+                color: #38bdf8 !important;
+            }
+            html.dark #outputMarkdown h3 {
+                color: #cbd5e1 !important;
+            }
+            html.dark #outputMarkdown strong {
+                color: #f1f5f9 !important;
+            }
+            html.dark #outputMarkdown a, html.dark .doi-link {
+                color: #60a5fa !important;
+            }
+            html.dark #outputMarkdown a:hover, html.dark .doi-link:hover {
+                color: #93c5fd !important;
+            }
+            html.dark .resizer {
+                background-color: #334155 !important;
+            }
+            html.dark .resizer:hover, html.dark .resizer.resizing {
+                background-color: #38bdf8 !important;
+            }
+            html.dark #sectionPopup {
+                background: #0f172a !important;
+                border-color: #0284c7 !important;
+                color: #f8fafc !important;
+            }
+            html.dark #popupHeader {
+                background: #1e293b !important;
+                border-bottom: 1px solid #334155 !important;
+            }
+            html.dark #popupTitle {
+                color: #f8fafc !important;
+            }
+            html.dark #popupScrollContainer {
+                background: #0f172a !important;
+            }
+            html.dark #popupScrollContainer::-webkit-scrollbar-track {
+                background: #0f172a !important;
+            }
+            html.dark #popupScrollContainer::-webkit-scrollbar-thumb {
+                background-color: #475569 !important;
+            }
+            html.dark #popupScrollContainer::-webkit-scrollbar-thumb:hover {
+                background-color: #64748b !important;
+            }
             /* Draggable resizer styling */
             .resizer {
                 width: 8px;
@@ -816,18 +920,18 @@ def index_page():
             #highlightHitbox {
                 position: absolute;
                 cursor: zoom-in;
-                border: 2px solid #d97706; /* vivid amber-600 border */
-                background-color: rgba(245, 158, 11, 0.28); /* luminous warm amber tint */
+                border: 2px solid var(--highlight-border, #d97706);
+                background-color: var(--highlight-bg, rgba(245, 158, 11, 0.28));
                 border-radius: 4px;
-                box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.5), 0 0 15px rgba(245, 158, 11, 0.4);
+                box-shadow: 0 0 0 2px var(--highlight-ring, rgba(251, 191, 36, 0.5)), 0 0 15px var(--highlight-glow, rgba(245, 158, 11, 0.4));
                 z-index: 25;
                 pointer-events: auto;
                 transition: top 0.15s ease-out, left 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out;
             }
             @keyframes highlightPulse {
-                0% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.8), 0 0 20px rgba(245, 158, 11, 0.9); }
-                50% { box-shadow: 0 0 0 5px rgba(251, 191, 36, 1.0), 0 0 30px rgba(245, 158, 11, 1.0); }
-                100% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.5), 0 0 15px rgba(245, 158, 11, 0.4); }
+                0% { box-shadow: 0 0 0 2px var(--highlight-ring-pulse, rgba(251, 191, 36, 0.8)), 0 0 20px var(--highlight-glow-pulse, rgba(245, 158, 11, 0.9)); }
+                50% { box-shadow: 0 0 0 5px var(--highlight-ring-pulse, rgba(251, 191, 36, 1.0)), 0 0 30px var(--highlight-glow-pulse, rgba(245, 158, 11, 1.0)); }
+                100% { box-shadow: 0 0 0 2px var(--highlight-ring, rgba(251, 191, 36, 0.5)), 0 0 15px var(--highlight-glow, rgba(245, 158, 11, 0.4)); }
             }
             .hitbox-pulse {
                 animation: highlightPulse 0.8s ease-in-out;
@@ -986,14 +1090,14 @@ def index_page():
             }
         </style>
     </head>
-    <body class="bg-slate-50 text-slate-800 min-h-screen p-4">
+    <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen p-4 transition-colors">
         <div class="max-w-[1700px] mx-auto space-y-3">
             <!-- Compact Header & Input Bar (Option 1) -->
-            <header class="bg-white px-5 py-3 rounded-lg border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-4">
+            <header class="bg-white dark:bg-slate-900 px-5 py-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap items-center justify-between gap-4 transition-colors">
                 <!-- Left: Logo & App Title -->
                 <div class="flex items-center gap-3 shrink-0">
                     <div class="relative z-30 group shrink-0">
-                        <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden border border-slate-200 shadow-2xs transition-all duration-300 ease-out origin-top-left group-hover:scale-[3.5] group-hover:rounded-xl group-hover:shadow-2xl group-hover:border-sky-300 group-hover:ring-4 group-hover:ring-sky-500/15 cursor-pointer">
+                        <div class="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xs transition-all duration-300 ease-out origin-top-left group-hover:scale-[3.5] group-hover:rounded-xl group-hover:shadow-2xl group-hover:border-sky-300 group-hover:ring-4 group-hover:ring-sky-500/15 cursor-pointer">
                             <img 
                                 src="/FACT-Elf.jpeg" 
                                 alt="F.A.C.T. Logo" 
@@ -1002,42 +1106,42 @@ def index_page():
                         </div>
                     </div>
                     <div class="flex flex-col items-center text-center">
-                        <h1 class="text-xl font-bold text-sky-800 tracking-tight leading-none text-center">F.A.C.T.</h1>
-                        <p class="text-slate-500 text-[11px] font-medium mt-1 text-center whitespace-nowrap">Find<span class="text-slate-400 font-bold px-1">·</span>Analyze<span class="text-slate-400 font-bold px-1">·</span>Contextualize<span class="text-slate-400 font-bold px-1">·</span>Talk</p>
+                        <h1 class="text-xl font-bold text-sky-800 dark:text-sky-400 tracking-tight leading-none text-center">F.A.C.T.</h1>
+                        <p class="text-slate-500 dark:text-slate-400 text-[11px] font-medium mt-1 text-center whitespace-nowrap">Find<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Analyze<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Contextualize<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Talk</p>
                     </div>
                 </div>
 
                 <!-- Master 3-Mode Navigation Switcher: F.A.C.T. (Find -> Analyze -> Summarize/Check Trials) -->
-                <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-semibold gap-1 shrink-0">
-                    <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
+                <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold gap-1 shrink-0">
+                    <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
                         <span>🔍</span> <span>Find</span>
                     </button>
-                    <button id="masterTabAppraisal" onclick="switchMasterMode('appraisal')" class="px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs">
+                    <button id="masterTabAppraisal" onclick="switchMasterMode('appraisal')" class="px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs">
                         <span>🔬</span> <span>Analyze</span>
                     </button>
-                    <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium">
+                    <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
                         <span>📝</span> <span>Contextualize</span>
                         <span id="summarizerBatchBadge" class="hidden ml-1 px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[10px] font-bold">0</span>
                     </button>
                 </div>
 
                 <!-- Center: Compact Unified Input (PDF or URL) -->
-                <div class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200 flex-1 max-w-2xl">
+                <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-850 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex-1 max-w-2xl">
                     <!-- Mode Switch Buttons -->
-                    <div class="flex bg-slate-200/80 p-0.5 rounded text-xs font-medium shrink-0">
-                        <button id="tabPdfBtn" onclick="switchInputTab('pdf')" class="px-2.5 py-1 rounded bg-white text-sky-700 shadow-2xs font-semibold transition">📄 PDF</button>
-                        <button id="tabUrlBtn" onclick="switchInputTab('url')" class="px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition">🔗 Link / PMID</button>
+                    <div class="flex bg-slate-200/80 dark:bg-slate-800 p-0.5 rounded text-xs font-medium shrink-0">
+                        <button id="tabPdfBtn" onclick="switchInputTab('pdf')" class="px-2.5 py-1 rounded bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-semibold transition">📄 PDF</button>
+                        <button id="tabUrlBtn" onclick="switchInputTab('url')" class="px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition">🔗 Link / PMID</button>
                     </div>
 
                     <!-- PDF Input Control -->
                     <div id="tabPdf" class="flex items-center gap-2 flex-1">
-                        <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-xs text-slate-600 file:mr-2.5 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer bg-white px-2 py-1 rounded border border-slate-200"/>
+                        <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-xs text-slate-600 dark:text-slate-300 file:mr-2.5 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700 cursor-pointer bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700"/>
                         <button onclick="startAppraisal()" id="runBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Analyze</button>
                     </div>
 
                     <!-- URL / PMID Input Control -->
                     <div id="tabUrl" class="hidden flex items-center gap-2 flex-1">
-                        <input type="text" id="paperUrl" placeholder="Paste PubMed URL, PMID (e.g. 37726553), PMC ID, or DOI" class="block w-full text-xs text-slate-800 bg-white px-3 py-1.5 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"/>
+                        <input type="text" id="paperUrl" placeholder="Paste PubMed URL, PMID (e.g. 37726553), PMC ID, or DOI" class="block w-full text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 px-3 py-1.5 rounded border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500"/>
                         <button onclick="startUrlResolution()" id="resolveBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Fetch & Analyze</button>
                     </div>
                 </div>
@@ -1045,14 +1149,14 @@ def index_page():
                 <!-- Right: Study Type Badge with Rich Tooltip (Hidden until appraisal loaded) -->
                 <div class="flex items-center gap-3 shrink-0">
                     <!-- Live Loading Spinner -->
-                    <div id="statusBox" class="hidden flex items-center gap-2 text-xs font-medium text-sky-700 bg-sky-50 px-3 py-1.5 rounded-md border border-sky-200">
+                    <div id="statusBox" class="hidden flex items-center gap-2 text-xs font-medium text-sky-700 bg-sky-50 dark:bg-sky-950 dark:text-sky-300 px-3 py-1.5 rounded-md border border-sky-200 dark:border-sky-800">
                         <div id="spinner" class="animate-spin rounded-full h-3.5 w-3.5 border-2 border-sky-600 border-t-transparent"></div>
                         <span id="statusText">Processing...</span>
                     </div>
 
                     <!-- Study Wonk Framework Badge with Hover Tooltip -->
                     <div id="studyBadgeWrapper" class="hidden study-badge-container cursor-help">
-                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 text-sky-900 border border-sky-300 text-xs font-semibold shadow-2xs hover:bg-sky-200 transition">
+                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-900 dark:text-sky-300 border border-sky-300 dark:border-sky-800 text-xs font-semibold shadow-2xs hover:bg-sky-200 dark:hover:bg-sky-900 transition">
                             <span class="w-2 h-2 rounded-full bg-sky-600"></span>
                             <span id="studyBadgeText">Biomarker Study</span>
                             <span class="text-sky-500 font-normal ml-0.5 text-[10px]">ℹ</span>
@@ -1074,7 +1178,14 @@ def index_page():
                     </div>
 
                     <!-- Auth & User Access Header Area -->
-                    <div id="authHeaderArea" class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                    <div id="authHeaderArea" class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                        <!-- Settings Gear Button (Always Accessible) -->
+                        <button id="settingsBtn" onclick="openSettingsModal()" class="relative p-2 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 shadow-2xs transition cursor-pointer" title="Display & Highlight Settings" aria-label="Settings">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <!-- Highlight Color indicator dot -->
+                            <span id="settingsHighlightDot" class="absolute top-1 right-1 w-2 h-2 rounded-full ring-1 ring-white dark:ring-slate-900" style="background-color: var(--highlight-hex, #d97706);"></span>
+                        </button>
+
                         <!-- Sign In Button (Shown when unauthenticated) -->
                         <button id="signInHeaderBtn" onclick="openAuthModal()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-xs transition flex items-center gap-1.5">
                             <span>🔑</span> <span>Sign In</span>
@@ -1083,7 +1194,7 @@ def index_page():
                         <!-- User Profile Area (Shown when signed in) -->
                         <div id="userProfileHeader" class="hidden flex items-center gap-2">
                             <!-- Admin Shield & Live Pending Counter (Master Admin drbiernd@gmail.com only) -->
-                            <button id="adminUserMgmtBtn" onclick="openUserManagementModal()" class="hidden relative p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 transition" title="User Access & Token Governance">
+                            <button id="adminUserMgmtBtn" onclick="openUserManagementModal()" class="hidden relative p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition" title="User Access & Token Governance">
                                 <span class="text-sm">🛡️</span>
                                 <span id="adminPendingBadge" class="hidden absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold leading-none shadow-xs">
                                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -1094,7 +1205,7 @@ def index_page():
                             <!-- User Avatar (Google Photo or Initial Badge) with Hover Tooltip -->
                             <div id="userProfilePill" class="relative group flex items-center cursor-pointer" title="">
                                 <img id="userAvatarImg" 
-                                     class="hidden w-7 h-7 rounded-full object-cover border border-slate-300 shadow-2xs hover:ring-2 hover:ring-sky-400 transition" 
+                                     class="hidden w-7 h-7 rounded-full object-cover border border-slate-300 dark:border-slate-700 shadow-2xs hover:ring-2 hover:ring-sky-400 transition" 
                                      referrerpolicy="no-referrer" 
                                      alt="Profile Avatar"
                                      onerror="this.classList.add('hidden'); const c = document.getElementById('userAvatarCircle'); if(c) c.classList.remove('hidden');" />
@@ -1110,7 +1221,7 @@ def index_page():
                             </div>
 
                             <!-- Sign Out Button -->
-                            <button onclick="handleSignOut()" class="p-1.5 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100 transition" title="Sign Out">
+                            <button onclick="handleSignOut()" class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Sign Out">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                             </button>
                         </div>
@@ -1266,27 +1377,133 @@ def index_page():
                     </div>
 
                     <!-- User Cards Scrollable Container -->
-                    <div id="adminUserListContainer" class="p-6 overflow-y-auto space-y-3 flex-1 bg-slate-50/40">
+                    <div id="adminUserListContainer" class="p-6 overflow-y-auto space-y-3 flex-1 bg-slate-50/40 dark:bg-slate-950/40">
                         <div class="text-center py-8 text-xs text-slate-400">Loading user registry...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Display & Appearance Settings Modal (Modeled after HomeoWonk) -->
+            <div id="settingsModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 transition-opacity" onclick="if(event.target===this) closeSettingsModal();">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-xl w-full flex flex-col max-h-[92vh] overflow-hidden text-slate-900 dark:text-slate-100 transition-colors">
+                    <!-- Modal Header -->
+                    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold leading-tight">Display &amp; Appearance Settings</h2>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Personalize theme mode and manuscript highlight accent</p>
+                            </div>
+                        </div>
+                        <button onclick="closeSettingsModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Close Settings">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Modal Body -->
+                    <div class="p-5 sm:p-6 overflow-y-auto space-y-6 text-xs sm:text-sm">
+                        <!-- Section 1: Appearance Mode -->
+                        <section class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">1. Appearance Mode</h3>
+                                    <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">Choose light or dark surfaces for optimal reading comfort.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <!-- Light Mode Option -->
+                                <button type="button" onclick="setThemeMode('light')" id="themeBtnLight" class="p-4 rounded-xl border text-left flex items-start space-x-3 transition cursor-pointer border-amber-400 bg-white shadow-xs ring-2 ring-amber-400/30">
+                                    <div class="p-2.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-bold text-sm text-slate-900 dark:text-slate-100">Light Mode</span>
+                                            <span id="themeCheckLight" class="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center justify-center text-xs font-bold border border-emerald-300 dark:border-emerald-700">✓</span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">Crisp daylight readability. Zero dark-panel fatigue.</p>
+                                    </div>
+                                </button>
+
+                                <!-- Dark Mode Option -->
+                                <button type="button" onclick="setThemeMode('dark')" id="themeBtnDark" class="p-4 rounded-xl border text-left flex items-start space-x-3 transition cursor-pointer border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                    <div class="p-2.5 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-700 shrink-0">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-bold text-sm text-slate-900 dark:text-slate-100">Dark Mode</span>
+                                            <span id="themeCheckDark" class="hidden w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">✓</span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">Muted charcoal surfaces designed for evening and clinic use.</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- Section 2: Highlight Accent Color -->
+                        <section class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                        2. Highlight Color (Currently: <span id="activeHighlightName">Warm Amber</span>)
+                                    </h3>
+                                    <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                                        Colors the PDF manuscript crop box, viewport pulse glow, and coordinate citation pills.
+                                    </p>
+                                </div>
+                                <span id="activeHighlightBadge" class="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                                    Active
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="highlightColorGrid"></div>
+                        </section>
+
+                        <!-- Section 3: Live Preview -->
+                        <section class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-2">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Live Preview</span>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="text-xs text-slate-600 dark:text-slate-300">Active Pill:</span>
+                                <button class="anchor-pill active px-2.5 py-1 text-xs font-semibold rounded shadow-2xs leading-none">[Res, p6]</button>
+                                <button class="anchor-pill px-2.5 py-1 text-xs font-semibold rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-300 leading-none">[Disc, p1]</button>
+                                <div class="flex items-center gap-2 pl-3 border-l border-slate-300 dark:border-slate-700">
+                                    <span class="text-xs text-slate-600 dark:text-slate-300">Hitbox Glow:</span>
+                                    <div id="previewHitbox" class="px-3 py-1 rounded text-xs font-mono border" style="border-color: var(--highlight-border); background-color: var(--highlight-bg); box-shadow: 0 0 0 2px var(--highlight-ring), 0 0 10px var(--highlight-glow);">
+                                        Manuscript Excerpt
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-end">
+                        <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-xs transition cursor-pointer">
+                            Done
+                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Sibling Container 1: Paper Finder Mode -->
             <div id="finderContainer" class="hidden w-full overflow-y-auto space-y-4" style="height: calc(100vh - 105px);">
-                <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-5xl mx-auto space-y-5">
+                <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs max-w-5xl mx-auto space-y-5 text-slate-800 dark:text-slate-100">
                     <!-- Header & Directive -->
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
                         <div>
-                            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                 <span>🔍</span> Precision Zero-Trust Paper Finder
                             </h2>
-                            <p class="text-xs text-slate-500 mt-1">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Search medical literature using fuzzy recollection or clinical criteria. Powered by a 4-tier query relaxation ladder and strict binary clinical gate.
                             </p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
                                 Model: Gemini flash
                             </span>
                         </div>
@@ -1300,10 +1517,10 @@ def index_page():
                                     type="text" 
                                     id="finderSearchInput" 
                                     placeholder="e.g. Paper showing CoQ10 reduced heart attacks in women, done in a Scandinavian country..." 
-                                    class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-2xs"
+                                    class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-3 text-slate-800 dark:text-slate-100 focus:bg-white focus:dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-2xs"
                                     onkeydown="if(event.key === 'Enter') executeFinderSearch();"
                                 />
-                                <button onclick="clearFinderSearch()" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs font-bold" title="Clear search">✕</button>
+                                <button onclick="clearFinderSearch()" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xs font-bold" title="Clear search">✕</button>
                             </div>
                             <button 
                                 id="finderSubmitBtn" 
@@ -1315,17 +1532,17 @@ def index_page():
                             </button>
                         </div>
                         <!-- Quick Example Chips & Cache Toggle -->
-                        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-500">
+                        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="font-medium">Try example query:</span>
-                                <button onclick="setFinderQuery('CoQ10 reduced cardiovascular mortality in elderly Swedish cohort, 5 year follow up')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-100 hover:text-sky-700 border border-slate-200 transition">
+                                <button onclick="setFinderQuery('CoQ10 reduced cardiovascular mortality in elderly Swedish cohort, 5 year follow up')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition">
                                     CoQ10 cardiovascular mortality in Swedish cohort
                                 </button>
-                                <button onclick="setFinderQuery('Curcumin osteoarthritis randomized trial knee pain and inflammatory biomarkers')" class="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-100 hover:text-sky-700 border border-slate-200 transition">
+                                <button onclick="setFinderQuery('Curcumin osteoarthritis randomized trial knee pain and inflammatory biomarkers')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-sky-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition">
                                     Curcumin knee osteoarthritis RCT
                                 </button>
                             </div>
-                            <label class="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-slate-500 hover:text-slate-800" title="Bypass the 24-hour cache and query PubMed/Gemini fresh">
+                            <label class="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200" title="Bypass the 24-hour cache and query PubMed/Gemini fresh">
                                 <input type="checkbox" id="finderForceRefresh" class="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"/>
                                 <span>Bypass 24h Cache (Force Refresh)</span>
                             </label>
@@ -1346,14 +1563,14 @@ def index_page():
 
             <!-- Sibling Container 2: Multi-Paper Summarizer Mode -->
             <div id="summarizerContainer" class="hidden w-full overflow-y-auto space-y-4" style="height: calc(100vh - 105px);">
-                <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-5xl mx-auto space-y-5">
+                <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs max-w-5xl mx-auto space-y-5 text-slate-800 dark:text-slate-100">
                     <!-- Header & Directive -->
-                    <div class="border-b border-slate-100 pb-4">
+                    <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
                         <div>
-                            <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                 <span>📝</span> Multi-Paper Science Communicator Contextualizer
                             </h2>
-                            <p class="text-xs text-slate-500 mt-1">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Paste a batch of 3–10 PubMed URLs, PMIDs, or DOIs. Reads structured abstracts sequentially to create an accessible, contextualized overview.
                             </p>
                         </div>
@@ -1361,7 +1578,7 @@ def index_page():
 
                     <!-- Batch URLs Input -->
                     <div class="space-y-2">
-                        <div class="flex items-center justify-between text-xs text-slate-600 font-medium">
+                        <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 font-medium">
                             <span>Enter PubMed URLs, PMIDs, or DOIs (one per line):</span>
                             <div class="flex items-center gap-3">
                                 <button onclick="clearSummarizerInput()" class="text-rose-600 hover:text-rose-700 font-semibold text-[11px]">Clear All</button>
@@ -1371,7 +1588,7 @@ def index_page():
                             id="summarizerUrlsInput" 
                             rows="5" 
                             placeholder="https://pubmed.ncbi.nlm.nih.gov/23843810/&#10;https://pubmed.ncbi.nlm.nih.gov/30302302/&#10;29188837"
-                            class="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-2xs leading-relaxed"
+                            class="w-full text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-slate-800 dark:text-slate-100 focus:bg-white focus:dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-2xs leading-relaxed"
                             oninput="updateSummarizerBatchCount()"
                         ></textarea>
                         <div class="flex items-center justify-between pt-1">
@@ -1379,7 +1596,7 @@ def index_page():
                             <button 
                                 id="summarizerSubmitBtn" 
                                 onclick="executeSummarizerBatch()" 
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition shadow-xs flex items-center gap-2"
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-5 py-2.5 rounded-lg transition shadow-xs flex items-center gap-2 cursor-pointer"
                             >
                                 <span id="summarizerBtnIcon">🚀</span>
                                 <span id="summarizerBtnText">Generate Science Briefing</span>
@@ -1392,20 +1609,20 @@ def index_page():
 
                     <!-- Generated Science Summary Output -->
                     <div id="summarizerOutputContainer" class="hidden space-y-4 pt-1">
-                        <div class="bg-slate-50 rounded-xl border border-slate-200 p-5 space-y-4">
-                            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div class="bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm font-bold text-slate-800">📄 Synthesized Briefing Document</span>
-                                    <span id="summarizerMetaBadge" class="text-[11px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-mono"></span>
+                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">📄 Synthesized Briefing Document</span>
+                                    <span id="summarizerMetaBadge" class="text-[11px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded font-mono"></span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="copySummarizerMarkdown()" id="copySummaryBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 text-xs font-medium transition shadow-2xs">
+                                    <button onclick="copySummarizerMarkdown()" id="copySummaryBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition shadow-2xs cursor-pointer">
                                         <span>📋</span> <span id="copySummaryBtnText">Copy to Clipboard</span>
                                     </button>
                                 </div>
                             </div>
                             <!-- Rendered Markdown Content -->
-                            <div id="summarizerRenderedContent" class="text-xs leading-relaxed space-y-4 text-slate-800"></div>
+                            <div id="summarizerRenderedContent" class="text-xs leading-relaxed space-y-4 text-slate-800 dark:text-slate-200"></div>
                         </div>
                     </div>
                 </div>
@@ -1414,59 +1631,59 @@ def index_page():
             <!-- Results Section: Split Screen -->
             <div id="resultBox" class="hidden">
                 <!-- Draggable Split Container: Left Appraisal | Resizer | Right Source Inspector -->
-                <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch rounded-lg border border-slate-200 shadow-sm overflow-hidden bg-white" style="height: calc(100vh - 105px); min-height: 650px;">
+                <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900" style="height: calc(100vh - 105px); min-height: 650px;">
                     <!-- Left: Clinical Analysis & Show Thinking Tab Switcher (Behavior 3) -->
-                    <div id="leftPane" class="bg-white p-6 border-r border-slate-200 overflow-y-auto select-text flex flex-col h-full" style="width: 55%; min-width: 25%; max-width: 75%;">
-                        <div class="sticky top-0 bg-white z-10 pb-3 border-b border-slate-200 mb-4 flex flex-wrap justify-between items-center gap-2">
+                    <div id="leftPane" class="bg-white dark:bg-slate-900 p-6 border-r border-slate-200 dark:border-slate-800 overflow-y-auto select-text flex flex-col h-full" style="width: 55%; min-width: 25%; max-width: 75%;">
+                        <div class="sticky top-0 bg-white dark:bg-slate-900 z-10 pb-3 border-b border-slate-200 dark:border-slate-800 mb-4 flex flex-wrap justify-between items-center gap-2">
                             <div class="flex items-center gap-2">
-                                <div class="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-medium">
-                                    <button id="leftTabAppraisalBtn" onclick="switchLeftTab('appraisal')" class="px-3 py-1 rounded-md bg-white text-sky-800 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
+                                <div class="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium">
+                                    <button id="leftTabAppraisalBtn" onclick="switchLeftTab('appraisal')" class="px-3 py-1 rounded-md bg-white dark:bg-slate-900 text-sky-800 dark:text-sky-300 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
                                         <span>📄</span> <span>Clinical Analysis</span>
                                     </button>
-                                    <button id="leftTabAskBtn" onclick="switchLeftTab('ask')" class="px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer">
+                                    <button id="leftTabAskBtn" onclick="switchLeftTab('ask')" class="px-3 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center gap-1.5 cursor-pointer">
                                         <span>💬</span> <span>Ask</span>
                                     </button>
-                                    <button id="leftTabThinkingBtn" onclick="switchLeftTab('thinking')" class="px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer">
+                                    <button id="leftTabThinkingBtn" onclick="switchLeftTab('thinking')" class="px-3 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center gap-1.5 cursor-pointer">
                                         <span>🧠</span> <span>Show Thinking / Audit</span>
                                     </button>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <span id="leftPaneHint" class="text-xs text-slate-400 italic hidden lg:inline">Click any pill to inspect</span>
-                                <button onclick="copyExportedAnalysis()" id="copyAnalysisBtn" title="Copy clinical analysis to clipboard with pills converted to text (e.g. Abs, p1)" class="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 text-xs font-medium transition shadow-2xs cursor-pointer">
+                                <button onclick="copyExportedAnalysis()" id="copyAnalysisBtn" title="Copy clinical analysis to clipboard with pills converted to text (e.g. Abs, p1)" class="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition shadow-2xs cursor-pointer">
                                     <span>📋</span> <span id="copyAnalysisBtnText">Copy</span>
                                 </button>
-                                <button onclick="downloadExportedAnalysis()" id="downloadAnalysisBtn" title="Export / download clinical analysis with pills converted to text (e.g. Abs, p1)" class="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 text-xs font-medium transition shadow-2xs cursor-pointer">
+                                <button onclick="downloadExportedAnalysis()" id="downloadAnalysisBtn" title="Export / download clinical analysis with pills converted to text (e.g. Abs, p1)" class="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition shadow-2xs cursor-pointer">
                                     <span>⬇️</span> <span>Export</span>
                                 </button>
                             </div>
                         </div>
-                        <div id="outputMarkdown" class="prose max-w-none text-slate-800 bg-slate-50 p-6 rounded-lg border border-slate-200 text-sm leading-relaxed flex-1"></div>
+                        <div id="outputMarkdown" class="prose max-w-none text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-950/70 p-6 rounded-lg border border-slate-200 dark:border-slate-800 text-sm leading-relaxed flex-1"></div>
                         <!-- Ask Tab Container (Conversational QA Interrogation) -->
                         <div id="askContainer" class="hidden flex-1 flex flex-col min-h-0 space-y-3">
                             <!-- Quick Clinical Inquiries -->
-                            <div class="flex-shrink-0 bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1.5">
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Quick Inquiries:</span>
+                            <div class="flex-shrink-0 bg-slate-50 dark:bg-slate-950/70 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Quick Inquiries:</span>
                                 <div class="flex flex-wrap gap-1.5">
-                                    <button onclick="askQuickChip('How many total participants were randomized or enrolled in the study?')" class="text-[11px] bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-200 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">👥 Total Sample Size</button>
-                                    <button onclick="askQuickChip('What was the primary endpoint, and was it statistically significant?')" class="text-[11px] bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-200 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">🎯 Primary Endpoint</button>
-                                    <button onclick="askQuickChip('Does the study report Overall Survival (OS) or MACE outcomes? What were the hazard ratios?')" class="text-[11px] bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-200 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">📈 Survival / MACE</button>
-                                    <button onclick="askQuickChip('What adverse events or safety signals were significantly different between groups?')" class="text-[11px] bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-200 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">⚠️ Safety & Harms</button>
+                                    <button onclick="askQuickChip('How many total participants were randomized or enrolled in the study?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">👥 Total Sample Size</button>
+                                    <button onclick="askQuickChip('What was the primary endpoint, and was it statistically significant?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">🎯 Primary Endpoint</button>
+                                    <button onclick="askQuickChip('Does the study report Overall Survival (OS) or MACE outcomes? What were the hazard ratios?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">📈 Survival / MACE</button>
+                                    <button onclick="askQuickChip('What adverse events or safety signals were significantly different between groups?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">⚠️ Safety & Harms</button>
                                 </div>
                             </div>
 
                             <!-- Chat Message History Feed -->
-                            <div id="askChatFeed" class="flex-1 bg-slate-50 p-4 rounded-lg border border-slate-200 overflow-y-auto space-y-4 text-xs leading-relaxed min-h-[300px]">
+                            <div id="askChatFeed" class="flex-1 bg-slate-50 dark:bg-slate-950/70 p-4 rounded-lg border border-slate-200 dark:border-slate-800 overflow-y-auto space-y-4 text-xs leading-relaxed min-h-[300px]">
                                 <div class="text-center p-6 text-slate-400 my-auto">
                                     <span class="text-2xl block mb-1">💬</span>
-                                    <p class="font-semibold text-slate-600 text-xs">Ask anything about this manuscript</p>
-                                    <p class="text-[11px] text-slate-400 mt-1 max-w-sm mx-auto">Answers cite coordinate anchors that jump directly to the source paragraph in the viewer on the right.</p>
+                                    <p class="font-semibold text-slate-600 dark:text-slate-400 text-xs">Ask anything about this manuscript</p>
+                                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">Answers cite coordinate anchors that jump directly to the source paragraph in the viewer on the right.</p>
                                 </div>
                             </div>
 
                             <!-- Question Input Box -->
                             <div class="flex-shrink-0 flex gap-2 pt-1">
-                                <input type="text" id="askQuestionInput" onkeydown="if(event.key==='Enter') executeAskQuery();" placeholder="Ask a question about this paper (e.g. 'What was the blinding method?')..." class="flex-1 text-xs text-slate-800 bg-white px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs"/>
+                                <input type="text" id="askQuestionInput" onkeydown="if(event.key==='Enter') executeAskQuery();" placeholder="Ask a question about this paper (e.g. 'What was the blinding method?')..." class="flex-1 text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs"/>
                                 <button id="askSubmitBtn" onclick="executeAskQuery()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
                                     <span>Send</span> <span>➤</span>
                                 </button>
@@ -1479,29 +1696,29 @@ def index_page():
                     <div id="dragDivider" class="resizer" title="Drag left or right to resize panels"></div>
 
                     <!-- Right: Interactive Source Inspector -->
-                    <div id="rightPane" class="bg-white p-6 flex flex-col space-y-4 select-text h-full overflow-hidden" style="width: 45%; min-width: 25%; max-width: 75%;">
-                        <div class="border-b border-slate-200 pb-3 flex justify-between items-center flex-shrink-0">
+                    <div id="rightPane" class="bg-white dark:bg-slate-900 p-6 flex flex-col space-y-4 select-text h-full overflow-hidden" style="width: 45%; min-width: 25%; max-width: 75%;">
+                        <div class="border-b border-slate-200 dark:border-slate-800 pb-3 flex justify-between items-center flex-shrink-0">
                             <div>
-                                <h3 class="text-base font-semibold text-slate-800">Source Evidence Inspector</h3>
-                                <p id="inspectSubtitle" class="text-xs text-slate-500 mt-0.5">Select any coordinate pill on the left</p>
+                                <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100">Source Evidence Inspector</h3>
+                                <p id="inspectSubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Select any coordinate pill on the left</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span id="pageBadge" class="hidden px-2.5 py-1 text-xs font-semibold rounded bg-sky-100 text-sky-800 border border-sky-200">Page -</span>
+                                <span id="pageBadge" class="hidden px-2.5 py-1 text-xs font-semibold rounded bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800">Page -</span>
                             </div>
                         </div>
 
                         <!-- Snippet Text Box (Large Readable Typography) -->
-                        <div id="snippetBox" class="hidden p-4 rounded-md bg-amber-50 border border-amber-200 text-sm text-amber-950 leading-relaxed shadow-xs flex-shrink-0 max-h-40 overflow-y-auto">
-                            <span class="font-bold uppercase tracking-wider text-[11px] text-amber-800 block mb-1.5 flex items-center gap-1.5">
+                        <div id="snippetBox" class="hidden p-4 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-sm text-amber-950 dark:text-amber-200 leading-relaxed shadow-xs flex-shrink-0 max-h-40 overflow-y-auto">
+                            <span class="font-bold uppercase tracking-wider text-[11px] text-amber-800 dark:text-amber-400 block mb-1.5 flex items-center gap-1.5">
                                 <span>📄 Exact Manuscript Text:</span>
                             </span>
-                            <p id="snippetText" class="font-serif italic text-[14px] leading-relaxed"></p>
+                            <p id="snippetText" class="font-serif italic text-[14px] leading-relaxed text-amber-950 dark:text-amber-200"></p>
                         </div>
 
                         <!-- Full Paper Continuous Scroll Viewer -->
-                        <div id="pageViewer" class="relative bg-slate-100 rounded border border-slate-300 flex-1 min-h-0 overflow-y-auto p-3">
+                        <div id="pageViewer" class="relative bg-slate-100 dark:bg-slate-950 rounded border border-slate-300 dark:border-slate-800 flex-1 min-h-0 overflow-y-auto p-3">
                             <div id="viewerPlaceholder" class="text-center p-8 text-slate-400 my-auto">
-                                <svg class="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <svg class="w-12 h-12 mx-auto mb-2 text-slate-300 dark:text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                 <p class="text-sm">Manuscript pages will appear here for continuous full-paper reading.</p>
                             </div>
                             <div id="pagesStack" class="hidden flex flex-col items-center gap-4 w-full"></div>
@@ -2251,6 +2468,237 @@ def index_page():
                 }
             }
 
+            // Display & Theme Customization System (modeled after HomeoWonk)
+            const HIGHLIGHT_PALETTES = {
+                amber: {
+                    id: 'amber',
+                    name: 'Warm Amber',
+                    desc: 'Apothecary ochre',
+                    hex: '#d97706',
+                    border: '#d97706',
+                    bg: 'rgba(245, 158, 11, 0.28)',
+                    ring: 'rgba(251, 191, 36, 0.5)',
+                    glow: 'rgba(245, 158, 11, 0.4)',
+                    ringPulse: 'rgba(251, 191, 36, 0.8)',
+                    glowPulse: 'rgba(245, 158, 11, 0.9)',
+                    pillBg: '#d97706',
+                    pillBorder: '#b45309'
+                },
+                emerald: {
+                    id: 'emerald',
+                    name: 'Emerald Green',
+                    desc: 'Botanical herbal',
+                    hex: '#059669',
+                    border: '#059669',
+                    bg: 'rgba(16, 185, 129, 0.26)',
+                    ring: 'rgba(52, 211, 153, 0.5)',
+                    glow: 'rgba(16, 185, 129, 0.4)',
+                    ringPulse: 'rgba(52, 211, 153, 0.8)',
+                    glowPulse: 'rgba(16, 185, 129, 0.9)',
+                    pillBg: '#059669',
+                    pillBorder: '#047857'
+                },
+                teal: {
+                    id: 'teal',
+                    name: 'Teal Ocean',
+                    desc: 'Medical cyan',
+                    hex: '#0d9488',
+                    border: '#0d9488',
+                    bg: 'rgba(20, 184, 166, 0.26)',
+                    ring: 'rgba(45, 212, 191, 0.5)',
+                    glow: 'rgba(20, 184, 166, 0.4)',
+                    ringPulse: 'rgba(45, 212, 191, 0.8)',
+                    glowPulse: 'rgba(20, 184, 166, 0.9)',
+                    pillBg: '#0d9488',
+                    pillBorder: '#0f766e'
+                },
+                blue: {
+                    id: 'blue',
+                    name: 'Medical Blue',
+                    desc: 'Clinical cobalt',
+                    hex: '#2563eb',
+                    border: '#2563eb',
+                    bg: 'rgba(37, 99, 235, 0.25)',
+                    ring: 'rgba(96, 165, 250, 0.5)',
+                    glow: 'rgba(37, 99, 235, 0.4)',
+                    ringPulse: 'rgba(96, 165, 250, 0.8)',
+                    glowPulse: 'rgba(37, 99, 235, 0.9)',
+                    pillBg: '#2563eb',
+                    pillBorder: '#1d4ed8'
+                },
+                indigo: {
+                    id: 'indigo',
+                    name: 'Royal Indigo',
+                    desc: 'Scholastic navy',
+                    hex: '#4f46e5',
+                    border: '#4f46e5',
+                    bg: 'rgba(79, 70, 229, 0.25)',
+                    ring: 'rgba(129, 140, 248, 0.5)',
+                    glow: 'rgba(79, 70, 229, 0.4)',
+                    ringPulse: 'rgba(129, 140, 248, 0.8)',
+                    glowPulse: 'rgba(79, 70, 229, 0.9)',
+                    pillBg: '#4f46e5',
+                    pillBorder: '#4338ca'
+                },
+                violet: {
+                    id: 'violet',
+                    name: 'Amethyst Violet',
+                    desc: 'Diagnostic purple',
+                    hex: '#7c3aed',
+                    border: '#7c3aed',
+                    bg: 'rgba(124, 58, 237, 0.25)',
+                    ring: 'rgba(167, 139, 250, 0.5)',
+                    glow: 'rgba(124, 58, 237, 0.4)',
+                    ringPulse: 'rgba(167, 139, 250, 0.8)',
+                    glowPulse: 'rgba(124, 58, 237, 0.9)',
+                    pillBg: '#7c3aed',
+                    pillBorder: '#6d28d9'
+                },
+                rose: {
+                    id: 'rose',
+                    name: 'Rose Coral',
+                    desc: 'Vivid crimson',
+                    hex: '#e11d48',
+                    border: '#e11d48',
+                    bg: 'rgba(225, 29, 72, 0.25)',
+                    ring: 'rgba(251, 113, 133, 0.5)',
+                    glow: 'rgba(225, 29, 72, 0.4)',
+                    ringPulse: 'rgba(251, 113, 133, 0.8)',
+                    glowPulse: 'rgba(225, 29, 72, 0.9)',
+                    pillBg: '#e11d48',
+                    pillBorder: '#be123c'
+                },
+                slate: {
+                    id: 'slate',
+                    name: 'Monochrome Slate',
+                    desc: 'Graphite steel',
+                    hex: '#475569',
+                    border: '#475569',
+                    bg: 'rgba(71, 85, 105, 0.3)',
+                    ring: 'rgba(148, 163, 184, 0.5)',
+                    glow: 'rgba(71, 85, 105, 0.4)',
+                    ringPulse: 'rgba(148, 163, 184, 0.8)',
+                    glowPulse: 'rgba(71, 85, 105, 0.9)',
+                    pillBg: '#475569',
+                    pillBorder: '#334155'
+                }
+            };
+
+            let currentThemeMode = localStorage.getItem('fact_theme_mode') || 'light';
+            let currentHighlightColor = localStorage.getItem('fact_highlight_color') || 'amber';
+
+            function applyThemeMode(mode) {
+                currentThemeMode = mode;
+                if (mode === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                localStorage.setItem('fact_theme_mode', mode);
+                updateThemeModalUI();
+            }
+
+            function setThemeMode(mode) {
+                applyThemeMode(mode);
+            }
+
+            function applyHighlightColor(colorId) {
+                currentHighlightColor = HIGHLIGHT_PALETTES[colorId] ? colorId : 'amber';
+                const p = HIGHLIGHT_PALETTES[currentHighlightColor];
+                const r = document.documentElement;
+                r.style.setProperty('--highlight-border', p.border);
+                r.style.setProperty('--highlight-bg', p.bg);
+                r.style.setProperty('--highlight-ring', p.ring);
+                r.style.setProperty('--highlight-glow', p.glow);
+                r.style.setProperty('--highlight-ring-pulse', p.ringPulse);
+                r.style.setProperty('--highlight-glow-pulse', p.glowPulse);
+                r.style.setProperty('--highlight-pill-bg', p.pillBg);
+                r.style.setProperty('--highlight-pill-border', p.pillBorder);
+                r.style.setProperty('--highlight-hex', p.hex);
+
+                const dot = document.getElementById('settingsHighlightDot');
+                if (dot) dot.style.backgroundColor = p.hex;
+
+                const prevHitbox = document.getElementById('previewHitbox');
+                if (prevHitbox) {
+                    prevHitbox.style.borderColor = p.border;
+                    prevHitbox.style.backgroundColor = p.bg;
+                    prevHitbox.style.boxShadow = `0 0 0 2px ${p.ring}, 0 0 10px ${p.glow}`;
+                }
+
+                localStorage.setItem('fact_highlight_color', currentHighlightColor);
+                updateThemeModalUI();
+            }
+
+            function setHighlightColor(colorId) {
+                applyHighlightColor(colorId);
+            }
+
+            function updateThemeModalUI() {
+                const isDark = document.documentElement.classList.contains('dark');
+                const themeBtnLight = document.getElementById('themeBtnLight');
+                const themeBtnDark = document.getElementById('themeBtnDark');
+                const checkLight = document.getElementById('themeCheckLight');
+                const checkDark = document.getElementById('themeCheckDark');
+
+                if (themeBtnLight && themeBtnDark) {
+                    if (isDark) {
+                        themeBtnDark.className = "p-4 rounded-xl border text-left flex items-start space-x-3 transition cursor-pointer border-indigo-500 bg-slate-800 shadow-xs ring-2 ring-indigo-500/30";
+                        if (checkDark) checkDark.classList.remove('hidden');
+                        themeBtnLight.className = "p-4 rounded-xl border text-left flex items-start space-x-3 transition cursor-pointer border-slate-700 bg-slate-800/40 hover:bg-slate-800 text-slate-400";
+                        if (checkLight) checkLight.classList.add('hidden');
+                    } else {
+                        themeBtnLight.className = "p-4 rounded-xl border text-left flex items-start space-x-3 transition cursor-pointer border-amber-400 bg-white shadow-xs ring-2 ring-amber-400/30";
+                        if (checkLight) checkLight.classList.remove('hidden');
+                        themeBtnDark.className = "p-4 rounded-xl border text-left flex items-start space-x-3 transition cursor-pointer border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600";
+                        if (checkDark) checkDark.classList.add('hidden');
+                    }
+                }
+
+                const curPal = HIGHLIGHT_PALETTES[currentHighlightColor] || HIGHLIGHT_PALETTES.amber;
+                const nameEl = document.getElementById('activeHighlightName');
+                if (nameEl) nameEl.innerText = curPal.name;
+
+                const grid = document.getElementById('highlightColorGrid');
+                if (grid) {
+                    grid.innerHTML = Object.values(HIGHLIGHT_PALETTES).map(pal => {
+                        const isSelected = pal.id === currentHighlightColor;
+                        return `
+                            <button
+                                type="button"
+                                onclick="setHighlightColor('${pal.id}')"
+                                class="p-3 rounded-xl border text-left transition flex items-center space-x-2.5 cursor-pointer ${
+                                    isSelected
+                                        ? 'border-sky-500 bg-sky-50/60 dark:bg-slate-800 ring-2 ring-sky-500/40 shadow-xs font-bold'
+                                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                }"
+                            >
+                                <div class="w-6 h-6 rounded-full flex items-center justify-center text-white shrink-0 shadow-2xs text-xs font-bold" style="background-color: ${pal.hex};">
+                                    ${isSelected ? '✓' : ''}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-semibold text-xs truncate text-slate-900 dark:text-slate-100">${escapeHtml(pal.name)}</div>
+                                    <div class="text-[10px] text-slate-500 dark:text-slate-400 truncate">${escapeHtml(pal.desc)}</div>
+                                </div>
+                            </button>
+                        `;
+                    }).join('');
+                }
+            }
+
+            function openSettingsModal() {
+                const m = document.getElementById('settingsModal');
+                if (m) {
+                    m.classList.remove('hidden');
+                    updateThemeModalUI();
+                }
+            }
+
+            function closeSettingsModal() {
+                const m = document.getElementById('settingsModal');
+                if (m) m.classList.add('hidden');
+            }
+
             // Global Encapsulated Cross-Tab State
             window.ResearchAppState = {
                 currentMasterMode: 'appraisal', // 'finder' | 'summarizer' | 'appraisal'
@@ -2273,9 +2721,9 @@ def index_page():
                 const tabAppraisalBtn = document.getElementById('masterTabAppraisal');
 
                 // Reset tab styles
-                if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium";
-                if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium";
-                if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5 text-xs font-medium";
+                if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
+                if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
+                if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
 
                 // Toggle visibility between sibling DOM containers
                 if (finderCont) finderCont.classList.add('hidden');
@@ -2284,14 +2732,14 @@ def index_page():
 
                 if (mode === 'finder') {
                     if (finderCont) finderCont.classList.remove('hidden');
-                    if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
                 } else if (mode === 'summarizer') {
                     if (summarizerCont) summarizerCont.classList.remove('hidden');
-                    if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
                     syncSummarizerInputFromBatch();
                 } else {
                     // Mode 'appraisal'
-                    if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md bg-white text-sky-700 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
                     // Only unhide resultBox if appraisal content has already been generated
                     if (currentFilename) {
                         if (resultBox) resultBox.classList.remove('hidden');
@@ -3255,7 +3703,7 @@ def index_page():
                 for (let p = 1; p <= totalPages; p++) {
                     const pageWrapper = document.createElement('div');
                     pageWrapper.id = `page-wrapper-${p}`;
-                    pageWrapper.className = 'relative bg-white shadow rounded border border-slate-300 max-w-full inline-block transition';
+                    pageWrapper.className = 'relative bg-white dark:bg-slate-900 shadow rounded border border-slate-300 dark:border-slate-700 max-w-full inline-block transition';
                     pageWrapper.setAttribute('data-page', p);
                     pageWrapper.style.minHeight = '750px';
 
@@ -3341,8 +3789,8 @@ def index_page():
                 const tabPdfBtn = document.getElementById('tabPdfBtn');
                 const tabUrlBtn = document.getElementById('tabUrlBtn');
 
-                const activeClass = "px-2.5 py-1 rounded bg-white text-sky-700 shadow-2xs font-semibold transition";
-                const inactiveClass = "px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition";
+                const activeClass = "px-2.5 py-1 rounded bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-2xs font-semibold transition";
+                const inactiveClass = "px-2.5 py-1 rounded text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition";
 
                 if (tab === 'pdf') {
                     tabPdf.classList.remove('hidden');
@@ -3376,8 +3824,8 @@ def index_page():
                 const tabThinkingBtn = document.getElementById('leftTabThinkingBtn');
                 const hint = document.getElementById('leftPaneHint');
 
-                const activeClass = "px-3 py-1 rounded-md bg-white text-sky-800 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer";
-                const inactiveClass = "px-3 py-1 rounded-md text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 cursor-pointer";
+                const activeClass = "px-3 py-1 rounded-md bg-white dark:bg-slate-900 text-sky-800 dark:text-sky-300 shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer";
+                const inactiveClass = "px-3 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center gap-1.5 cursor-pointer";
 
                 if (appraisalView) appraisalView.classList.add('hidden');
                 if (askView) askView.classList.add('hidden');
@@ -3947,7 +4395,7 @@ ${escapeHtml(thought)}
                     const trimmed = inner.trim();
                     if (trimmed.toLowerCase() === 'doc_header' || trimmed.toLowerCase() === 'header') {
                         const enc = encodeURIComponent('[Doc_Header]');
-                        return `<button onclick="inspectAnchor('${enc}')" data-anchor="[Doc_Header]" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">Header</button>`;
+                        return `<button onclick="inspectAnchor('${enc}')" data-anchor="[Doc_Header]" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none" title="Click to view source page and highlight">Header</button>`;
                     }
 
                     // Split compound coordinates by semicolon first, or by section-boundary comma
@@ -3981,7 +4429,7 @@ ${escapeHtml(thought)}
                         const rawAnchorId = `[${part}]`;
                         const enc = encodeURIComponent(rawAnchorId);
                         const displayText = formatAnchorDisplay(part);
-                        return `<button onclick="inspectAnchor('${enc}')" data-anchor="${rawAnchorId}" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">${displayText}</button>`;
+                        return `<button onclick="inspectAnchor('${enc}')" data-anchor="${rawAnchorId}" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none" title="Click to view source page and highlight">${displayText}</button>`;
                     });
 
                     return buttons.join(' ');
@@ -4525,6 +4973,19 @@ ${escapeHtml(thought)}
 
             // Initialize Firebase Authentication & Governance on Load
             initFirebaseAuth();
+
+            // Initialize Theme & Highlight Settings on Load
+            applyThemeMode(currentThemeMode);
+            applyHighlightColor(currentHighlightColor);
+
+            // Global Escape key listener to close modals
+            window.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeSettingsModal();
+                    closeAuthModal();
+                    closeUserManagementModal();
+                }
+            });
         </script>
     </body>
     </html>
