@@ -1079,8 +1079,19 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     else:
         page1_text = doc[0].get_text() if len(doc) > 0 else ""
 
-    header_lines = [l.strip() for l in page1_text.split('\n') if l.strip()]
-    doc_header = "\n".join(header_lines[:35])[:2500]
+    header_lines = []
+    for l in page1_text.split('\n'):
+        l_str = l.strip()
+        if not l_str:
+            continue
+        clean_u = l_str.strip(':.-# ').upper()
+        if clean_u in ('ABSTRACT', 'SUMMARY', '1. INTRODUCTION', 'INTRODUCTION') or is_structured_header_line(l_str):
+            break
+        header_lines.append(l_str)
+        if len(header_lines) >= 15:
+            break
+
+    doc_header = "\n".join(header_lines)[:1500] if header_lines else page1_text[:500]
     indexed_doc.doc_header = doc_header
     indexed_doc.all_anchors["[Doc_Header]"] = doc_header
     indexed_doc.anchor_metadata["[Doc_Header]"] = CoordinateAnchor(
@@ -1092,7 +1103,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         page_number=1,
         page_width=float(doc[0].rect.width) if len(doc) > 0 else 595.0,
         page_height=float(doc[0].rect.height) if len(doc) > 0 else 842.0,
-        bbox=[30.0, 30.0, float(doc[0].rect.width) - 30.0 if len(doc) > 0 else 560.0, 240.0]
+        bbox=[30.0, 30.0, float(doc[0].rect.width) - 30.0 if len(doc) > 0 else 560.0, 160.0]
     )
     
     active_table_anchor = None
@@ -1228,7 +1239,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                 continue
             
             # Stage 2 Table Footnote / Legend Gate:
-            if is_footnote_or_table_banner(block_text, b, float(page.rect.height), float(page.rect.width)):
+            if current_section != "Abstract" and is_footnote_or_table_banner(block_text, b, float(page.rect.height), float(page.rect.width)):
                 meta_anchor_id = f"[{current_section}, TableNote p{page_num}_{int(b[1])}]"
                 anchor_meta = CoordinateAnchor(
                     anchor_id=meta_anchor_id,
@@ -1404,7 +1415,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                     and not re.match(r'^(?:Conclusions?:|Results?:|Methods?:|Background?:|Introduction:)', lines[0], re.IGNORECASE)
                 )
 
-                if is_dense_numeric_table or is_compressed_leading_table:
+                if current_section != "Abstract" and (is_dense_numeric_table or is_compressed_leading_table):
                     item_type = "table"
                     idx_num = 0
                     anchor_id = f"[{current_section}, Table p{page_num}_{int(b[1])}]"

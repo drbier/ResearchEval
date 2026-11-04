@@ -541,7 +541,28 @@ class PaperFetcher:
         sections = []
         abstract_el = root.find('.//abstract')
         if abstract_el is not None:
-            sections.append(("Abstract", "".join(abstract_el.itertext()).strip()))
+            abstract_sec_texts = []
+            sec_nodes = abstract_el.findall('.//sec')
+            if sec_nodes:
+                for s in sec_nodes:
+                    s_title = s.findtext('title') or ""
+                    s_paras = ["".join(p.itertext()).strip() for p in s.findall('.//p')]
+                    p_text = "\n\n".join(filter(None, s_paras))
+                    if s_title and p_text:
+                        abstract_sec_texts.append(f"{s_title}: {p_text}")
+                    elif p_text:
+                        abstract_sec_texts.append(p_text)
+            if not abstract_sec_texts:
+                p_nodes = abstract_el.findall('.//p')
+                if p_nodes:
+                    for p in p_nodes:
+                        t = "".join(p.itertext()).strip()
+                        if t:
+                            abstract_sec_texts.append(t)
+            if not abstract_sec_texts:
+                abstract_sec_texts = ["".join(abstract_el.itertext()).strip()]
+            
+            sections.append(("Abstract", "\n\n".join(filter(None, abstract_sec_texts))))
             
         body = root.find('.//body')
         if body is not None:

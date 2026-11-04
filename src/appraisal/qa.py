@@ -176,7 +176,7 @@ class PaperQAEngine:
             "Your objective is to answer the clinician's question accurately, concisely, and with strict factual grounding.\n\n"
             "MANDATORY EXECUTION DIRECTIVES:\n"
             "1. Base your answer EXCLUSIVELY on the provided manuscript text. Never extrapolate, speculate, or introduce external data.\n"
-            "2. EXACT ANCHOR CITATIONS: Every factual assertion, quantitative statistic, endpoint finding, or study detail MUST be immediately followed by its exact coordinate anchor in square brackets (e.g., [Abstract, Para 2], [Methods, Para 4], [Results, Table 1], [Results, TableNote p1_504], [Discussion, Para 8], [Doc_Header]).\n"
+            "2. EXACT ANCHOR CITATIONS: Every factual assertion, quantitative statistic, endpoint finding, or study detail MUST be immediately followed by its exact coordinate anchor in square brackets (e.g., [Abstract, Para 2], [Methods, Para 4], [Results, Table 1], [Results, TableNote p1_504], [Discussion, Para 8]).\n"
             "   - Single anchors only: Write '[Methods, Para 2] [Methods, Para 4]', never combine into '[Methods, Para 2, 4]'.\n"
             "   - Never invent or fabricate anchors.\n"
             "3. NEGATIVE OBSERVATIONS: If the paper does NOT report, evaluate, or mention the queried outcome (e.g. Overall Survival was not tracked, or subgroup analysis was omitted), state this directly and clearly:\n"

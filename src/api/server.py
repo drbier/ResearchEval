@@ -3257,6 +3257,7 @@ def index_page():
                     pageWrapper.id = `page-wrapper-${p}`;
                     pageWrapper.className = 'relative bg-white shadow rounded border border-slate-300 max-w-full inline-block transition';
                     pageWrapper.setAttribute('data-page', p);
+                    pageWrapper.style.minHeight = '750px';
 
                     const badge = document.createElement('div');
                     badge.className = 'absolute top-2 left-2 px-2 py-0.5 bg-slate-800/70 text-white rounded text-[10px] font-mono pointer-events-none select-none z-10';
@@ -3271,8 +3272,8 @@ def index_page():
                     img.src = `/view-pdf-page?filename=${encodeURIComponent(filename)}&page=${p}`;
 
                     img.onload = function() {
-                        if (currentMeta && currentMeta.page === p) {
-                            repositionHitbox(false);
+                        if (currentMeta && (currentMeta.page || 1) === p) {
+                            repositionHitbox(true);
                         }
                     };
 
@@ -3291,11 +3292,17 @@ def index_page():
                 const pageWrapper = document.getElementById('page-wrapper-' + targetPage);
                 const img = document.getElementById('pdf-page-img-' + targetPage);
                 const hitbox = document.getElementById('highlightHitbox');
-                if (!hitbox) return;
+                if (!hitbox || !pageWrapper) return;
 
-                if (!pageWrapper || !img || img.naturalWidth === 0) {
-                    if (img && !img.complete) {
-                        img.onload = () => repositionHitbox(shouldScroll);
+                if (hitbox.parentElement !== pageWrapper) {
+                    hitbox.style.display = 'none';
+                    pageWrapper.appendChild(hitbox);
+                }
+
+                if (!img || img.naturalWidth === 0) {
+                    if (img) {
+                        img.loading = 'eager';
+                        img.addEventListener('load', () => repositionHitbox(shouldScroll), { once: true });
                     }
                     return;
                 }
@@ -3303,10 +3310,6 @@ def index_page():
                 if (img.clientWidth === 0) {
                     requestAnimationFrame(() => repositionHitbox(shouldScroll));
                     return;
-                }
-
-                if (hitbox.parentElement !== pageWrapper) {
-                    pageWrapper.appendChild(hitbox);
                 }
 
                 const pWidth = currentMeta.page_width || 595.0;
@@ -3820,14 +3823,14 @@ ${escapeHtml(thought)}
                 if (!text) return '';
 
                 // Group consecutive coordinate anchor brackets so they export neatly demarcated as [Abs, p38; Abs, p39; Abs, p41]
-                const consecutiveCoordGroupRegex = /(\[\s*[^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig|p\d+)\b[^\]]*?\](?:\s*\[\s*[^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig|p\d+)\b[^\]]*?\])*)/gi;
+                const consecutiveCoordGroupRegex = /(\[\s*[^[\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Results?|Res|Disc(?:ussion)?|Concl(?:usions?)?|Conc|Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box|p\d+)\b[^\]]*?\](?:\s*\[\s*[^[\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Results?|Res|Disc(?:ussion)?|Concl(?:usions?)?|Conc|Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box|p\d+)\b[^\]]*?\])*)/gi;
                 text = text.replace(consecutiveCoordGroupRegex, function(fullMatch) {
-                    const singleBracketRe = /\[\s*([^[\]]*?\b(?:Doc_Header|Para(?:graph)?|Table|Fig|p\d+)\b[^\]]*?)\s*\]/gi;
+                    const singleBracketRe = /\[\s*([^[\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Results?|Res|Disc(?:ussion)?|Concl(?:usions?)?|Conc|Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box|p\d+)\b[^\]]*?)\s*\]/gi;
                     const items = [];
                     let match;
                     while ((match = singleBracketRe.exec(fullMatch)) !== null) {
                         const trimmed = match[1].trim();
-                        if (trimmed.toLowerCase() === 'doc_header') {
+                        if (trimmed.toLowerCase() === 'doc_header' || trimmed.toLowerCase() === 'header') {
                             items.push('Header');
                             continue;
                         }
@@ -3835,7 +3838,7 @@ ${escapeHtml(thought)}
                         if (trimmed.includes(';')) {
                             rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
                         } else {
-                            rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para|Table|Fig|p\d+))/i).map(p => p.trim()).filter(Boolean);
+                            rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box|p\d+))/i).map(p => p.trim()).filter(Boolean);
                         }
                         if (!rawParts || rawParts.length === 0) {
                             rawParts = [trimmed];
@@ -3938,11 +3941,11 @@ ${escapeHtml(thought)}
 
                 let html = marked.parse(content);
                 // Match coordinate blocks, supporting single, multi-paragraph, and compound citations
-                // Expanded to include Doc_Header, Para, Table, TableNote, Fig, FigLegend, Box
-                const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box)\b[^\]]*?)\]/gi;
+                // Expanded to include Doc_Header, Header, Abstract, Intro, Methods, Results, Disc, Concl, Para, Table, Fig, Box, p\d+
+                const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Patients?\s+and\s+Methods?|Materials?\s+and\s+Methods?|Results?|Res|Findings?|Discussion|Disc|Conclusions?|Concl|Appendix|Supp(?:lementary)?|Para(?:graph)?|Table(?:Note)?|Fig(?:ure)?(?:Legend)?|Box|p\d+)\b[^\]]*?)\]/gi;
                 html = html.replace(bracketCoordRegex, function(fullMatch, inner) {
                     const trimmed = inner.trim();
-                    if (trimmed.toLowerCase() === 'doc_header') {
+                    if (trimmed.toLowerCase() === 'doc_header' || trimmed.toLowerCase() === 'header') {
                         const enc = encodeURIComponent('[Doc_Header]');
                         return `<button onclick="inspectAnchor('${enc}')" data-anchor="[Doc_Header]" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 text-sky-800 hover:bg-sky-600 hover:text-white border border-sky-300/80 rounded shadow-2xs leading-none" title="Click to view source page and highlight">Header</button>`;
                     }
@@ -3952,7 +3955,7 @@ ${escapeHtml(thought)}
                     if (trimmed.includes(';')) {
                         rawParts = trimmed.split(';').map(p => p.trim()).filter(Boolean);
                     } else {
-                        rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box))/i).map(p => p.trim()).filter(Boolean);
+                        rawParts = trimmed.split(/,\s*(?=[A-Za-z\s]+,\s*(?:Para(?:graph)?|Table(?:Note)?|Fig(?:ure)?(?:Legend)?|Box|p\d+))/i).map(p => p.trim()).filter(Boolean);
                     }
 
                     if (!rawParts || rawParts.length === 0) {
@@ -4406,6 +4409,41 @@ ${escapeHtml(thought)}
                     }
                 }
 
+                // Support bare section citations (e.g. [Abstract], [Results], [Methods], [Discussion], [Conclusions])
+                if (!meta) {
+                    const cleanSec = anchor.replace(/^\[|\]$/g, '').trim().toLowerCase();
+                    const secPatterns = {
+                        'abstract': [/^\[abstract/i],
+                        'abs': [/^\[abstract/i],
+                        'introduction': [/^\[intro/i],
+                        'intro': [/^\[intro/i],
+                        'methods': [/^\[(?:methods|materials and methods|patients and methods|study design)/i],
+                        'meth': [/^\[(?:methods|materials and methods|patients and methods|study design)/i],
+                        'results': [/^\[(?:results|findings)/i],
+                        'res': [/^\[(?:results|findings)/i],
+                        'discussion': [/^\[discussion/i],
+                        'disc': [/^\[discussion/i],
+                        'conclusion': [/^\[conclusion/i],
+                        'conclusions': [/^\[conclusion/i],
+                        'concl': [/^\[conclusion/i],
+                        'header': [/^\[doc_header\]$/i],
+                        'doc_header': [/^\[doc_header\]$/i]
+                    };
+                    const pats = secPatterns[cleanSec];
+                    if (pats) {
+                        for (const pat of pats) {
+                            for (const [k, v] of Object.entries(anchorIndex)) {
+                                if (pat.test(k)) {
+                                    meta = v;
+                                    resolvedAnchorId = k;
+                                    break;
+                                }
+                            }
+                            if (meta) break;
+                        }
+                    }
+                }
+
                 if (meta && !meta.anchor_id) {
                     meta.anchor_id = resolvedAnchorId;
                 }
@@ -4421,7 +4459,7 @@ ${escapeHtml(thought)}
                 }
 
                 if (meta) {
-                    currentMeta = Object.assign({ anchor_id: anchor }, meta);
+                    currentMeta = Object.assign({ anchor_id: resolvedAnchorId }, meta);
                     if (pageBadge) {
                         pageBadge.innerText = 'Page ' + (meta.page || 1);
                         pageBadge.classList.remove('hidden');
@@ -4453,6 +4491,32 @@ ${escapeHtml(thought)}
                 }
 
                 if (placeholder) placeholder.classList.add('hidden');
+
+                const targetPage = (meta && meta.page) ? meta.page : 1;
+                const pageViewer = document.getElementById('pageViewer');
+                const targetWrapper = document.getElementById('page-wrapper-' + targetPage);
+                const targetImg = document.getElementById('pdf-page-img-' + targetPage);
+                const hitbox = document.getElementById('highlightHitbox');
+
+                if (hitbox && targetWrapper && hitbox.parentElement !== targetWrapper) {
+                    hitbox.style.display = 'none';
+                    targetWrapper.appendChild(hitbox);
+                }
+
+                if (targetImg) {
+                    targetImg.loading = 'eager';
+                }
+
+                if (pageViewer && targetWrapper) {
+                    const currentScroll = pageViewer.scrollTop;
+                    const viewerRect = pageViewer.getBoundingClientRect();
+                    const wrapperRect = targetWrapper.getBoundingClientRect();
+                    const targetScroll = currentScroll + (wrapperRect.top - viewerRect.top) - 20;
+                    pageViewer.scrollTo({
+                        top: Math.max(0, targetScroll),
+                        behavior: 'smooth'
+                    });
+                }
 
                 repositionHitbox(true);
                 setTimeout(() => repositionHitbox(true), 80);
