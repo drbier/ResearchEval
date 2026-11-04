@@ -1348,7 +1348,7 @@ def index_page():
             <div id="summarizerContainer" class="hidden w-full overflow-y-auto space-y-4" style="height: calc(100vh - 105px);">
                 <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-5xl mx-auto space-y-5">
                     <!-- Header & Directive -->
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div class="border-b border-slate-100 pb-4">
                         <div>
                             <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
                                 <span>📝</span> Multi-Paper Science Communicator Contextualizer
@@ -1357,11 +1357,6 @@ def index_page():
                                 Paste a batch of 3–10 PubMed URLs, PMIDs, or DOIs. Reads structured abstracts sequentially to create an accessible, contextualized overview.
                             </p>
                         </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Model: Gemini flash
-                            </span>
-                        </div>
                     </div>
 
                     <!-- Batch URLs Input -->
@@ -1369,8 +1364,6 @@ def index_page():
                         <div class="flex items-center justify-between text-xs text-slate-600 font-medium">
                             <span>Enter PubMed URLs, PMIDs, or DOIs (one per line):</span>
                             <div class="flex items-center gap-3">
-                                <button onclick="loadSampleSummarizerBatch()" class="text-sky-600 hover:text-sky-700 font-semibold text-[11px]">Load Sample CoQ10 Papers</button>
-                                <span class="text-slate-300">|</span>
                                 <button onclick="clearSummarizerInput()" class="text-rose-600 hover:text-rose-700 font-semibold text-[11px]">Clear All</button>
                             </div>
                         </div>
@@ -2745,7 +2738,6 @@ def index_page():
                         banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-emerald-50 text-emerald-900 border-emerald-200";
                         banner.innerHTML = `
                             <span class="font-bold">✅ Briefing generated successfully (${data.accessible_count} accessible, ${data.inaccessible_count} unavailable).</span>
-                            <span class="text-slate-500 font-mono text-[11px]">Model: ${data.model_designation || 'Gemini flash'}</span>
                         `;
 
                         if (metaBadge) {
