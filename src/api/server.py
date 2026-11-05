@@ -1642,7 +1642,8 @@ def index_page():
                     </div>
 
                     <!-- Modal Footer -->
-                    <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-end">
+                    <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between">
+                        <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">F.A.C.T. v1.0.0</span>
                         <button id="settingsDoneBtn" onclick="closeSettingsModal()" class="btn-primary-accent px-4 py-2 rounded-lg text-white font-semibold text-xs shadow-xs transition cursor-pointer">
                             Done
                         </button>

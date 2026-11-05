@@ -2,6 +2,7 @@ module.exports = {
   apps: [
     {
       name: "fact",
+      version: "1.0.0",
       script: "venv/bin/python",
       args: "-m uvicorn src.api.server:app --host 127.0.0.1 --port 3008 --workers 2",
       cwd: "/var/www/fact",
