@@ -79,8 +79,14 @@ def get_manifest():
 @app.get("/FAST-Elf.jpeg")
 @app.get("/elf-thinker.png")
 @app.get("/fast-elf.png")
+@app.get("/FACT Elf Thinker PWA Logo.png")
+@app.get("/FACT Elf Thinker PWA Logo.jpeg")
+@app.get("/FACT-Elf-Thinker-PWA-Logo.png")
+@app.get("/FACT-Elf-Thinker-PWA-Logo.jpeg")
 def get_fast_elf_image():
     for candidate in [
+        os.path.join(PUBLIC_DIR, "FACT Elf Thinker PWA Logo.png"),
+        os.path.join(PUBLIC_DIR, "FACT Elf Thinker PWA Logo.jpeg"),
         os.path.join(PUBLIC_DIR, "FACT-Elf.jpeg"),
         os.path.join(PUBLIC_DIR, "FAST-Elf.jpeg"),
         os.path.join(STATIC_DIR, "FACT-Elf.jpeg"),
@@ -97,6 +103,7 @@ def get_fast_elf_image():
 def get_logo():
     for candidate in [
         os.path.join(PUBLIC_DIR, "icons", "icon-512.png"),
+        os.path.join(PUBLIC_DIR, "FACT Elf Thinker PWA Logo.png"),
         os.path.join(STATIC_DIR, "elf-thinker.png"),
         os.path.join(STATIC_DIR, "fast-elf.png"),
         os.path.join(PUBLIC_DIR, "FACT-Elf.jpeg"),
@@ -734,8 +741,10 @@ def index_page():
         
         <!-- Icons -->
         <link rel="icon" type="image/x-icon" href="/favicon.ico">
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
