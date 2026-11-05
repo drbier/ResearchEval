@@ -3043,7 +3043,7 @@ def index_page():
 
                 if (banner) {
                     banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-sky-50 text-sky-800 border-sky-200";
-                    banner.innerHTML = '<span>⚡ Running 4-tier query relaxation ladder across PubMed & Semantic Scholar...</span>';
+                    banner.innerHTML = '<span>⏳ Searching PubMed and verifying against clinical criteria...</span>';
                     banner.classList.remove('hidden');
                 }
 
@@ -3081,7 +3081,8 @@ def index_page():
                     window.ResearchAppState.lastSearchQuery = query;
 
                     if (data.status === 'success' && data.qualifying_papers && data.qualifying_papers.length > 0) {
-                        const tierName = data.tier_used === 1 ? 'Tier 1 (Strict All Criteria)' : 
+                        const tierName = typeof data.tier_used === 'string' ? data.tier_used :
+                                         data.tier_used === 1 ? 'Tier 1 (Strict Specific)' : 
                                          data.tier_used === 2 ? 'Tier 2 (Relaxed Geography)' : 
                                          data.tier_used === 3 ? 'Tier 3 (Core Clinical Only)' : 'Tier 4 (Semantic Scholar Fallback)';
                         
