@@ -1654,19 +1654,14 @@ def index_page():
             <div id="finderContainer" class="hidden w-full overflow-y-auto space-y-4" style="height: calc(100vh - 105px);">
                 <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs max-w-5xl mx-auto space-y-5 text-slate-800 dark:text-slate-100">
                     <!-- Header & Directive -->
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
                         <div>
                             <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                <span>🔍</span> Precision Zero-Trust Paper Finder
+                                <span>🔍</span> Verified Literature Finder
                             </h2>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Search medical literature using fuzzy recollection or clinical criteria. Powered by a 4-tier query relaxation ladder and strict binary clinical gate.
+                                Search PubMed studies using clinical criteria or trial recollections. Every result is independently verified against the published abstract.
                             </p>
-                        </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                                Model: Gemini flash
-                            </span>
                         </div>
                     </div>
 
@@ -1729,10 +1724,10 @@ def index_page():
                     <div class="border-b border-slate-100 dark:border-slate-800 pb-4">
                         <div>
                             <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                <span>📝</span> Multi-Paper Science Communicator Contextualizer
+                                <span>📝</span> Multi-Study Evidence Synthesis
                             </h2>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Paste a batch of 3–10 PubMed URLs, PMIDs, or DOIs. Reads structured abstracts sequentially to create an accessible, contextualized overview.
+                                Paste 3–10 PubMed URLs, PMIDs, or DOIs. Synthesizes structured abstracts across multiple studies into a unified clinical briefing.
                             </p>
                         </div>
                     </div>
