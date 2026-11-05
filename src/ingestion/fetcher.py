@@ -484,6 +484,61 @@ class PaperFetcher:
         except Exception as e:
             return {"status": "error", "message": f"Failed to access webpage: {str(e)}"}
 
+    @staticmethod
+    def normalize_for_pdf_rendering(text: str) -> str:
+        """Normalize typography, non-standard whitespace, directional quotes, and Greek/math symbols for standard PDF fonts."""
+        if not text:
+            return ""
+        # 1. Unicode spaces (thin space, hair space, non-breaking space, etc.)
+        text = re.sub(r'[\u2000-\u200B\u202F\u205F\u00A0]', ' ', text)
+        # 2. Dashes and hyphens (en-dash, em-dash, minus, figure dash) -> standard ASCII '-'
+        text = re.sub(r'[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]', '-', text)
+        # 3. Directional quotes and apostrophes -> standard ASCII ' and "
+        text = re.sub(r'[\u2018\u2019\u201B\u2032]', "'", text)
+        text = re.sub(r'[\u201C\u201D\u201E\u201F\u2033]', '"', text)
+        # 4. Mathematical comparisons and operators
+        math_map = {
+            '≤': '<=',
+            '≥': '>=',
+            '≠': '!=',
+            '≈': '~',
+            '×': 'x',
+            '÷': '/',
+            '·': '*',
+            '±': '+/-',
+            '‰': 'permil'
+        }
+        for orig, repl in math_map.items():
+            text = text.replace(orig, repl)
+        # 5. Greek letters commonly used in statistical and medical publications
+        greek_map = {
+            'χ': 'Chi',
+            'Χ': 'Chi',
+            'α': 'alpha',
+            'Α': 'Alpha',
+            'β': 'beta',
+            'Β': 'Beta',
+            'γ': 'gamma',
+            'Γ': 'Gamma',
+            'δ': 'delta',
+            'Δ': 'Delta',
+            'ε': 'epsilon',
+            'κ': 'kappa',
+            'λ': 'lambda',
+            'μ': 'u',
+            'ν': 'nu',
+            'ρ': 'rho',
+            'σ': 'sigma',
+            'Σ': 'Sigma',
+            'τ': 'tau',
+            'θ': 'theta',
+            'ω': 'omega',
+            'Ω': 'Omega'
+        }
+        for grk, eng in greek_map.items():
+            text = text.replace(grk, eng)
+        return text
+
     def _generate_pdf_from_jats(self, root: ET.Element, output_path: str, title: str, default_pmcid: str = ""):
         """Construct a clean, coordinate-indexable PDF from PubMed Central JATS XML with full bibliographic header."""
         doc = pymupdf.open()
@@ -494,6 +549,7 @@ class PaperFetcher:
             clean_title = ''.join(title_el.itertext()).strip()
             if clean_title:
                 title = clean_title
+        title = self.normalize_for_pdf_rendering(title)
 
         authors = []
         for contrib in root.findall('.//contrib'):
@@ -506,7 +562,7 @@ class PaperFetcher:
                     g_txt = giv.text.strip() if giv is not None and giv.text else ''
                     if s_txt or g_txt:
                         authors.append(f"{g_txt} {s_txt}".strip())
-        authors_str = ", ".join(authors) if authors else "Not specified"
+        authors_str = self.normalize_for_pdf_rendering(", ".join(authors) if authors else "Not specified")
 
         j_el = root.find('.//journal-title')
         if j_el is None:
@@ -514,7 +570,7 @@ class PaperFetcher:
                 if jid.text:
                     j_el = jid
                     break
-        journal = ''.join(j_el.itertext()).strip() if j_el is not None else "Not specified"
+        journal = self.normalize_for_pdf_rendering(''.join(j_el.itertext()).strip() if j_el is not None else "Not specified")
 
         year = ""
         for pd in root.findall('.//pub-date'):
@@ -545,8 +601,8 @@ class PaperFetcher:
             sec_nodes = abstract_el.findall('.//sec')
             if sec_nodes:
                 for s in sec_nodes:
-                    s_title = s.findtext('title') or ""
-                    s_paras = ["".join(p.itertext()).strip() for p in s.findall('.//p')]
+                    s_title = self.normalize_for_pdf_rendering(s.findtext('title') or "")
+                    s_paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in s.findall('.//p')]
                     p_text = "\n\n".join(filter(None, s_paras))
                     if s_title and p_text:
                         abstract_sec_texts.append(f"{s_title}: {p_text}")
@@ -556,11 +612,11 @@ class PaperFetcher:
                 p_nodes = abstract_el.findall('.//p')
                 if p_nodes:
                     for p in p_nodes:
-                        t = "".join(p.itertext()).strip()
+                        t = self.normalize_for_pdf_rendering("".join(p.itertext()).strip())
                         if t:
                             abstract_sec_texts.append(t)
             if not abstract_sec_texts:
-                abstract_sec_texts = ["".join(abstract_el.itertext()).strip()]
+                abstract_sec_texts = [self.normalize_for_pdf_rendering("".join(abstract_el.itertext()).strip())]
             
             sections.append(("Abstract", "\n\n".join(filter(None, abstract_sec_texts))))
             
@@ -568,8 +624,8 @@ class PaperFetcher:
         if body is not None:
             for sec in body.findall('.//sec'):
                 sec_title_el = sec.find('title')
-                sec_title = "".join(sec_title_el.itertext()).strip() if sec_title_el is not None else "Section"
-                paras = ["".join(p.itertext()).strip() for p in sec.findall('.//p')]
+                sec_title = self.normalize_for_pdf_rendering("".join(sec_title_el.itertext()).strip() if sec_title_el is not None else "Section")
+                paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in sec.findall('.//p')]
                 if paras:
                     sections.append((sec_title, "\n\n".join(paras)))
 
@@ -619,7 +675,7 @@ class PaperFetcher:
             
             # Paragraphs
             for para in content.split("\n\n"):
-                p_clean = para.strip()
+                p_clean = self.normalize_for_pdf_rendering(para.strip())
                 if not p_clean:
                     continue
                 if y > 760:
@@ -640,6 +696,8 @@ class PaperFetcher:
         elif metadata is None:
             metadata = {}
             
+        title = self.normalize_for_pdf_rendering(title)
+        abstract_text = self.normalize_for_pdf_rendering(abstract_text)
         doc = pymupdf.open()
         page = doc.new_page(width=595, height=842)
         
@@ -654,14 +712,14 @@ class PaperFetcher:
         y += t_h + 4.0
         
         # Authors
-        authors = metadata.get("authors", "Not specified")
+        authors = self.normalize_for_pdf_rendering(str(metadata.get("authors", "Not specified")))
         a_lines = max(1, len(f"Authors: {authors}") // 80 + 1)
         a_h = a_lines * 13.0 + 8.0
         page.insert_textbox(pymupdf.Rect(50, y, 545, y + a_h), f"Authors: {authors}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
         y += a_h + 4.0
         
         # Journal & Year
-        journal = metadata.get("journal", "Not specified")
+        journal = self.normalize_for_pdf_rendering(str(metadata.get("journal", "Not specified")))
         year = metadata.get("year", "Not specified")
         page.insert_text(pymupdf.Point(50, y), f"Journal: {journal} | Year: {year}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))
         y += 16.0
@@ -698,20 +756,21 @@ class PaperFetcher:
         elif metadata is None:
             metadata = {}
 
+        title = self.normalize_for_pdf_rendering(title)
         doc = pymupdf.open()
-        paragraphs = [p.strip() for p in full_text.split("\n\n") if len(p.strip()) > 30]
+        paragraphs = [self.normalize_for_pdf_rendering(p.strip()) for p in full_text.split("\n\n") if len(p.strip()) > 30]
         
         page = doc.new_page(width=595, height=842)
         y = 45.0
         page.insert_textbox(pymupdf.Rect(50, y, 545, y + 42), title, fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
         y += 46.0
         
-        authors = metadata.get("authors", "")
+        authors = self.normalize_for_pdf_rendering(str(metadata.get("authors", "")))
         if authors:
             page.insert_textbox(pymupdf.Rect(50, y, 545, y + 30), f"Authors: {authors}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
             y += 32.0
             
-        journal = metadata.get("journal", "")
+        journal = self.normalize_for_pdf_rendering(str(metadata.get("journal", "")))
         year = metadata.get("year", "")
         if journal or year:
             page.insert_text(pymupdf.Point(50, y), f"Journal: {journal or 'Web Publication'} | Year: {year or 'N/A'}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))

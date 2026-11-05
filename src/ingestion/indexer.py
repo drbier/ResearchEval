@@ -120,12 +120,29 @@ FIGURE_LEGEND_REGEX = re.compile(
 )
 
 def clean_ocr_text(text: str) -> str:
-    """Standardize ligatures, special whitespace, OCR hyphens, and bullet glyph artifacts."""
+    """Standardize ligatures, special whitespace, OCR hyphens, font-encoding artifact question marks, and bullet glyphs."""
     if not text:
         return ""
     text = text.replace('\xa0', ' ')
+    # Normalize unicode whitespace (thin space, hair space, zero-width space, etc.)
+    text = re.sub(r'[\u2000-\u200B\u202F\u205F]', ' ', text)
     text = re.sub(r'[ \t]+', ' ', text)
     text = re.sub(r'(\w+)-\n(\w+)', r'\1\2', text)
+
+    # Repair font-encoding question mark artifacts (from Latin-1 / WinAnsi fallback)
+    # 1. Number range hyphens: '0.87?1.04' -> '0.87-1.04'
+    text = re.sub(r'(?<=\d)\s*\?\s*(?=\d)', '-', text)
+    # 2. P-value comparisons: 'p?<?0.001' or 'p ? < 0.001' -> 'p < 0.001'
+    text = re.sub(r'([pP])\s*\?\s*<\s*\?\s*', r'\1 < ', text)
+    text = re.sub(r'([pP])\s*\?\s*([<>=≤≥])\s*\??\s*', r'\1 \2 ', text)
+    # 3. Statistical Chi / I-squared: '(? 2 96.06' or '(?\n2 96.06' -> '(Chi² 96.06'
+    text = re.sub(r'\(\s*\?\s*\n?\s*2\s+(?=\d)', '(Chi² ', text)
+    text = re.sub(r'(?<=\bheterogeneity\s)\(\s*\?\s*\n?\s*2', '(Chi²', text, flags=re.IGNORECASE)
+    # 4. Quoted terms with internal hyphens: '?leave?one?out?' -> '"leave-one-out"'
+    text = re.sub(r'\?([a-zA-Z0-9]+)\?([a-zA-Z0-9]+)\?([a-zA-Z0-9]+)\?', r'"\1-\2-\3"', text)
+    text = re.sub(r'\?([a-zA-Z0-9]+)\?([a-zA-Z0-9]+)\?', r'"\1-\2"', text)
+    text = re.sub(r'(?<=\s)\?([a-zA-Z0-9\-_]+)\?(?=[\s,\.;:\)])', r'"\1"', text)
+
     # Clean OCR pseudo-bullet glyph artifacts (e.g. 'e Dietary uptake...' -> '• Dietary uptake...')
     text = re.sub(r'(?m)^[eo•·\-]\s+(?=[A-Z])', '• ', text)
     # Clean isolated single-character OCR noise artifacts on their own line within blocks (e.g. stray edge margin specks)
