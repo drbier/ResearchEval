@@ -72,7 +72,11 @@ if os.path.exists(ICONS_DIR):
 def get_manifest():
     for m in [os.path.join(PUBLIC_DIR, "manifest.json"), os.path.join(STATIC_DIR, "manifest.json")]:
         if os.path.exists(m):
-            return FileResponse(m, media_type="application/manifest+json")
+            return FileResponse(
+                m,
+                media_type="application/manifest+json",
+                headers={"Cache-Control": "no-cache, must-revalidate"}
+            )
     raise HTTPException(status_code=404, detail="Manifest not found")
 
 @app.get("/FACT-Elf.jpeg")
@@ -740,7 +744,7 @@ def index_page():
         <title>F.A.C.T. — Find · Analyze · Contextualize · Talk</title>
         
         <!-- PWA Meta Tags & Web Manifest -->
-        <link rel="manifest" href="/manifest.json">
+        <link rel="manifest" href="/manifest.json?v=2">
         <meta name="theme-color" content="#0284c7">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
@@ -748,12 +752,12 @@ def index_page():
         <meta name="apple-mobile-web-app-title" content="F.A.C.T.">
         
         <!-- Icons -->
-        <link rel="icon" type="image/x-icon" href="/favicon.ico">
-        <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
-        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
-        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+        <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png?v=2">
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png?v=2">
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png?v=2">
+        <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png?v=2">
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {
