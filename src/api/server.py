@@ -79,25 +79,33 @@ def get_manifest():
 @app.get("/FAST-Elf.jpeg")
 @app.get("/elf-thinker.png")
 @app.get("/fast-elf.png")
-@app.get("/FACT Elf Thinker PWA Logo.png")
-@app.get("/FACT Elf Thinker PWA Logo.jpeg")
-@app.get("/FACT-Elf-Thinker-PWA-Logo.png")
-@app.get("/FACT-Elf-Thinker-PWA-Logo.jpeg")
 def get_fast_elf_image():
     for candidate in [
-        os.path.join(PUBLIC_DIR, "FACT Elf Thinker PWA Logo.png"),
-        os.path.join(PUBLIC_DIR, "FACT Elf Thinker PWA Logo.jpeg"),
         os.path.join(PUBLIC_DIR, "FACT-Elf.jpeg"),
         os.path.join(PUBLIC_DIR, "FAST-Elf.jpeg"),
         os.path.join(STATIC_DIR, "FACT-Elf.jpeg"),
         os.path.join(STATIC_DIR, "elf-thinker.png"),
-        os.path.join(STATIC_DIR, "fast-elf.png"),
-        os.path.join(PUBLIC_DIR, "icons", "icon-512.png")
+        os.path.join(STATIC_DIR, "fast-elf.png")
     ]:
         if os.path.exists(candidate):
             mtype = "image/png" if candidate.endswith(".png") else "image/jpeg"
             return FileResponse(candidate, media_type=mtype)
     raise HTTPException(status_code=404, detail="Elf thinker logo not found")
+
+@app.get("/FACT Elf Thinker PWA Logo.png")
+@app.get("/FACT Elf Thinker PWA Logo.jpeg")
+@app.get("/FACT-Elf-Thinker-PWA-Logo.png")
+@app.get("/FACT-Elf-Thinker-PWA-Logo.jpeg")
+def get_pwa_logo_image():
+    for candidate in [
+        os.path.join(PUBLIC_DIR, "FACT Elf Thinker PWA Logo.png"),
+        os.path.join(PUBLIC_DIR, "FACT Elf Thinker PWA Logo.jpeg"),
+        os.path.join(PUBLIC_DIR, "icons", "icon-512.png")
+    ]:
+        if os.path.exists(candidate):
+            mtype = "image/png" if candidate.endswith(".png") else "image/jpeg"
+            return FileResponse(candidate, media_type=mtype)
+    raise HTTPException(status_code=404, detail="PWA logo not found")
 
 @app.get("/logo.png")
 def get_logo():
