@@ -1554,8 +1554,8 @@ def index_page():
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
                             </div>
                             <div>
-                                <h2 class="text-base font-bold leading-tight">Display &amp; Appearance Settings</h2>
-                                <p class="text-xs text-slate-500 dark:text-slate-400">Personalize theme mode and manuscript highlight accent</p>
+                                <h2 class="text-base font-bold leading-tight">Settings &amp; Preferences</h2>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Personalize appearance, default startup view, and highlight colors</p>
                             </div>
                         </div>
                         <button onclick="closeSettingsModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" title="Close Settings">
@@ -1605,12 +1605,60 @@ def index_page():
                             </div>
                         </section>
 
-                        <!-- Section 2: Highlight Accent Color -->
+                        <!-- Section 2: Default Startup View -->
+                        <section class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">2. Default Startup View</h3>
+                                    <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">Select which tool opens automatically when loading F.A.C.T.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <!-- Find Option -->
+                                <button type="button" onclick="setDefaultStartupMode('finder')" id="defaultModeBtnFinder" class="p-3.5 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                    <div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-lg">🔍</span>
+                                            <span id="defaultModeCheckFinder" class="hidden w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold border">✓</span>
+                                        </div>
+                                        <div class="font-bold text-sm text-slate-900 dark:text-slate-100 mt-2">Find</div>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Verified Literature Finder</p>
+                                    </div>
+                                </button>
+
+                                <!-- Analyze Option -->
+                                <button type="button" onclick="setDefaultStartupMode('appraisal')" id="defaultModeBtnAppraisal" class="p-3.5 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                    <div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-lg">🔬</span>
+                                            <span id="defaultModeCheckAppraisal" class="hidden w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold border">✓</span>
+                                        </div>
+                                        <div class="font-bold text-sm text-slate-900 dark:text-slate-100 mt-2">Analyze</div>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Clinical Manuscript Appraisal</p>
+                                    </div>
+                                </button>
+
+                                <!-- Contextualize Option -->
+                                <button type="button" onclick="setDefaultStartupMode('summarizer')" id="defaultModeBtnSummarizer" class="p-3.5 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                    <div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-lg">📝</span>
+                                            <span id="defaultModeCheckSummarizer" class="hidden w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold border">✓</span>
+                                        </div>
+                                        <div class="font-bold text-sm text-slate-900 dark:text-slate-100 mt-2">Contextualize</div>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">Multi-Study Evidence Synthesis</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- Section 3: Highlight Accent Color -->
                         <section class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                        2. Highlight Color (Currently: <span id="activeHighlightName">Warm Amber</span>)
+                                        3. Highlight Color (Currently: <span id="activeHighlightName">Warm Amber</span>)
                                     </h3>
                                     <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
                                         Colors the PDF manuscript crop box, viewport pulse glow, and coordinate citation pills.
@@ -1624,7 +1672,7 @@ def index_page():
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="highlightColorGrid"></div>
                         </section>
 
-                        <!-- Section 3: Live Preview -->
+                        <!-- Section 4: Live Preview -->
                         <section class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 space-y-2">
                             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Live Preview</span>
                             <div class="flex flex-wrap items-center gap-3">
@@ -2927,6 +2975,14 @@ def index_page():
                 applyHighlightColor(colorId);
             }
 
+            let currentDefaultMode = localStorage.getItem('fact_default_mode') || 'appraisal';
+
+            function setDefaultStartupMode(mode) {
+                currentDefaultMode = mode;
+                localStorage.setItem('fact_default_mode', mode);
+                updateThemeModalUI();
+            }
+
             function updateThemeModalUI() {
                 const isDark = document.documentElement.classList.contains('dark');
                 const themeBtnLight = document.getElementById('themeBtnLight');
@@ -2949,6 +3005,39 @@ def index_page():
                 }
 
                 const curPal = HIGHLIGHT_PALETTES[currentHighlightColor] || HIGHLIGHT_PALETTES.amber;
+
+                // Update Default Startup Mode UI
+                const curDefMode = localStorage.getItem('fact_default_mode') || 'appraisal';
+                const modeBtnMap = {
+                    finder: { btn: document.getElementById('defaultModeBtnFinder'), check: document.getElementById('defaultModeCheckFinder') },
+                    appraisal: { btn: document.getElementById('defaultModeBtnAppraisal'), check: document.getElementById('defaultModeCheckAppraisal') },
+                    summarizer: { btn: document.getElementById('defaultModeBtnSummarizer'), check: document.getElementById('defaultModeCheckSummarizer') }
+                };
+
+                Object.keys(modeBtnMap).forEach(mKey => {
+                    const item = modeBtnMap[mKey];
+                    if (!item.btn) return;
+                    const isSelected = (mKey === curDefMode);
+                    if (isSelected) {
+                        item.btn.className = "p-3.5 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer shadow-xs font-semibold ring-2";
+                        item.btn.style.borderColor = curPal.primary;
+                        item.btn.style.backgroundColor = isDark ? curPal.softBgDark : curPal.softBgLight;
+                        item.btn.style.boxShadow = `0 0 0 2px ${curPal.ring}`;
+                        if (item.check) {
+                            item.check.classList.remove('hidden');
+                            item.check.style.backgroundColor = curPal.hex;
+                            item.check.style.color = '#ffffff';
+                            item.check.style.borderColor = curPal.primary;
+                        }
+                    } else {
+                        item.btn.className = "p-3.5 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300";
+                        item.btn.style.borderColor = '';
+                        item.btn.style.backgroundColor = '';
+                        item.btn.style.boxShadow = '';
+                        if (item.check) item.check.classList.add('hidden');
+                    }
+                });
+
                 const nameEl = document.getElementById('activeHighlightName');
                 if (nameEl) nameEl.innerText = curPal.name;
 
@@ -5279,6 +5368,12 @@ ${escapeHtml(thought)}
             // Initialize Theme & Highlight Settings on Load
             applyThemeMode(currentThemeMode);
             applyHighlightColor(currentHighlightColor);
+
+            // Initialize Default Startup View on Load
+            const savedDefaultMode = localStorage.getItem('fact_default_mode') || 'appraisal';
+            if (savedDefaultMode && savedDefaultMode !== 'appraisal') {
+                switchMasterMode(savedDefaultMode);
+            }
 
             // Global Escape key listener to close modals
             window.addEventListener('keydown', function(e) {
