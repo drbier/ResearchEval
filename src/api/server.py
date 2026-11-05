@@ -2395,20 +2395,56 @@ def index_page():
                 const container = document.getElementById('adminUserListContainer');
                 if (!fbDb) return;
                 try {
-                    const snap = await fbDb.collection('users').get();
+                    const [usersSnap, preSnap] = await Promise.all([
+                        fbDb.collection('users').get(),
+                        fbDb.collection('preapproved_emails').get().catch(err => {
+                            console.warn("Could not fetch preapproved_emails:", err);
+                            return { forEach: () => {} };
+                        })
+                    ]);
+
                     const list = [];
-                    snap.forEach(doc => {
+                    const seenEmails = new Set();
+
+                    usersSnap.forEach(doc => {
                         const d = doc.data();
+                        const email = (d.email || '').toLowerCase().trim();
+                        if (email) seenEmails.add(email);
                         list.push({
                             uid: doc.id,
                             email: d.email || 'No Email',
+                            displayName: d.displayName || '',
+                            photoURL: d.photoURL || '',
                             approved: Boolean(d.approved),
                             status: d.status || (Boolean(d.approved) ? 'approved' : 'pending'),
                             role: d.role || 'user',
                             createdAt: d.createdAt,
-                            lastLoginAt: d.lastLoginAt
+                            lastLoginAt: d.lastLoginAt,
+                            isPreapprovedOnly: false
                         });
                     });
+
+                    preSnap.forEach(doc => {
+                        const d = doc.data();
+                        const email = (d.email || doc.id || '').toLowerCase().trim();
+                        if (!email) return;
+                        if (seenEmails.has(email)) return; // Already present in registered users list
+
+                        const isApproved = d.approved !== false;
+                        list.push({
+                            uid: `preapproved:${email}`,
+                            email: d.email || doc.id,
+                            displayName: '',
+                            photoURL: '',
+                            approved: isApproved,
+                            status: isApproved ? 'approved' : (d.status || 'revoked'),
+                            role: 'user',
+                            createdAt: d.preapprovedAt || d.updatedAt || new Date().toISOString(),
+                            lastLoginAt: null,
+                            isPreapprovedOnly: true
+                        });
+                    });
+
                     adminUsersList = list;
                     updateAdminTabCounts();
                     renderAdminUserList();
@@ -2527,10 +2563,11 @@ def index_page():
                                     <div class="flex items-center gap-2">
                                         <span class="font-bold text-xs text-slate-900 truncate">${u.displayName ? u.displayName + ' · ' : ''}${email}</span>
                                         <span class="text-[10px] px-2 py-0.2 rounded-full font-semibold shrink-0 ${u.approved ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : (u.status === 'denied' || u.status === 'revoked' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200')}">
-                                            ${u.approved ? 'Approved' : (u.status === 'denied' ? 'Denied' : (u.status === 'revoked' ? 'Revoked' : 'Pending'))}
+                                            ${u.isPreapprovedOnly ? (u.approved ? 'Pre-Approved' : 'Revoked') : (u.approved ? 'Approved' : (u.status === 'denied' ? 'Denied' : (u.status === 'revoked' ? 'Revoked' : 'Pending')))}
                                         </span>
+                                        ${u.isPreapprovedOnly ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200 font-medium">Whitelist (Awaiting Sign-In)</span>' : ''}
                                     </div>
-                                    <div class="text-[11px] text-slate-400 font-mono">UID: ${u.uid}</div>
+                                    <div class="text-[11px] text-slate-400 font-mono">${u.isPreapprovedOnly ? 'Pre-approved Whitelist · Awaiting initial sign-in' : `UID: ${u.uid}`}</div>
                                     <!-- Live Token & Cost Telemetry Badges -->
                                     <div class="flex flex-wrap items-center gap-2 pt-1">
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 border border-sky-100 text-[10px] font-semibold text-sky-800" title="Total API requests">
@@ -2569,17 +2606,20 @@ def index_page():
                 renderAdminUserList();
 
                 try {
-                    await fbDb.collection('users').doc(targetUid).set({
-                        approved,
-                        status,
-                        role: 'user',
-                        updatedAt: new Date().toISOString()
-                    }, { merge: true });
+                    if (targetUid && !targetUid.startsWith('preapproved:')) {
+                        await fbDb.collection('users').doc(targetUid).set({
+                            approved,
+                            status,
+                            role: 'user',
+                            updatedAt: new Date().toISOString()
+                        }, { merge: true });
+                    }
 
                     if (targetEmail) {
                         await fbDb.collection('preapproved_emails').doc(targetEmail.toLowerCase().trim()).set({
                             email: targetEmail.toLowerCase().trim(),
                             approved,
+                            status,
                             updatedAt: new Date().toISOString()
                         }, { merge: true });
                     }
@@ -2606,16 +2646,32 @@ def index_page():
                     await fbDb.collection('preapproved_emails').doc(email).set({
                         email: email,
                         approved: true,
+                        status: 'approved',
                         preapprovedAt: new Date().toISOString(),
                         preapprovedBy: MASTER_ADMIN_EMAIL
                     }, { merge: true });
 
                     // Check if user is already registered in users list
-                    const match = adminUsersList.find(u => u.email && u.email.toLowerCase() === email);
+                    const match = adminUsersList.find(u => u.email && u.email.toLowerCase() === email && !u.isPreapprovedOnly);
                     if (match) {
                         await handleSetUserApproval(match.uid, email, true, 'approved');
                     } else {
-                        alert(`Email ${email} has been pre-approved! They will have instant full access upon signing in.`);
+                        // Immediately add or update in local list under Approved
+                        adminUsersList = adminUsersList.filter(u => (u.email || '').toLowerCase() !== email);
+                        adminUsersList.unshift({
+                            uid: `preapproved:${email}`,
+                            email: email,
+                            displayName: '',
+                            photoURL: '',
+                            approved: true,
+                            status: 'approved',
+                            role: 'user',
+                            createdAt: new Date().toISOString(),
+                            lastLoginAt: null,
+                            isPreapprovedOnly: true
+                        });
+                        updateAdminTabCounts();
+                        switchAdminTab('approved');
                     }
                     if (input) input.value = '';
                 } catch (err) {
