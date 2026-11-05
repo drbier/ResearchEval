@@ -745,7 +745,7 @@ def index_page():
         
         <!-- PWA Meta Tags & Web Manifest -->
         <link rel="manifest" href="/manifest.json?v=2">
-        <meta name="theme-color" content="#0284c7">
+        <meta name="theme-color" id="pwaThemeColor" content="#d97706">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -876,6 +876,12 @@ def index_page():
                     r.style.setProperty('--highlight-pill-bg', p.pillBg);
                     r.style.setProperty('--highlight-pill-border', p.pillBorder);
                     r.style.setProperty('--highlight-hex', p.hex);
+
+                    // Instantaneous PWA title bar color initialization
+                    const metaThemeColor = document.getElementById('pwaThemeColor') || document.querySelector('meta[name="theme-color"]');
+                    if (metaThemeColor && p.primary) {
+                        metaThemeColor.setAttribute('content', p.primary);
+                    }
                 } catch(e) {}
             })();
         </script>
@@ -2986,6 +2992,12 @@ def index_page():
                     prevHitbox.style.borderColor = p.border;
                     prevHitbox.style.backgroundColor = p.bg;
                     prevHitbox.style.boxShadow = `0 0 0 2px ${p.ringGlow || p.ring}, 0 0 10px ${p.glow}`;
+                }
+
+                // Dynamically update PWA title bar color in Chrome / Edge / Windows / Android
+                const metaThemeColor = document.getElementById('pwaThemeColor') || document.querySelector('meta[name="theme-color"]');
+                if (metaThemeColor && p.primary) {
+                    metaThemeColor.setAttribute('content', p.primary);
                 }
 
                 localStorage.setItem('fact_highlight_color', currentHighlightColor);
