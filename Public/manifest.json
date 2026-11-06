@@ -1,8 +1,8 @@
 {
-  "name": "F.A.C.T. - Find · Analyze · Contextualize · Talk",
+  "name": "F.A.C.T.",
   "short_name": "F.A.C.T.",
-  "version": "1.0.2",
-  "description": "Deterministic Clinical Research Analyzer with Inline Source Grounding",
+  "version": "1.0.3",
+  "description": "F.A.C.T. — Find · Analyze · Contextualize · Talk — Deterministic Clinical Research Analyzer",
   "start_url": "/",
   "id": "/",
   "display": "standalone",

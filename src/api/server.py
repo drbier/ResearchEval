@@ -744,7 +744,7 @@ def index_page():
         <title>F.A.C.T. — Find · Analyze · Contextualize · Talk</title>
         
         <!-- PWA Meta Tags & Web Manifest -->
-        <link rel="manifest" href="/manifest.json?v=2">
+        <link rel="manifest" href="/manifest.json?v=3">
         <meta name="theme-color" id="pwaThemeColor" content="#d97706">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
