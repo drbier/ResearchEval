@@ -1881,8 +1881,9 @@ def index_page():
                 <!-- Draggable Split Container: Left Appraisal | Resizer | Right Source Inspector -->
                 <div id="splitContainer" class="flex flex-row w-full gap-0 select-none items-stretch rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900" style="height: calc(100vh - 105px); min-height: 650px;">
                     <!-- Left: Clinical Analysis & Show Thinking Tab Switcher (Behavior 3) -->
-                    <div id="leftPane" class="bg-white dark:bg-slate-900 p-6 border-r border-slate-200 dark:border-slate-800 overflow-y-auto select-text flex flex-col h-full" style="width: 55%; min-width: 25%; max-width: 75%;">
-                        <div class="sticky top-0 bg-white dark:bg-slate-900 z-10 pb-3 border-b border-slate-200 dark:border-slate-800 mb-4 flex flex-wrap justify-between items-center gap-2">
+                    <div id="leftPane" class="bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 select-text flex flex-col h-full overflow-hidden" style="width: 55%; min-width: 25%; max-width: 75%;">
+                        <!-- Fixed Header Bar: Tabs & Action Buttons (never scrolled or overlapped) -->
+                        <div class="flex-shrink-0 bg-white dark:bg-slate-900 z-10 px-6 pt-5 pb-3 border-b border-slate-200 dark:border-slate-800 flex flex-wrap justify-between items-center gap-2">
                             <div class="flex items-center gap-2">
                                 <div class="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium">
                                     <button id="leftTabAppraisalBtn" onclick="switchLeftTab('appraisal')" class="px-3 py-1 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer">
@@ -1906,38 +1907,42 @@ def index_page():
                                 </button>
                             </div>
                         </div>
-                        <div id="outputMarkdown" class="prose max-w-none text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-950/70 p-6 rounded-lg border border-slate-200 dark:border-slate-800 text-sm leading-relaxed flex-1"></div>
-                        <!-- Ask Tab Container (Conversational QA Interrogation) -->
-                        <div id="askContainer" class="hidden flex-1 flex flex-col min-h-0 space-y-3">
-                            <!-- Quick Clinical Inquiries -->
-                            <div class="flex-shrink-0 bg-slate-50 dark:bg-slate-950/70 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
-                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Quick Inquiries:</span>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <button onclick="askQuickChip('How many total participants were randomized or enrolled in the study?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">👥 Total Sample Size</button>
-                                    <button onclick="askQuickChip('What was the primary endpoint, and was it statistically significant?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">🎯 Primary Endpoint</button>
-                                    <button onclick="askQuickChip('Does the study report Overall Survival (OS) or MACE outcomes? What were the hazard ratios?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">📈 Survival / MACE</button>
-                                    <button onclick="askQuickChip('What adverse events or safety signals were significantly different between groups?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">⚠️ Safety & Harms</button>
+
+                        <!-- Scrollable Body Content -->
+                        <div class="flex-1 overflow-y-auto p-6 min-h-0 flex flex-col">
+                            <div id="outputMarkdown" class="prose max-w-none text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-950/70 p-6 rounded-lg border border-slate-200 dark:border-slate-800 text-sm leading-relaxed flex-1"></div>
+                            <!-- Ask Tab Container (Conversational QA Interrogation) -->
+                            <div id="askContainer" class="hidden flex-1 flex flex-col min-h-0 space-y-3">
+                                <!-- Quick Clinical Inquiries -->
+                                <div class="flex-shrink-0 bg-slate-50 dark:bg-slate-950/70 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
+                                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">Quick Inquiries:</span>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <button onclick="askQuickChip('How many total participants were randomized or enrolled in the study?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">👥 Total Sample Size</button>
+                                        <button onclick="askQuickChip('What was the primary endpoint, and was it statistically significant?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">🎯 Primary Endpoint</button>
+                                        <button onclick="askQuickChip('Does the study report Overall Survival (OS) or MACE outcomes? What were the hazard ratios?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">📈 Survival / MACE</button>
+                                        <button onclick="askQuickChip('What adverse events or safety signals were significantly different between groups?')" class="text-[11px] bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 px-2.5 py-1 rounded-md shadow-2xs transition font-medium cursor-pointer">⚠️ Safety & Harms</button>
+                                    </div>
+                                </div>
+
+                                <!-- Chat Message History Feed -->
+                                <div id="askChatFeed" class="flex-1 bg-slate-50 dark:bg-slate-950/70 p-4 rounded-lg border border-slate-200 dark:border-slate-800 overflow-y-auto space-y-4 text-xs leading-relaxed min-h-[300px]">
+                                    <div class="text-center p-6 text-slate-400 my-auto">
+                                        <span class="text-2xl block mb-1">💬</span>
+                                        <p class="font-semibold text-slate-600 dark:text-slate-400 text-xs">Ask anything about this manuscript</p>
+                                        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">Answers cite coordinate anchors that jump directly to the source paragraph in the viewer on the right.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Question Input Box -->
+                                <div class="flex-shrink-0 flex gap-2 pt-1">
+                                    <input type="text" id="askQuestionInput" onkeydown="if(event.key==='Enter') executeAskQuery();" placeholder="Ask a question about this paper (e.g. 'What was the blinding method?')..." class="flex-1 text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs"/>
+                                    <button id="askSubmitBtn" onclick="executeAskQuery()" class="btn-primary-accent px-4 py-2 text-white font-semibold text-xs rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
+                                        <span>Send</span> <span>➤</span>
+                                    </button>
                                 </div>
                             </div>
-
-                            <!-- Chat Message History Feed -->
-                            <div id="askChatFeed" class="flex-1 bg-slate-50 dark:bg-slate-950/70 p-4 rounded-lg border border-slate-200 dark:border-slate-800 overflow-y-auto space-y-4 text-xs leading-relaxed min-h-[300px]">
-                                <div class="text-center p-6 text-slate-400 my-auto">
-                                    <span class="text-2xl block mb-1">💬</span>
-                                    <p class="font-semibold text-slate-600 dark:text-slate-400 text-xs">Ask anything about this manuscript</p>
-                                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">Answers cite coordinate anchors that jump directly to the source paragraph in the viewer on the right.</p>
-                                </div>
-                            </div>
-
-                            <!-- Question Input Box -->
-                            <div class="flex-shrink-0 flex gap-2 pt-1">
-                                <input type="text" id="askQuestionInput" onkeydown="if(event.key==='Enter') executeAskQuery();" placeholder="Ask a question about this paper (e.g. 'What was the blinding method?')..." class="flex-1 text-xs text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs"/>
-                                <button id="askSubmitBtn" onclick="executeAskQuery()" class="btn-primary-accent px-4 py-2 text-white font-semibold text-xs rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
-                                    <span>Send</span> <span>➤</span>
-                                </button>
-                            </div>
+                            <div id="thinkingContainer" class="hidden flex-1 space-y-4"></div>
                         </div>
-                        <div id="thinkingContainer" class="hidden flex-1 space-y-4"></div>
                     </div>
 
                     <!-- Draggable Divider Bar -->
