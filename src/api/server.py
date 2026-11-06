@@ -4703,10 +4703,23 @@ ${escapeHtml(thought)}
 
                 try {
                     const res = await fetch('/appraise-fetched', { method: 'POST', body: formData });
+                    if (!res.ok) {
+                        let errMsg = `Server returned status ${res.status}`;
+                        try {
+                            const errData = await res.json();
+                            if (errData && errData.detail) errMsg = errData.detail;
+                        } catch (_) {
+                            const rawErrText = await res.text().catch(() => '');
+                            if (res.status === 524 || rawErrText.includes('524')) {
+                                errMsg = 'Gateway timeout: Cloudflare limit reached. If this is a large scanned PDF, processing may still complete on server.';
+                            } else if (res.status === 502 || res.status === 504) {
+                                errMsg = `Server Gateway Error (${res.status}). Please try again shortly.`;
+                            }
+                        }
+                        throw new Error(errMsg);
+                    }
+
                     const data = await res.json();
-
-                    if (!res.ok) throw new Error(data.detail || 'Evaluation failed.');
-
                     renderAppraisalResults(data);
                 } catch (err) {
                     spinner.classList.add('hidden');
@@ -5161,17 +5174,6 @@ ${escapeHtml(thought)}
 
                 currentFilename = fileInput.files[0].name;
 
-                // Immediately initialize full paper viewer so the user can read the entire manuscript while appraisal runs
-                const initForm = new FormData();
-                initForm.append('file', fileInput.files[0]);
-                fetch('/api/init-pdf-viewer', { method: 'POST', body: initForm })
-                    .then(r => r.json())
-                    .then(initData => {
-                        if (initData && initData.total_pages) {
-                            renderFullDocumentPages(initData.filename, initData.total_pages, initData.pages);
-                        }
-                    }).catch(e => console.warn('Pre-viewer init note:', e));
-
                 const statusBox = document.getElementById('statusBox');
                 const statusText = document.getElementById('statusText');
                 const spinner = document.getElementById('spinner');
@@ -5182,22 +5184,48 @@ ${escapeHtml(thought)}
                 statusBox.classList.remove('hidden');
                 resultBox.classList.add('hidden');
                 runBtn.disabled = true;
-                statusText.innerText = 'Extracting PDF layout & coordinate anchors...';
-
-                const formData = new FormData();
-                formData.append('file', fileInput.files[0]);
-                if (currentUser) {
-                    formData.append('user_uid', currentUser.uid);
-                    formData.append('user_email', currentUser.email);
-                }
+                statusText.innerText = 'Uploading manuscript & preparing document layout...';
 
                 try {
-                    statusText.innerText = 'Executing Stage 2 Triage & Stage 3 Scoped Synthesis...';
-                    const res = await fetch('/appraise', { method: 'POST', body: formData });
+                    // Step 1: Upload once to initialize viewer and guarantee file is saved to server
+                    const uploadForm = new FormData();
+                    uploadForm.append('file', fileInput.files[0]);
+                    const initRes = await fetch('/api/init-pdf-viewer', { method: 'POST', body: uploadForm });
+                    if (!initRes.ok) {
+                        throw new Error(`Upload failed with status ${initRes.status}`);
+                    }
+                    const initData = await initRes.json();
+                    if (initData && initData.total_pages) {
+                        renderFullDocumentPages(initData.filename, initData.total_pages, initData.pages);
+                    }
+
+                    // Step 2: Run appraisal pipeline on the saved server file via /appraise-fetched
+                    statusText.innerText = 'Extracting PDF layout, triaging & synthesizing analysis...';
+                    const appraiseForm = new FormData();
+                    appraiseForm.append('filename', initData.filename);
+                    if (currentUser) {
+                        appraiseForm.append('user_uid', currentUser.uid);
+                        appraiseForm.append('user_email', currentUser.email);
+                    }
+
+                    const res = await fetch('/appraise-fetched', { method: 'POST', body: appraiseForm });
+                    if (!res.ok) {
+                        let errMsg = `Server returned status ${res.status}`;
+                        try {
+                            const errData = await res.json();
+                            if (errData && errData.detail) errMsg = errData.detail;
+                        } catch (_) {
+                            const rawErrText = await res.text().catch(() => '');
+                            if (res.status === 524 || rawErrText.includes('524')) {
+                                errMsg = 'Gateway timeout: Cloudflare limit reached. If this is a large scanned PDF, processing may still complete on server.';
+                            } else if (res.status === 502 || res.status === 504) {
+                                errMsg = `Server Gateway Error (${res.status}). Please try again shortly.`;
+                            }
+                        }
+                        throw new Error(errMsg);
+                    }
+
                     const data = await res.json();
-
-                    if (!res.ok) throw new Error(data.detail || 'Evaluation failed.');
-
                     renderAppraisalResults(data);
                 } catch (err) {
                     spinner.classList.add('hidden');

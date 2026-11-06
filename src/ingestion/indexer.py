@@ -1089,7 +1089,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     # Step 1: Extract Document Header (First ~500 words or Page 1 Top)
     if is_scanned_pdf and has_tessdata:
         try:
-            tp0 = doc[0].get_textpage_ocr(tessdata=tessdata_dir, dpi=200, full=True)
+            tp0 = doc[0].get_textpage_ocr(tessdata=tessdata_dir, dpi=130, full=True)
             page1_text = tp0.extractText()
         except Exception:
             page1_text = doc[0].get_text() if len(doc) > 0 else ""
@@ -1132,7 +1132,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         
         if is_scanned_pdf and has_tessdata:
             try:
-                tp = page.get_textpage_ocr(tessdata=tessdata_dir, dpi=200, full=True)
+                tp = page.get_textpage_ocr(tessdata=tessdata_dir, dpi=130, full=True)
                 page_text = tp.extractText()
                 raw_blocks = decompose_page_into_blocks(page, textpage=tp, page_num=page_num)
             except Exception as e:
