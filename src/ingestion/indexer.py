@@ -1059,6 +1059,23 @@ def order_page_blocks(raw_blocks, page) -> List[Any]:
         
     return clean_blocks
 
+def _ocr_page_worker(args: Tuple[int, str, str]) -> Tuple[int, str, List[Tuple[float, float, float, float, str, int, int]]]:
+    """Independent worker function for parallel OCR and block decomposition without Leptonica thread collision."""
+    page_idx, pdf_path, tessdata_dir = args
+    page_num = page_idx + 1
+    doc = pymupdf.open(pdf_path)
+    page = doc[page_idx]
+    try:
+        tp = page.get_textpage_ocr(tessdata=tessdata_dir, dpi=130, full=True)
+        page_text = tp.extractText()
+        raw_blocks = decompose_page_into_blocks(page, textpage=tp, page_num=page_num)
+    except Exception as e:
+        page_text = page.get_text("text")
+        raw_blocks = decompose_page_into_blocks(page, page_num=page_num)
+    finally:
+        doc.close()
+    return page_idx, page_text, raw_blocks
+
 def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     """
     Ingest a medical research PDF and index each paragraph with high-precision bounding box coordinates.
@@ -1127,10 +1144,28 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
     active_table_page = 0
     last_para_anchor: Optional[CoordinateAnchor] = None
     
+    # Pre-extract OCR and raw blocks across independent processes if scanned PDF
+    pre_extracted_ocr: Dict[int, Tuple[str, List[Any]]] = {}
+    if is_scanned_pdf and has_tessdata and len(doc) > 0:
+        import multiprocessing as mp
+        # Limit worker pool to 4 processes to avoid thrashing server memory
+        max_workers = min(4, max(1, (os.cpu_count() or 1)))
+        worker_args = [(idx, pdf_path, tessdata_dir) for idx in range(len(doc))]
+        try:
+            with mp.Pool(processes=max_workers) as pool:
+                ocr_results = pool.map(_ocr_page_worker, worker_args)
+            for idx, p_text, r_blocks in ocr_results:
+                pre_extracted_ocr[idx] = (p_text, r_blocks)
+        except Exception as e:
+            print(f"[Indexer] Warning: Parallel OCR pool failed: {e}. Falling back to sequential.")
+            pre_extracted_ocr = {}
+    
     for page_idx, page in enumerate(doc):
         page_num = page_idx + 1
         
-        if is_scanned_pdf and has_tessdata:
+        if page_idx in pre_extracted_ocr:
+            page_text, raw_blocks = pre_extracted_ocr[page_idx]
+        elif is_scanned_pdf and has_tessdata:
             try:
                 tp = page.get_textpage_ocr(tessdata=tessdata_dir, dpi=130, full=True)
                 page_text = tp.extractText()
