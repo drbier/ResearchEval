@@ -4302,12 +4302,27 @@ def index_page():
                 return tag.replace(/^\+?TAG_/, '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
             }
 
+            function renderCoordinatePillsInText(rawText) {
+                if (!rawText) return '';
+                let escaped = escapeHtml(rawText);
+                const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Patients?\s+and\s+Methods?|Materials?\s+and\s+Methods?|Results?|Res|Findings?|Discussion|Disc|Conclusions?|Concl|Appendix|Supp(?:lementary)?|Para(?:graph)?|Table(?:Note)?|Fig(?:ure)?(?:Legend)?|Box|p\d+)\b[^\]]*?)\]/gi;
+                return escaped.replace(bracketCoordRegex, function(fullMatch, inner) {
+                    const trimmed = inner.trim();
+                    const rawAnchorId = `[${trimmed}]`;
+                    const enc = encodeURIComponent(rawAnchorId);
+                    const displayText = formatAnchorDisplay(trimmed);
+                    return `<button type="button" onclick="inspectAnchor('${enc}')" data-anchor="${rawAnchorId}" class="anchor-pill inline-flex items-center px-1.5 py-0.5 mx-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none cursor-pointer" title="Click to view source page and highlight">${displayText}</button>`;
+                });
+            }
+
             function renderThinkingAudit(data) {
                 const container = document.getElementById('thinkingContainer');
                 if (!container) return;
 
                 const triage = data.triage || {};
+                const evaluations = data.rule_evaluations || [];
                 const rulesDetail = data.active_rules_detail || [];
+                const displayRules = (evaluations.length > 0) ? evaluations : rulesDetail;
                 const thought = (data.thought_output || '').trim();
                 const selectedModel = data.selected_model || 'gemini-3.8-flash';
 
@@ -4326,30 +4341,100 @@ def index_page():
                     ? triggers.map(tr => `<span class="px-2 py-0.5 rounded bg-slate-200/80 text-slate-700 font-mono text-[11px] border border-slate-300">"${escapeHtml(tr)}"</span>`).join(' ')
                     : '<span class="text-slate-400 italic text-[11px]">Standard design keywords</span>';
 
-                // 2. Methodological Bias Rules
-                let rulesListHtml = '';
-                if (rulesDetail.length > 0) {
-                    rulesListHtml = rulesDetail.map((r, idx) => `
-                        <div class="bg-white border border-slate-200 rounded-md p-3.5 shadow-2xs hover:border-slate-300 transition">
-                            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs font-bold text-sky-800 bg-sky-100 px-2 py-0.5 rounded-full font-mono">${idx + 1}</span>
-                                    <span class="text-xs font-bold text-slate-900">${escapeHtml(r.target_domain || 'Methodological Standard')}</span>
-                                </div>
-                                ${r.citation ? `<span class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${escapeHtml(r.citation)}</span>` : ''}
-                            </div>
-                            <p class="text-xs text-slate-800 font-medium mb-2 leading-relaxed">
-                                ${escapeHtml(r.appraisal_action || '')}
-                            </p>
-                            <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-                                ${r.citation ? `<span><strong class="text-slate-700 font-semibold">Guideline:</strong> ${escapeHtml(r.citation)}</span>` : ''}
-                                ${r.directional_bias ? `<span><strong class="text-rose-700 font-semibold">Directional Risk:</strong> ${escapeHtml(r.directional_bias)}</span>` : ''}
-                            </div>
+                // 2. Methodological Bias Rules Audit
+                const passCount = displayRules.filter(e => (e.status || '').toUpperCase() === 'PASS').length;
+                const failCount = displayRules.filter(e => (e.status || '').toUpperCase() === 'FAIL').length;
+                const naCount = displayRules.filter(e => ['NOT_AVAILABLE', 'PENDING', 'UNKNOWN'].includes((e.status || '').toUpperCase())).length;
+
+                let summaryTallyHtml = '';
+                if (evaluations.length > 0) {
+                    summaryTallyHtml = `
+                        <div class="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                            <span class="px-2 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                                <span class="font-bold">✓</span> ${passCount} Compliant
+                            </span>
+                            ${failCount > 0 ? `
+                            <span class="px-2 py-0.5 rounded text-[11px] bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-1">
+                                <span class="font-bold">✗</span> ${failCount} Deviations
+                            </span>` : ''}
+                            ${naCount > 0 ? `
+                            <span class="px-2 py-0.5 rounded text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                                <span class="font-bold">?</span> ${naCount} Not Reported
+                            </span>` : ''}
                         </div>
-                    `).join('');
+                    `;
+                } else {
+                    summaryTallyHtml = `<span class="text-[11px] text-slate-500 font-mono">AST Rulebase v2.0</span>`;
+                }
+
+                let rulesListHtml = '';
+                if (displayRules.length > 0) {
+                    rulesListHtml = displayRules.map((r, idx) => {
+                        const status = (r.status || '').toUpperCase();
+                        let statusBadge = '';
+                        if (status === 'PASS') {
+                            statusBadge = `<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1"><span class="text-emerald-600 dark:text-emerald-400 font-extrabold">✓</span> Compliant (Low Risk)</span>`;
+                        } else if (status === 'FAIL') {
+                            statusBadge = `<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300 dark:border-rose-700 flex items-center gap-1"><span class="text-rose-600 dark:text-rose-400 font-extrabold">✗</span> Deviation (High Risk)</span>`;
+                        } else if (status === 'NOT_AVAILABLE') {
+                            statusBadge = `<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1"><span class="text-amber-600 dark:text-amber-400 font-extrabold">?</span> Not Reported</span>`;
+                        } else if (status === 'PENDING') {
+                            statusBadge = `<span class="px-2.5 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700 flex items-center gap-1"><span class="text-slate-500 font-extrabold">⋯</span> Pending</span>`;
+                        } else {
+                            statusBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200">Rule Active</span>`;
+                        }
+
+                        let headlineHtml = '';
+                        if (r.verdict_title) {
+                            headlineHtml = `<div class="text-xs font-bold text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1.5">${escapeHtml(r.verdict_title)}</div>`;
+                        }
+
+                        let explanationHtml = '';
+                        if (r.explanation) {
+                            explanationHtml = `<div class="text-xs text-slate-800 dark:text-slate-200 mb-2 leading-relaxed">${renderCoordinatePillsInText(r.explanation)}</div>`;
+                        } else if (r.appraisal_action) {
+                            explanationHtml = `<p class="text-xs text-slate-800 dark:text-slate-200 font-medium mb-2 leading-relaxed">${escapeHtml(r.appraisal_action)}</p>`;
+                        }
+
+                        let citationsHtml = '';
+                        if (r.citations && Array.isArray(r.citations) && r.citations.length > 0) {
+                            const pills = r.citations.map(c => {
+                                const clean = String(c).replace(/^\[|\]$/g, '').trim();
+                                const rawAnchorId = `[${clean}]`;
+                                const enc = encodeURIComponent(rawAnchorId);
+                                const displayText = formatAnchorDisplay(clean);
+                                return `<button type="button" onclick="inspectAnchor('${enc}')" data-anchor="${rawAnchorId}" class="anchor-pill inline-flex items-center px-2 py-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none cursor-pointer" title="Click to view source page and highlight">${displayText}</button>`;
+                            }).join(' ');
+                            citationsHtml = `
+                                <div class="flex items-center gap-1.5 flex-wrap pt-1.5 pb-1">
+                                    <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Cited Coordinates:</span>
+                                    ${pills}
+                                </div>
+                            `;
+                        }
+
+                        return `
+                            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-3.5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition">
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-sky-800 dark:text-sky-300 bg-sky-100 dark:bg-sky-950 px-2 py-0.5 rounded-full font-mono">${idx + 1}</span>
+                                        <span class="text-xs font-bold text-slate-900 dark:text-slate-100">${escapeHtml(r.target_domain || 'Methodological Standard')}</span>
+                                    </div>
+                                    ${statusBadge}
+                                </div>
+                                ${headlineHtml}
+                                ${explanationHtml}
+                                ${citationsHtml}
+                                <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                    ${r.citation ? `<span><strong class="text-slate-700 dark:text-slate-300 font-semibold">Guideline:</strong> ${escapeHtml(r.citation)}</span>` : ''}
+                                    ${r.directional_bias ? `<span><strong class="text-rose-700 dark:text-rose-400 font-semibold">Directional Risk:</strong> ${escapeHtml(r.directional_bias)}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
                 } else {
                     rulesListHtml = `
-                        <div class="bg-white border border-slate-200 rounded-md p-4 text-xs text-slate-500 italic">
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-4 text-xs text-slate-500 italic">
                             Standard methodological analysis framework rules applied.
                         </div>
                     `;
@@ -4401,13 +4486,13 @@ ${escapeHtml(thought)}
                     </div>
 
                     <!-- Card 2: Methodological Bias Rules Audit -->
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-5">
+                    <div id="auditCard2" class="bg-slate-50 border border-slate-200 rounded-lg p-5">
                         <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-200 pb-2.5">
                             <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-slate-800">2. Grounded Methodological Bias Rules</span>
-                                <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-200">${rulesDetail.length} Rules Active</span>
+                                <span class="text-sm font-bold text-slate-800">2. Grounded Methodological Bias Rules Audit</span>
+                                <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-200">${displayRules.length} Rules Active</span>
                             </div>
-                            <span class="text-[11px] text-slate-500 font-mono">AST Rulebase v2.0</span>
+                            ${summaryTallyHtml}
                         </div>
                         <p class="text-xs text-slate-600 mb-3 leading-relaxed">
                             The following domain-specific methodological bias rules were triggered by AST logic and evaluated against manuscript coordinates:
@@ -4862,6 +4947,75 @@ ${escapeHtml(thought)}
                 return html;
             }
 
+            function openThinkingModalToCard(cardIdx) {
+                switchLeftTab('thinking');
+                if (cardIdx === 2) {
+                    setTimeout(() => {
+                        const card2 = document.getElementById('auditCard2');
+                        if (card2) card2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 80);
+                }
+            }
+
+            function injectMethodologicalScorecard(container, evaluations) {
+                if (!container) return;
+                // Remove any pre-existing scorecard for idempotency
+                const existing = container.querySelector('#methodologicalAuditScorecard');
+                if (existing) existing.remove();
+
+                if (!evaluations || !Array.isArray(evaluations) || evaluations.length === 0) {
+                    return;
+                }
+
+                const passCount = evaluations.filter(e => (e.status || '').toUpperCase() === 'PASS').length;
+                const failCount = evaluations.filter(e => (e.status || '').toUpperCase() === 'FAIL').length;
+                const naCount = evaluations.filter(e => ['NOT_AVAILABLE', 'PENDING', 'UNKNOWN'].includes((e.status || '').toUpperCase())).length;
+
+                const scorecard = document.createElement('div');
+                scorecard.id = 'methodologicalAuditScorecard';
+                scorecard.className = 'my-4 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shadow-2xs flex flex-wrap items-center justify-between gap-3 select-none';
+
+                let badgesHtml = `
+                    <span class="px-2 py-0.5 rounded font-semibold text-[11px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                        <span class="font-bold">✓</span> ${passCount} Compliant
+                    </span>
+                `;
+                if (failCount > 0) {
+                    badgesHtml += `
+                    <span class="px-2 py-0.5 rounded font-semibold text-[11px] bg-rose-100 text-rose-800 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex items-center gap-1">
+                        <span class="font-bold">✗</span> ${failCount} ${failCount === 1 ? 'Deviation' : 'Deviations'}
+                    </span>`;
+                }
+                if (naCount > 0) {
+                    badgesHtml += `
+                    <span class="px-2 py-0.5 rounded font-semibold text-[11px] bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                        <span class="font-bold">?</span> ${naCount} Not Reported
+                    </span>`;
+                }
+
+                scorecard.innerHTML = `
+                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                        <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Methodological Audit:
+                        </span>
+                        ${badgesHtml}
+                    </div>
+                    <button type="button" onclick="openThinkingModalToCard(2)" class="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-200 flex items-center gap-1 cursor-pointer transition">
+                        Inspect Full Audit Trail &rarr;
+                    </button>
+                `;
+
+                // Post-Render DOM Insertion: insertBefore target <h2>
+                const headings = container.querySelectorAll('h2');
+                const targetH2 = Array.from(headings).find(h => /Assertive Critical Appraisal/i.test(h.textContent));
+                if (targetH2 && targetH2.parentNode) {
+                    targetH2.parentNode.insertBefore(scorecard, targetH2);
+                } else {
+                    container.appendChild(scorecard);
+                }
+            }
+
             function renderAppraisalResults(data) {
                 anchorIndex = data.anchor_index || {};
 
@@ -4956,6 +5110,9 @@ ${escapeHtml(thought)}
                         });
                         node.parentNode.replaceChild(span, node);
                     });
+
+                    // Injected Methodological Audit Scorecard strictly post-render
+                    injectMethodologicalScorecard(container, data.rule_evaluations);
                 }
 
                 // Reset Ask conversational interface for new paper

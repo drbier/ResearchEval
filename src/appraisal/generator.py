@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import time
 import requests
@@ -80,6 +81,22 @@ class SynthesisEngine:
             "7. In '## Bibliographic Data': Accurately extract Title, Authors, Journal, Year, and DOI / PubMed ID from [Doc_Header]. Ground them with [Doc_Header]. Always format the DOI / PubMed ID as a full live URL (e.g., https://doi.org/10.xxxx/xxxx or https://pubmed.ncbi.nlm.nih.gov/xxxx/). If authors, journal, year, or DOI/PMID are present in [Doc_Header], extract them and never state 'Not specified'.\n"
             "8. FORMATTING & MATHEMATICAL NOTATION: Do NOT use LaTeX math formatting, dollar signs ($...$ or $$...$$), or LaTeX macros like \\text{}, \\beta, \\alpha, \\gamma, \\pm, \\ge. Always write in standard clinical English with standard Unicode symbols when needed (e.g., n = 19, p < 0.05, 1 - β, α = 0.05, CD8⁺, CD4⁺, IFN-γ, ±, ×, ≥, ≤). Never enclose variables, sample sizes, or formulas in dollar signs.\n"
             "9. STRICT NEGATIVE CONSTRAINTS: NO medical disclaimers, NO conversational greetings, pleasantries, or closing sign-offs, and NO therapeutic practice mandates beyond what the source study evaluated.\n"
+            "10. MANDATORY METHODOLOGICAL AUDIT BLOCK:\n"
+            "At the very end of your response, strictly AFTER '## Bibliographic Data', you MUST output a structured JSON block enclosed in ```methodological_audit ... ``` evaluating each active rule in '### APPLICABLE METHODOLOGICAL RULES'.\n"
+            "Each item in the JSON array must strictly follow this format:\n"
+            "[\n"
+            "  {\n"
+            "    \"rule_id\": \"<exact_rule_id>\",\n"
+            "    \"status\": \"PASS\" | \"FAIL\" | \"NOT_AVAILABLE\",\n"
+            "    \"verdict_title\": \"<short 3-5 word headline>\",\n"
+            "    \"explanation\": \"<1-2 concise sentences explaining compliance, deviation, or missing data>\",\n"
+            "    \"citations\": [\"<coordinate_anchor>\", ...]\n"
+            "  }\n"
+            "]\n"
+            "RULES FOR STATUS:\n"
+            "- 'PASS': Study explicitly fulfilled criteria, minimized bias, or adhered to reporting guidelines.\n"
+            "- 'FAIL': Study exhibited identifiable risk of bias, deviation, confounding, or guideline breach.\n"
+            "- 'NOT_AVAILABLE': Manuscript omitted or failed to state necessary methodological details.\n"
         )
         
         # Scoped prompt content
@@ -92,6 +109,7 @@ class SynthesisEngine:
 
 ### APPLICABLE METHODOLOGICAL RULES (RoB 2, CONSORT, STROBE, etc.):
 {json.dumps(active_rules, indent=2)}
+(Note: You MUST evaluate each active rule above in the final ```methodological_audit JSON array)
 
 ### RELEVANT STATISTICAL DEFINITIONS & CAVEATS:
 {json.dumps(relevant_lexicon, indent=2)}
@@ -164,6 +182,137 @@ Anchors & Text:
                 
         raise RuntimeError(f"All Gemini models in hierarchy failed. Last error: {last_error}")
 
+    def _build_fallback_evaluations(
+        self,
+        active_rules: List[Dict[str, Any]],
+        reason: str
+    ) -> List[Dict[str, Any]]:
+        """Construct safe fallback evaluation entries with PENDING status."""
+        fallbacks = []
+        for r in active_rules:
+            fallbacks.append({
+                "rule_id": r.get("rule_id", ""),
+                "target_domain": r.get("target_domain", ""),
+                "citation": r.get("citation", ""),
+                "directional_bias": r.get("directional_bias", ""),
+                "appraisal_action": r.get("appraisal_action", ""),
+                "status": "PENDING",
+                "verdict_title": "Evaluation Pending",
+                "explanation": reason,
+                "citations": []
+            })
+        return fallbacks
+
+    def _extract_and_excise_audit_block(
+        self,
+        raw_output: str,
+        active_rules: List[Dict[str, Any]]
+    ) -> Tuple[str, List[Dict[str, Any]]]:
+        """
+        Extract and excise the structured methodological audit block BEFORE coordinate sanitization.
+        Uses non-greedy matching from '[' to ']' and graceful fallback to PENDING status upon failure.
+        """
+        if not raw_output:
+            return "", self._build_fallback_evaluations(active_rules, "Empty response received.")
+
+        audit_json_str: Optional[str] = None
+        excised_markdown: str = raw_output
+
+        # Strategy 1: Non-greedy fenced block matching (```methodological_audit or ```json)
+        fence_match = re.search(
+            r'```(?:methodological_audit|json)?\s*(\[\s*\{[\s\S]*?\}\s*\])\s*```?',
+            raw_output,
+            re.IGNORECASE
+        )
+        if fence_match:
+            audit_json_str = fence_match.group(1).strip()
+            # Excise the entire fenced block from the residual markdown
+            excised_markdown = (raw_output[:fence_match.start()] + raw_output[fence_match.end():]).strip()
+        else:
+            # Strategy 2: Look for fence header or tag if closing fence was truncated
+            fence_tag_match = re.search(r'```(?:methodological_audit|json)?\s*(\[[\s\S]*)$', raw_output, re.IGNORECASE)
+            if fence_tag_match:
+                candidate_str = fence_tag_match.group(1).strip()
+                # Find matching closing bracket or fallback
+                closing_bracket_idx = candidate_str.rfind("]")
+                if closing_bracket_idx != -1:
+                    audit_json_str = candidate_str[:closing_bracket_idx + 1]
+                else:
+                    # Token exhaustion cut off before closing ']'; close after last '}'
+                    last_brace_idx = candidate_str.rfind("}")
+                    if last_brace_idx != -1:
+                        audit_json_str = candidate_str[:last_brace_idx + 1] + "\n]"
+                excised_markdown = raw_output[:fence_tag_match.start()].strip()
+
+        # Parse the JSON payload defensively with fallback
+        parsed_items: Optional[List[Dict[str, Any]]] = None
+        if audit_json_str:
+            try:
+                parsed = json.loads(audit_json_str)
+                if isinstance(parsed, list):
+                    parsed_items = parsed
+            except Exception:
+                # Attempt minor repair: remove trailing commas before } or ]
+                try:
+                    repaired = re.sub(r',\s*([\]\}])', r'\1', audit_json_str)
+                    parsed = json.loads(repaired)
+                    if isinstance(parsed, list):
+                        parsed_items = parsed
+                except Exception as parse_err:
+                    print(f"[SynthesisEngine] Warning: Audit JSON parse failed: {parse_err}")
+                    parsed_items = None
+
+        if not parsed_items:
+            return excised_markdown, self._build_fallback_evaluations(
+                active_rules,
+                "Evaluation omitted or truncated during synthesis."
+            )
+
+        # Map parsed evaluations by rule_id
+        eval_by_id = {}
+        for item in parsed_items:
+            if isinstance(item, dict) and "rule_id" in item:
+                eval_by_id[str(item["rule_id"]).strip()] = item
+
+        evaluations: List[Dict[str, Any]] = []
+        for r in active_rules:
+            rid = str(r.get("rule_id", "")).strip()
+            if rid in eval_by_id:
+                ev = eval_by_id[rid]
+                raw_status = str(ev.get("status", "NOT_AVAILABLE")).upper().strip()
+                if raw_status not in ("PASS", "FAIL", "NOT_AVAILABLE"):
+                    raw_status = "NOT_AVAILABLE"
+                
+                citations = ev.get("citations", [])
+                if not isinstance(citations, list):
+                    citations = [str(citations)] if citations else []
+
+                evaluations.append({
+                    "rule_id": rid,
+                    "target_domain": r.get("target_domain", ""),
+                    "citation": r.get("citation", ""),
+                    "directional_bias": r.get("directional_bias", ""),
+                    "appraisal_action": r.get("appraisal_action", ""),
+                    "status": raw_status,
+                    "verdict_title": str(ev.get("verdict_title", "")).strip(),
+                    "explanation": str(ev.get("explanation", "")).strip(),
+                    "citations": citations
+                })
+            else:
+                evaluations.append({
+                    "rule_id": rid,
+                    "target_domain": r.get("target_domain", ""),
+                    "citation": r.get("citation", ""),
+                    "directional_bias": r.get("directional_bias", ""),
+                    "appraisal_action": r.get("appraisal_action", ""),
+                    "status": "PENDING",
+                    "verdict_title": "Evaluation Pending",
+                    "explanation": "Rule was not evaluated in the synthesized response.",
+                    "citations": []
+                })
+
+        return excised_markdown, evaluations
+
     def generate_appraisal(self, indexed_doc: IndexedDocument, model_override: Optional[str] = None) -> Dict[str, Any]:
         """Execute end-to-end appraisal generation and validation."""
         # Step 1: Triage
@@ -184,6 +333,7 @@ Anchors & Text:
                 "prompt_length_chars": len(payload["user_prompt"]),
                 "active_rules_count": len(payload["active_rules"]),
                 "active_rules_detail": payload["active_rules"],
+                "rule_evaluations": self._build_fallback_evaluations(payload["active_rules"], "API key needed for live inference."),
                 "lexicon_terms_count": len(payload["relevant_lexicon"]),
                 "payload": payload
             }
@@ -197,8 +347,14 @@ Anchors & Text:
             thinking_level=thinking_lvl
         )
         
-        # Step 3: Sanitize and verify coordinate anchors
-        sanitization = sanitize_and_verify_appraisal(raw_output, indexed_doc.all_anchors)
+        # Step 3: Extract and excise audit block BEFORE coordinate sanitization
+        residual_markdown, rule_evaluations = self._extract_and_excise_audit_block(
+            raw_output=raw_output,
+            active_rules=payload["active_rules"]
+        )
+        
+        # Step 4: Sanitize and verify coordinate anchors on residual markdown ONLY
+        sanitization = sanitize_and_verify_appraisal(residual_markdown, indexed_doc.all_anchors)
         
         return {
             "status": "success",
@@ -206,6 +362,7 @@ Anchors & Text:
             "thinking_level": thinking_lvl,
             "triage": triage.model_dump(),
             "active_rules_detail": payload["active_rules"],
+            "rule_evaluations": rule_evaluations,
             "sanitization": sanitization.model_dump(),
             "raw_output": raw_output,
             "thought_output": thought_output,
