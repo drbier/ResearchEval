@@ -4655,6 +4655,9 @@ ${escapeHtml(thought)}
                     return;
                 }
 
+                // If user initiates URL resolution while in Finder or Contextualize, switch master mode to Analyze
+                switchMasterMode('appraisal');
+
                 const statusBox = document.getElementById('statusBox');
                 const statusText = document.getElementById('statusText');
                 const spinner = document.getElementById('spinner');
@@ -5175,6 +5178,9 @@ ${escapeHtml(thought)}
                 renderThinkingAudit(data);
                 switchLeftTab('appraisal');
 
+                // Switch master mode to appraisal to guarantee Finder / Contextualize containers are hidden
+                switchMasterMode('appraisal');
+
                 document.getElementById('resultBox').classList.remove('hidden');
                 document.getElementById('statusBox').classList.add('hidden');
 
@@ -5211,6 +5217,9 @@ ${escapeHtml(thought)}
                     alert('Please select a PDF file to analyze.');
                     return;
                 }
+
+                // If user initiates appraisal while in Finder or Contextualize, switch master mode to Analyze
+                switchMasterMode('appraisal');
 
                 currentFilename = fileInput.files[0].name;
 
