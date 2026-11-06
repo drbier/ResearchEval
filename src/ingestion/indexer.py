@@ -1472,11 +1472,44 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                         indexed_doc.all_anchors[last_para_anchor.anchor_id] = last_para_anchor.text
                         continue
 
-                    if current_section not in section_para_counters:
-                        section_para_counters[current_section] = 0
-                    section_para_counters[current_section] += 1
-                    idx_num = section_para_counters[current_section]
-                    anchor_id = f"[{current_section}, Para {idx_num}]"
+                    if current_section == "Abstract":
+                        sub_m = re.match(r'^(?:(?:Structured\s+)?Abstract\s*[:\.\n]\s*)?(Aims?|Objectives?|Background|Methods?|Patients?\s+and\s+Methods?|Materials?\s+and\s+Methods?|Results?|Findings?|Conclusions?)\s*[:\.]', block_text.strip(), re.IGNORECASE)
+                        if sub_m:
+                            raw_s = sub_m.group(1).capitalize()
+                            if raw_s.startswith("Aim") or raw_s.startswith("Obj") or raw_s.startswith("Back"):
+                                sub_name = "Objective"
+                            elif raw_s.startswith("Meth") or raw_s.startswith("Mat") or raw_s.startswith("Pat"):
+                                sub_name = "Methods"
+                            elif raw_s.startswith("Res") or raw_s.startswith("Find"):
+                                sub_name = "Results"
+                            elif raw_s.startswith("Concl"):
+                                sub_name = "Conclusions"
+                            else:
+                                sub_name = raw_s
+                                
+                            sub_key = f"Abstract_{sub_name}"
+                            if sub_key not in section_para_counters:
+                                section_para_counters[sub_key] = 0
+                            section_para_counters[sub_key] += 1
+                            cnt = section_para_counters[sub_key]
+                            
+                            idx_num = cnt
+                            if cnt == 1:
+                                anchor_id = f"[{current_section}, {sub_name}]"
+                            else:
+                                anchor_id = f"[{current_section}, {sub_name} {cnt}]"
+                        else:
+                            if current_section not in section_para_counters:
+                                section_para_counters[current_section] = 0
+                            section_para_counters[current_section] += 1
+                            idx_num = section_para_counters[current_section]
+                            anchor_id = f"[{current_section}, Para {idx_num}]"
+                    else:
+                        if current_section not in section_para_counters:
+                            section_para_counters[current_section] = 0
+                        section_para_counters[current_section] += 1
+                        idx_num = section_para_counters[current_section]
+                        anchor_id = f"[{current_section}, Para {idx_num}]"
                 
             anchor = CoordinateAnchor(
                 anchor_id=anchor_id,

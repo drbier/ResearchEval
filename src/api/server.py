@@ -515,7 +515,16 @@ def resolve_anchor(indexed: IndexedDocument, anchor_str: str) -> Optional[Any]:
             if (meta.item_type or "").lower() == item_type.lower() and meta.index == num:
                 return meta
 
-    # 4. Fallback: match any single paragraph number in the anchor string
+    # 4. Structured abstract subsection matching (e.g. '[Abstract, Results]', '[Abs, Results]')
+    abs_sub_match = re.search(r'\[?\s*(?:Abstract|Abs)\s*,\s*(Objective|Aims?|Methods?|Results?|Conclusions?)\b', anchor_clean, re.IGNORECASE)
+    if abs_sub_match:
+        sub_word = abs_sub_match.group(1).lower()
+        for k, meta in indexed.anchor_metadata.items():
+            if (meta.section or "").lower() == "abstract":
+                if sub_word in k.lower() or (meta.text and sub_word in meta.text[:80].lower()):
+                    return meta
+
+    # 5. Fallback: match any single paragraph number in the anchor string
     any_num = re.search(r'\bPara\s*(\d+)\b', anchor_clean, re.IGNORECASE)
     if any_num:
         p_num = int(any_num.group(1))
@@ -674,13 +683,20 @@ def view_anchor_crop(
         annot = page.add_highlight_annot(rect)
         annot.set_colors(stroke=(1.0, 0.9, 0.2))
         annot.update()
+        
+        # Enforce sensible minimum height (at least 75 pt) and horizontal width for readable crops
+        raw_h = rect.height
+        raw_w = rect.width
+        v_pad = max(18.0, (75.0 - raw_h) / 2.0 if raw_h < 75.0 else 18.0)
+        h_pad = 20.0
+        
         crop_rect = pymupdf.Rect(
-            max(0, rect.x0 - 16),
-            max(0, rect.y0 - 10),
-            min(page.rect.width, rect.x1 + 16),
-            min(page.rect.height, rect.y1 + 10)
+            max(0, rect.x0 - h_pad),
+            max(0, rect.y0 - v_pad),
+            min(page.rect.width, rect.x1 + h_pad),
+            min(page.rect.height, rect.y1 + v_pad)
         )
-        pix1 = page.get_pixmap(clip=crop_rect, dpi=300)
+        pix1 = page.get_pixmap(clip=crop_rect, dpi=250)
         crops.append(Image.open(io.BytesIO(pix1.tobytes("png"))))
         
     # If it overflowed onto next page, crop the continuation block too!
@@ -1984,8 +2000,15 @@ def index_page():
                     <button onclick="closeSectionPopup()" class="text-white/80 hover:text-white px-2 py-0.5 rounded hover:bg-rose-600 transition text-sm font-bold ml-1" title="Close (or press Esc)">✕</button>
                 </div>
             </div>
-            <div id="popupScrollContainer" class="p-4 bg-slate-100/70 overflow-y-auto overflow-x-auto flex items-start justify-center flex-1 min-h-0 w-full" style="max-height: calc(100vh - 90px);">
-                <img id="popupCropImg" class="rounded border border-slate-200 shadow-sm bg-white" style="max-width: 100%; height: auto; object-fit: contain; transition: width 0.12s ease;" alt="Manuscript Section Crop"/>
+            <div id="popupScrollContainer" class="p-4 bg-slate-100/70 dark:bg-slate-900/80 overflow-y-auto overflow-x-auto flex flex-col items-center gap-3 flex-1 min-h-0 w-full" style="max-height: calc(100vh - 90px);">
+                <img id="popupCropImg" class="rounded border border-slate-200 dark:border-slate-800 shadow-sm bg-white" style="max-width: 100%; height: auto; object-fit: contain; transition: width 0.12s ease;" alt="Manuscript Section Crop"/>
+                <div id="popupTranscriptBox" class="w-full bg-white dark:bg-slate-950 p-3 rounded-md border border-slate-200 dark:border-slate-800 shadow-2xs text-left hidden">
+                    <div class="flex items-center justify-between mb-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <span>Extracted Text</span>
+                        <span id="popupPageInfo" class="font-mono text-sky-700 dark:text-sky-400"></span>
+                    </div>
+                    <p id="popupTranscriptText" class="text-xs text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap select-text"></p>
+                </div>
             </div>
 
             <!-- Modal Resize Handles -->
@@ -3818,6 +3841,18 @@ def index_page():
                     if (popupImg.src !== cropUrl && !popupImg.src.endsWith(cropUrl)) {
                         popupImg.src = cropUrl;
                     }
+                    
+                    const transcriptBox = document.getElementById('popupTranscriptBox');
+                    const transcriptText = document.getElementById('popupTranscriptText');
+                    const pageInfo = document.getElementById('popupPageInfo');
+                    if (transcriptBox && transcriptText && currentMeta.text) {
+                        transcriptText.innerText = currentMeta.text;
+                        if (pageInfo) pageInfo.innerText = currentMeta.page ? `Page ${currentMeta.page}` : '';
+                        transcriptBox.classList.remove('hidden');
+                    } else if (transcriptBox) {
+                        transcriptBox.classList.add('hidden');
+                    }
+                    
                     applyZoom();
 
                     // Only compute position if popup is currently hidden to avoid jumping/chasing
@@ -5466,6 +5501,21 @@ ${escapeHtml(thought)}
                     }
                 }
 
+                // Support structured abstract citations (e.g. [Abstract, Results], [Abs, Results], [Abstract, Methods])
+                if (!meta) {
+                    const absSubMatch = anchor.match(/\[?\s*(?:Abstract|Abs)\s*,\s*(Objective|Aims?|Methods?|Results?|Conclusions?)\b/i);
+                    if (absSubMatch) {
+                        const subWord = absSubMatch[1].toLowerCase();
+                        for (const [k, v] of Object.entries(anchorIndex)) {
+                            if (k.toLowerCase().includes('abstract') && (k.toLowerCase().includes(subWord) || (v.text && v.text.slice(0, 80).toLowerCase().includes(subWord)))) {
+                                meta = v;
+                                resolvedAnchorId = k;
+                                break;
+                            }
+                        }
+                    }
+                }
+
                 // Support bare section citations (e.g. [Abstract], [Results], [Methods], [Discussion], [Conclusions])
                 if (!meta) {
                     const cleanSec = anchor.replace(/^\[|\]$/g, '').trim().toLowerCase();
@@ -5532,9 +5582,17 @@ ${escapeHtml(thought)}
                     if (isPinned) {
                         const popupTitle = document.getElementById('popupTitle');
                         const popupImg = document.getElementById('popupCropImg');
+                        const transcriptBox = document.getElementById('popupTranscriptBox');
+                        const transcriptText = document.getElementById('popupTranscriptText');
+                        const pageInfo = document.getElementById('popupPageInfo');
                         if (popupTitle) popupTitle.innerText = formatAnchorDisplay(anchor);
                         const cropAnchorId = (meta && meta.anchor_id) ? meta.anchor_id : anchor;
                         if (popupImg) popupImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(cropAnchorId)}`;
+                        if (transcriptBox && transcriptText && meta.text) {
+                            transcriptText.innerText = meta.text;
+                            if (pageInfo) pageInfo.innerText = meta.page ? `Page ${meta.page}` : '';
+                            transcriptBox.classList.remove('hidden');
+                        }
                     } else {
                         const popup = document.getElementById('sectionPopup');
                         if (popup) popup.style.display = 'none';
