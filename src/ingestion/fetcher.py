@@ -2,6 +2,8 @@ import os
 import sys
 import re
 import io
+import time
+import random
 import urllib.parse
 from typing import Dict, Any, Optional, Tuple, List
 import requests
@@ -13,6 +15,29 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
+
+def _resilient_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 12, max_retries: int = 3) -> requests.Response:
+    """Execute GET request with exponential backoff on HTTP 429 and 503 rate limits."""
+    # Ensure email and tool parameters are included on NCBI eutils calls to comply with policy
+    if "ncbi.nlm.nih.gov" in url and "email=" not in url:
+        sep = "&" if "?" in url else "?"
+        url = f"{url}{sep}tool=FACT-App&email=drbiernd@gmail.com"
+        
+    last_exc = None
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(url, headers=headers, timeout=timeout)
+            if resp.status_code in (429, 503):
+                sleep_time = (1.0 * (2 ** attempt)) + random.uniform(0.1, 0.4)
+                time.sleep(sleep_time)
+                continue
+            return resp
+        except Exception as e:
+            last_exc = e
+            time.sleep(0.5 * (attempt + 1))
+    if last_exc:
+        raise last_exc
+    return requests.get(url, headers=headers, timeout=timeout)
 
 class PaperFetcher:
     """Intelligent paper fetcher supporting PMC, PubMed, DOI, and journal URLs."""
@@ -51,10 +76,11 @@ class PaperFetcher:
             pmcid = pmc_match.group(1)
             return self._fetch_pmc_fulltext(pmcid, raw_clean)
 
-        # 3. Check for PubMed (PMID) URL or numeric PMID
-        pmid_match = re.search(r'pubmed\.ncbi\.nlm\.nih\.gov/(\d+)', raw_clean, re.IGNORECASE) or (raw_clean.isdigit() and len(raw_clean) in range(6, 10))
+        # 3. Check for PubMed (PMID) URL or numeric PMID (including 'PMID 12345678', 'PMID: 12345678')
+        pmid_match = re.search(r'pubmed\.ncbi\.nlm\.nih\.gov/(\d+)', raw_clean, re.IGNORECASE) or \
+                     re.search(r'\b(?:PMID[:\s]*)?(\d{6,9})\b', raw_clean, re.IGNORECASE)
         if pmid_match:
-            pmid = pmid_match.group(1) if hasattr(pmid_match, 'group') else raw_clean
+            pmid = pmid_match.group(1)
             return self._fetch_pubmed_id(pmid, raw_clean)
 
         # 4. Check for DOI
@@ -101,9 +127,10 @@ class PaperFetcher:
             }
 
         # 3. PubMed (PMID) URL or numeric PMID
-        pmid_match = re.search(r'pubmed\.ncbi\.nlm\.nih\.gov/(\d+)', raw_clean, re.IGNORECASE) or (raw_clean.isdigit() and len(raw_clean) in range(6, 10))
+        pmid_match = re.search(r'pubmed\.ncbi\.nlm\.nih\.gov/(\d+)', raw_clean, re.IGNORECASE) or \
+                     re.search(r'\b(?:PMID[:\s]*)?(\d{6,9})\b', raw_clean, re.IGNORECASE)
         if pmid_match:
-            pmid = pmid_match.group(1) if hasattr(pmid_match, 'group') else raw_clean
+            pmid = pmid_match.group(1)
             return self._check_pubmed_availability(pmid, raw_clean)
 
         # 4. DOI
@@ -127,7 +154,7 @@ class PaperFetcher:
         try:
             # 1. Query elink.fcgi for direct PMC linkage
             elink_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&db=pmc&id={pmid}&retmode=json"
-            r_elink = requests.get(elink_url, timeout=8)
+            r_elink = _resilient_get(elink_url, timeout=8)
             if r_elink.status_code == 200:
                 for ls in r_elink.json().get('linksets', []):
                     for db in ls.get('linksetdbs', []):
@@ -138,7 +165,7 @@ class PaperFetcher:
                                 # Fetch title from esummary
                                 title = f"PubMed Article {pmid}"
                                 sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmid}&retmode=json"
-                                r_sum = requests.get(sum_url, timeout=6)
+                                r_sum = _resilient_get(sum_url, timeout=6)
                                 if r_sum.status_code == 200:
                                     title = r_sum.json().get('result', {}).get(pmid, {}).get('title', title)
                                 return {
@@ -155,7 +182,7 @@ class PaperFetcher:
 
             # 2. Query esummary for DOI and Unpaywall check
             sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmid}&retmode=json"
-            r_sum = requests.get(sum_url, timeout=8)
+            r_sum = _resilient_get(sum_url, timeout=8)
             title = f"PubMed Article {pmid}"
             doi = None
             if r_sum.status_code == 200:
@@ -176,7 +203,7 @@ class PaperFetcher:
             # 3. Paywalled article - retrieve official abstract snippet
             abstract_text = ""
             fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
-            r_fetch = requests.get(fetch_url, timeout=8)
+            r_fetch = _resilient_get(fetch_url, timeout=8)
             if r_fetch.status_code == 200:
                 root = ET.fromstring(r_fetch.content)
                 title_el = root.find('.//ArticleTitle')
@@ -257,7 +284,7 @@ class PaperFetcher:
         """Fetch full-text from PubMed Central via official NCBI JATS XML efetch."""
         try:
             url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id={pmcid_digits}&retmode=xml"
-            r = requests.get(url, timeout=15)
+            r = _resilient_get(url, timeout=15)
             if r.status_code == 200 and len(r.text) > 1000:
                 root = ET.fromstring(r.content)
                 
@@ -291,7 +318,7 @@ class PaperFetcher:
         try:
             # 1. Direct NCBI elink check for PubMed Central full-text linkage
             elink_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=pubmed&db=pmc&id={pmid}&retmode=json"
-            r_elink = requests.get(elink_url, timeout=10)
+            r_elink = _resilient_get(elink_url, timeout=10)
             if r_elink.status_code == 200:
                 for ls in r_elink.json().get('linksets', []):
                     for db in ls.get('linksetdbs', []):
@@ -309,7 +336,7 @@ class PaperFetcher:
 
             # 2. Check esummary for DOI and open-access via Unpaywall
             sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmid}&retmode=json"
-            r_sum = requests.get(sum_url, timeout=10)
+            r_sum = _resilient_get(sum_url, timeout=10)
             if r_sum.status_code == 200:
                 data = r_sum.json().get('result', {}).get(pmid, {})
                 article_ids = data.get('articleids', [])
@@ -322,7 +349,7 @@ class PaperFetcher:
 
             # 3. If no free full-text found, fetch the official abstract via efetch
             fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
-            r_fetch = requests.get(fetch_url, timeout=10)
+            r_fetch = _resilient_get(fetch_url, timeout=10)
             if r_fetch.status_code == 200:
                 root = ET.fromstring(r_fetch.content)
                 title_el = root.find('.//ArticleTitle')
