@@ -1753,7 +1753,7 @@ def index_page():
                                 <span>🔍</span> Verified Literature Finder
                             </h2>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Search PubMed studies using clinical criteria or trial recollections. Every result is independently verified against the published abstract.
+                                Search PubMed & Europe PMC studies using clinical criteria or trial recollections. Every result is independently verified against the published abstract.
                             </p>
                         </div>
                     </div>
@@ -1791,7 +1791,7 @@ def index_page():
                                     Curcumin knee osteoarthritis RCT
                                 </button>
                             </div>
-                            <label class="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200" title="Bypass the 24-hour cache and query PubMed/Gemini fresh">
+                            <label class="flex items-center gap-1.5 cursor-pointer select-none text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200" title="Bypass the 24-hour cache and query PubMed / Europe PMC fresh">
                                 <input type="checkbox" id="finderForceRefresh" class="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5"/>
                                 <span>Bypass 24h Cache (Force Refresh)</span>
                             </label>
@@ -3250,7 +3250,7 @@ def index_page():
 
                 if (banner) {
                     banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-sky-50 text-sky-800 border-sky-200";
-                    banner.innerHTML = '<span>⏳ Searching PubMed and verifying against clinical criteria...</span>';
+                    banner.innerHTML = '<span>⏳ Searching PubMed & Europe PMC and verifying against clinical criteria...</span>';
                     banner.classList.remove('hidden');
                 }
 
