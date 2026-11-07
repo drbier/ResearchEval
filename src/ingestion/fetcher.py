@@ -116,6 +116,37 @@ class PaperFetcher:
         pmc_match = re.search(r'PMC(\d+)', raw_clean, re.IGNORECASE)
         if pmc_match:
             pmcid = pmc_match.group(1)
+            # Verify if PMC actually allows full-text XML retrieval or if the publisher blocked machine downloads
+            try:
+                chk_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id={pmcid}&retmode=xml"
+                r_chk = _resilient_get(chk_url, timeout=8)
+                if r_chk.status_code == 200 and len(r_chk.content) > 1000:
+                    if b"<body" in r_chk.content:
+                        return {
+                            "status": "success",
+                            "input_type": "pmc",
+                            "pmcid": f"PMC{pmcid}",
+                            "full_text_available": True,
+                            "is_abstract_only": False,
+                            "source_type": "PubMed Central (PMC)",
+                            "message": f"Full text is available on PubMed Central (PMC{pmcid}) via PubMed API."
+                        }
+                    else:
+                        # Publisher withheld XML body
+                        return {
+                            "status": "success",
+                            "input_type": "pmc",
+                            "pmcid": f"PMC{pmcid}",
+                            "full_text_available": False,
+                            "is_abstract_only": True,
+                            "publisher_blocked": True,
+                            "source_type": "PubMed Central (PMC)",
+                            "direct_url": f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{pmcid}/",
+                            "message": f"The publisher restricts automated full-text downloading for PMC{pmcid}. Manuscript is available to download manually at the link, or you can analyze the official abstract only."
+                        }
+            except Exception:
+                pass
+
             return {
                 "status": "success",
                 "input_type": "pmc",
@@ -168,6 +199,29 @@ class PaperFetcher:
                                 r_sum = _resilient_get(sum_url, timeout=6)
                                 if r_sum.status_code == 200:
                                     title = r_sum.json().get('result', {}).get(pmid, {}).get('title', title)
+
+                                # Quick check if PMC full-text XML is allowed by publisher
+                                try:
+                                    chk_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id={pmcid}&retmode=xml"
+                                    r_chk = _resilient_get(chk_url, timeout=6)
+                                    if r_chk.status_code == 200 and len(r_chk.content) > 1000 and b"<body" not in r_chk.content:
+                                        # Publisher withheld XML body
+                                        return {
+                                            "status": "success",
+                                            "input_type": "pubmed",
+                                            "pmid": pmid,
+                                            "pmcid": f"PMC{pmcid}",
+                                            "full_text_available": False,
+                                            "is_abstract_only": True,
+                                            "publisher_blocked": True,
+                                            "direct_url": f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{pmcid}/",
+                                            "source_type": "PubMed Central (PMC)",
+                                            "title": title,
+                                            "message": f"The publisher restricts automated full-text downloading for PMC{pmcid}. Manuscript is available to download manually at the link, or you can analyze the official abstract only."
+                                        }
+                                except Exception:
+                                    pass
+
                                 return {
                                     "status": "success",
                                     "input_type": "pubmed",
@@ -327,10 +381,13 @@ class PaperFetcher:
         return None
 
     def _download_direct_pdf(self, pdf_url: str) -> Dict[str, Any]:
-        """Download direct PDF link."""
+        """Download direct PDF link, validating that the content is genuine PDF binary."""
         try:
             r = requests.get(pdf_url, headers=self.headers, timeout=20)
             if r.status_code == 200 and len(r.content) > 5000:
+                # Ensure it is a real PDF (magic bytes %PDF-) and not an HTML anti-bot challenge
+                if not r.content.startswith(b"%PDF-"):
+                    return {"status": "error", "message": f"URL did not return a valid PDF (received {r.headers.get('content-type', 'HTML/text')})."}
                 filename = f"url_paper_{abs(hash(pdf_url)) % 1000000}.pdf"
                 path = os.path.join(self.upload_dir, filename)
                 with open(path, "wb") as f:
@@ -375,6 +432,91 @@ class PaperFetcher:
                         "source_url": source_url,
                         "message": f"Full text extracted from PubMed Central (PMC{pmcid_digits})."
                     }
+                else:
+                    # Body is missing: Publisher restricts XML downloading for this PMC article.
+                    # Extract DOI, PMID, journal, authors, and abstract from the XML front matter
+                    doi_el = root.find('.//article-id[@pub-id-type=\'doi\']')
+                    doi = doi_el.text.strip() if doi_el is not None and doi_el.text else ""
+                    
+                    pmid_el = root.find('.//article-id[@pub-id-type=\'pmid\']')
+                    pmid = pmid_el.text.strip() if pmid_el is not None and pmid_el.text else ""
+
+                    # Attempt resolving open access PDF via Unpaywall / DOI first
+                    if doi:
+                        oa_res = self._fetch_via_doi_or_unpaywall(doi, source_url)
+                        if oa_res.get("status") == "full_text_pdf":
+                            oa_res["pmcid"] = f"PMC{pmcid_digits}"
+                            if pmid:
+                                oa_res["pmid"] = pmid
+                            return oa_res
+
+                    # Fallback to Europe PMC
+                    epmc_res = self._query_europe_pmc_oa(pmid=pmid, doi=doi)
+                    if epmc_res and epmc_res.get("status") == "full_text_pdf":
+                        epmc_res["pmcid"] = f"PMC{pmcid_digits}"
+                        return epmc_res
+
+                    # Extract metadata for abstract PDF creation
+                    j_el = root.find('.//journal-title') or root.find('.//journal-meta//journal-title')
+                    journal = ''.join(j_el.itertext()) if j_el is not None else "PubMed Central"
+
+                    authors = []
+                    for c in root.findall('.//contrib[@contrib-type=\'author\']'):
+                        sn = c.find('.//surname')
+                        gn = c.find('.//given-names')
+                        if sn is not None and sn.text:
+                            name = f"{gn.text} {sn.text}" if gn is not None and gn.text else sn.text
+                            authors.append(name)
+                    authors_str = ", ".join(authors) if authors else "Not specified"
+
+                    y_el = root.find('.//pub-date/year') or root.find('.//pub-date//year')
+                    year = y_el.text.strip() if y_el is not None and y_el.text else "Not specified"
+
+                    meta_dict = {
+                        "authors": authors_str,
+                        "journal": journal,
+                        "year": year,
+                        "doi": doi,
+                        "pmid": pmid,
+                        "pmcid": f"PMC{pmcid_digits}"
+                    }
+
+                    abstract_nodes = root.findall('.//abstract//p') or root.findall('.//abstract')
+                    abs_parts = [''.join(p.itertext()).strip() for p in abstract_nodes if ''.join(p.itertext()).strip()]
+                    abstract_full = "\n\n".join(abs_parts)
+
+                    if not abstract_full and pmid:
+                        # Fallback to fetch abstract via PubMed efetch
+                        try:
+                            fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
+                            r_fetch = _resilient_get(fetch_url, timeout=8)
+                            if r_fetch.status_code == 200:
+                                r_root = ET.fromstring(r_fetch.content)
+                                p_abs = r_root.findall('.//AbstractText')
+                                abs_parts = [''.join(p.itertext()).strip() for p in p_abs if ''.join(p.itertext()).strip()]
+                                abstract_full = "\n\n".join(abs_parts)
+                        except Exception:
+                            pass
+
+                    if abstract_full:
+                        filename = f"PMC{pmcid_digits}_abstract.pdf"
+                        pdf_path = os.path.join(self.upload_dir, filename)
+                        self._create_abstract_pdf(pdf_path, title, abstract_full, meta_dict)
+
+                        return {
+                            "status": "abstract_only",
+                            "pdf_filename": filename,
+                            "is_abstract_only": True,
+                            "publisher_blocked": True,
+                            "pmcid": f"PMC{pmcid_digits}",
+                            "pmid": pmid,
+                            "doi": doi,
+                            "title": title,
+                            "abstract_text": abstract_full,
+                            "direct_url": f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{pmcid_digits}/",
+                            "source_url": source_url,
+                            "message": f"The publisher blocks automated downloading for PMC{pmcid_digits}. Full-text PDF is available at the link, or you can analyze the official abstract."
+                        }
         except Exception as e:
             pass
             

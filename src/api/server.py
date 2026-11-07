@@ -1439,16 +1439,32 @@ def index_page():
                 <div class="bg-white rounded-xl border border-slate-200 shadow-xl max-w-lg w-full p-6 space-y-4">
                     <div class="flex items-center gap-3 text-amber-600">
                         <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        <h3 class="text-lg font-bold text-slate-900">Full Text Unavailable (Abstract Only)</h3>
+                        <h3 id="abstractModalTitle" class="text-lg font-bold text-slate-900">Full Text Unavailable (Abstract Only)</h3>
                     </div>
-                    <p class="text-sm text-slate-600 leading-relaxed">
+                    <p id="abstractModalDesc" class="text-sm text-slate-600 leading-relaxed">
                         The requested URL or identifier does not have a free full-text manuscript available (likely behind a journal paywall). We retrieved the official published abstract.
                     </p>
+                    <div id="publisherLinkBox" class="hidden p-3 bg-sky-50 rounded-md border border-sky-200 text-xs text-sky-950 space-y-1.5">
+                        <div class="font-semibold flex items-center gap-1.5 text-sky-900">
+                            <span>📄</span> <span>Direct Manuscript Download Available:</span>
+                        </div>
+                        <p class="text-[11px] text-sky-800">
+                            The publisher restricts automated API downloading, but you can download the full-text PDF directly in your browser:
+                        </p>
+                        <a id="publisherDirectLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-900 underline font-mono break-all pt-0.5">
+                            Open Paper on PubMed Central ↗
+                        </a>
+                    </div>
                     <div class="p-3 bg-amber-50 rounded-md border border-amber-200 text-xs text-amber-900 max-h-36 overflow-y-auto font-serif italic" id="modalAbstractSnippet"></div>
-                    <p class="text-xs font-semibold text-slate-700">Would you like to analyze the abstract only?</p>
-                    <div class="flex justify-end gap-3 pt-2">
-                        <button onclick="closeAbstractModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-md transition">Cancel</button>
-                        <button onclick="proceedWithAbstractOnly()" class="btn-primary-accent px-4 py-2 text-xs font-semibold text-white rounded-md transition shadow">Analyze Abstract Only</button>
+                    <p id="abstractModalPrompt" class="text-xs font-semibold text-slate-700">Would you like to manually upload the PDF or analyze the abstract only?</p>
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <button onclick="closeAbstractModal()" class="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-md transition">Cancel</button>
+                        <div class="flex items-center gap-2">
+                            <button id="modalUploadBtn" onclick="switchToManualUpload()" class="hidden px-3.5 py-2 text-xs font-semibold text-sky-700 hover:text-sky-900 bg-sky-100 hover:bg-sky-200 rounded-md border border-sky-300 transition">
+                                📤 Upload PDF Manually
+                            </button>
+                            <button onclick="proceedWithAbstractOnly()" class="btn-primary-accent px-4 py-2 text-xs font-semibold text-white rounded-md transition shadow">Analyze Abstract Only</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4626,12 +4642,13 @@ ${escapeHtml(thought)}
                                 `;
                             } else if (d.is_abstract_only) {
                                 notice.className = "p-2.5 rounded-lg text-xs flex items-center justify-between border bg-amber-50 border-amber-300 text-amber-900 transition-all";
+                                const isBlocked = d.publisher_blocked;
                                 notice.innerHTML = `
                                     <div class="flex items-center gap-2">
                                         <span class="text-amber-600 font-bold text-sm">⚠️</span>
-                                        <span><strong>Full Text Unavailable:</strong> Paywalled study. Only official abstract available in PubMed registry.</span>
+                                        <span><strong>${isBlocked ? 'Publisher Download Restriction:' : 'Full Text Unavailable:'}</strong> ${isBlocked ? 'Publisher blocks automated XML download. Full-text PDF available at link.' : 'Paywalled study. Only official abstract available in PubMed registry.'}</span>
                                     </div>
-                                    <span class="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-semibold text-[11px]">Abstract Only</span>
+                                    <span class="px-2 py-0.5 rounded ${isBlocked ? 'bg-sky-200 text-sky-900' : 'bg-amber-200 text-amber-900'} font-semibold text-[11px]">${isBlocked ? 'Manual Download' : 'Abstract Only'}</span>
                                 `;
                             } else {
                                 notice.classList.add('hidden');
@@ -4648,6 +4665,15 @@ ${escapeHtml(thought)}
                 pendingResolution = null;
                 document.getElementById('resolveBtn').disabled = false;
                 document.getElementById('statusBox').classList.add('hidden');
+            }
+
+            function switchToManualUpload() {
+                closeAbstractModal();
+                const fileInput = document.getElementById('fileUpload');
+                if (fileInput) {
+                    fileInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    fileInput.click();
+                }
             }
 
             async function proceedWithAbstractOnly() {
@@ -4716,6 +4742,32 @@ ${escapeHtml(thought)}
 
                     if (data.status === 'abstract_only') {
                         pendingResolution = data;
+                        
+                        const modalTitle = document.getElementById('abstractModalTitle');
+                        const modalDesc = document.getElementById('abstractModalDesc');
+                        const pubBox = document.getElementById('publisherLinkBox');
+                        const pubLink = document.getElementById('publisherDirectLink');
+                        const uploadBtn = document.getElementById('modalUploadBtn');
+                        const modalPrompt = document.getElementById('abstractModalPrompt');
+
+                        if (data.publisher_blocked) {
+                            if (modalTitle) modalTitle.innerText = 'Publisher Download Restriction';
+                            if (modalDesc) modalDesc.innerText = 'The publisher restricts automated API downloading of this article. However, the complete full-text PDF is available to download directly in your browser:';
+                            if (pubBox) pubBox.classList.remove('hidden');
+                            if (pubLink) {
+                                pubLink.href = data.direct_url || (data.pmcid ? `https://pmc.ncbi.nlm.nih.gov/articles/${data.pmcid}/` : '#');
+                                pubLink.innerText = `Open Article on PubMed Central (${data.pmcid || 'PMC'}) ↗`;
+                            }
+                            if (uploadBtn) uploadBtn.classList.remove('hidden');
+                            if (modalPrompt) modalPrompt.innerText = 'Would you like to manually download & upload the PDF, or should F.A.C.T. analyze the official abstract only?';
+                        } else {
+                            if (modalTitle) modalTitle.innerText = 'Full Text Unavailable (Abstract Only)';
+                            if (modalDesc) modalDesc.innerText = 'The requested URL or identifier does not have a free full-text manuscript available (likely behind a journal paywall). We retrieved the official published abstract.';
+                            if (pubBox) pubBox.classList.add('hidden');
+                            if (uploadBtn) uploadBtn.classList.add('hidden');
+                            if (modalPrompt) modalPrompt.innerText = 'Would you like to analyze the abstract only?';
+                        }
+
                         document.getElementById('modalAbstractSnippet').innerText = data.abstract_text || '(Abstract text extracted from publication registry)';
                         document.getElementById('abstractModal').classList.remove('hidden');
                         statusText.innerHTML = '<span class="text-amber-700 font-medium">⚠️ Abstract only available.</span> Awaiting user confirmation to analyze abstract...';
