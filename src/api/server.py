@@ -3430,7 +3430,10 @@ def index_page():
                     const rawTitle = p.title || '';
                     const titleBase = rawTitle.includes(':') ? rawTitle.split(':')[0] : rawTitle;
                     const cleanTitle = titleBase.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
-                    const firstAuthor = (p.authors && p.authors.length > 0) ? p.authors[0].split(' ').pop().replace(/[^\w]/g, '') : '';
+                    // PubMed lists authors as "Demidov LV" (surname first, then initials)
+                    const firstAuthorParts = (p.authors && p.authors.length > 0) ? String(p.authors[0]).trim().split(/\s+/) : [];
+                    const lastTok = firstAuthorParts[firstAuthorParts.length - 1] || '';
+                    const firstAuthor = (firstAuthorParts.length > 1 && /^[A-Z]{1,3}$/.test(lastTok) ? firstAuthorParts[0] : lastTok).replace(/[^\w]/g, '');
                     
                     const scholarQueryParts = [];
                     if (cleanTitle) scholarQueryParts.push(cleanTitle);

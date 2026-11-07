@@ -672,6 +672,15 @@ class PaperFetcher:
         except Exception:
             pass
 
+        # Fallback to OpenAlex (aggregates repository / preprint / author-deposited locations)
+        try:
+            oa_res = self._fetch_via_openalex(doi)
+            if oa_res and oa_res.get("status") == "full_text_pdf":
+                oa_res["source_url"] = source_url
+                return oa_res
+        except Exception:
+            pass
+
         # Fallback to Europe PMC via DOI
         try:
             epmc_res = self._query_europe_pmc_oa(doi=doi)
@@ -682,6 +691,31 @@ class PaperFetcher:
             pass
 
         return {"status": "error", "message": f"Could not find open access PDF for DOI: {doi}"}
+
+    def _fetch_via_openalex(self, doi: str) -> Optional[Dict[str, Any]]:
+        """Query OpenAlex for every known open-access location of a DOI and download the first valid PDF."""
+        url = f"https://api.openalex.org/works/doi:{doi}?mailto=drbiernd@gmail.com"
+        r = requests.get(url, timeout=10)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        title = data.get("title") or f"DOI: {doi}"
+
+        candidates = []
+        best = data.get("best_oa_location") or {}
+        if best.get("pdf_url"):
+            candidates.append(best["pdf_url"])
+        for loc in data.get("locations", []):
+            if loc.get("is_oa") and loc.get("pdf_url") and loc["pdf_url"] not in candidates:
+                candidates.append(loc["pdf_url"])
+
+        for pdf_link in candidates:
+            pdf_res = self._download_direct_pdf(pdf_link)
+            if pdf_res.get("status") == "full_text_pdf":
+                pdf_res["title"] = title
+                pdf_res["message"] = "Full-text PDF located via OpenAlex open-access index."
+                return pdf_res
+        return None
 
     def _query_europe_pmc_oa(self, pmid: str = "", doi: str = "") -> Optional[Dict[str, Any]]:
         """
