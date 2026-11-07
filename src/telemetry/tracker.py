@@ -10,7 +10,6 @@ import sqlite3
 import datetime
 from typing import Dict, Any, List, Optional
 
-DB_DIR = os.getenv("RESEARCH_EVAL_DATA_DIR", r"D:\SSD-Drive\Antigravity\ResearchEval\data")
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DB_DIR = os.getenv("RESEARCH_EVAL_DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 os.makedirs(DB_DIR, exist_ok=True)

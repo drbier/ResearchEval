@@ -241,7 +241,8 @@ class TriageEngine:
 if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding='utf-8')
-    data_dir = r"D:\SSD-Drive\Antigravity\ResearchEval\data"
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    data_dir = os.path.join(project_root, "data")
     engine = TriageEngine(data_dir)
     sample_header = "Interpreting the results of noninferiority trials—a review. Clinical Studies. Jack Cuzick"
     sample_methods = "Noninferiority trials are becoming increasingly common. Both per-protocol and intention-to-treat analysis are required. Non-inferiority margin delta."

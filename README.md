@@ -13,7 +13,7 @@ Deterministic Clinical Research Appraiser that ingests primary medical literatur
 ## 2. Directory Architecture & Knowledge Bases
 
 ```
-D:\SSD-Drive\Antigravity\ResearchEval\
+FACT/
 ├── data\
 │   ├── triagedb.json       # Master Triage Matrix (FW_A through FW_H)
 │   ├── rulesdb.json        # Methodological Rules (RoB 2, CONSORT Harms, STROBE, REMARK, etc.)
@@ -45,8 +45,8 @@ D:\SSD-Drive\Antigravity\ResearchEval\
 ### Launch the Web UI & API
 Open a terminal (PowerShell or Bash) and execute:
 ```powershell
-Set-Location "D:\SSD-Drive\Antigravity\ResearchEval"
-$env:PYTHONPATH="D:\SSD-Drive\Antigravity\ResearchEval"
+Set-Location "D:\SSD-Drive\Antigravity\FACT"
+$env:PYTHONPATH="."
 python src/api/server.py
 ```
 Then navigate to:
@@ -54,8 +54,8 @@ Then navigate to:
 
 ### Running the Test Suite
 ```powershell
-Set-Location "D:\SSD-Drive\Antigravity\ResearchEval"
-$env:PYTHONPATH="D:\SSD-Drive\Antigravity\ResearchEval"
+Set-Location "D:\SSD-Drive\Antigravity\FACT"
+$env:PYTHONPATH="."
 python -m unittest tests/test_pipeline.py
 ```
 

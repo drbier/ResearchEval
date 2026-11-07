@@ -241,7 +241,7 @@ sudo chmod 0440 /etc/sudoers.d/deploy-fact
 Once the above configuration is in place, future application updates require only executing the local batch script:
 
 ```cmd
-D:\SSD-Drive\Antigravity\ResearchEval\deploy.bat
+D:\SSD-Drive\Antigravity\FACT\deploy.bat
 ```
 
 This automatically pulls the latest Git commits, reinstalls dependencies, flushes ephemeral caches, and reloads PM2 with zero downtime.

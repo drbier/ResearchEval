@@ -48,13 +48,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_DIR = os.getenv("RESEARCH_EVAL_DATA_DIR", r"D:\SSD-Drive\Antigravity\ResearchEval\data")
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.getenv("RESEARCH_EVAL_DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
 PUBLIC_DIR = os.path.join(PROJECT_ROOT, "Public") if os.path.exists(os.path.join(PROJECT_ROOT, "Public")) else os.path.join(PROJECT_ROOT, "public")
 ICONS_DIR = os.path.join(PUBLIC_DIR, "icons") if os.path.exists(os.path.join(PUBLIC_DIR, "icons")) else os.path.join(STATIC_DIR, "icons")

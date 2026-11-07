@@ -10,7 +10,6 @@ from src.ingestion.indexer import IndexedDocument, parse_and_index_pdf
 from src.triage.classifier import TriageEngine, TriageResult
 from src.appraisal.sanitizer import sanitize_and_verify_appraisal, SanitizationResult
 
-load_dotenv(r"D:\SSD-Drive\Antigravity\ResearchEval\.env")
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
@@ -372,10 +371,10 @@ Anchors & Text:
 if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding='utf-8')
-    data_dir = r"D:\SSD-Drive\Antigravity\ResearchEval\data"
+    data_dir = os.path.join(PROJECT_ROOT, "data")
     engine = SynthesisEngine(data_dir)
     
-    test_pdf = r"D:\SSD-Drive\Antigravity\ResearchEval\Reference_papers\2.Statistics\Interpreting_the_results_of_noninferiority_trials-.pdf"
+    test_pdf = os.path.join(PROJECT_ROOT, "Reference_papers", "2.Statistics", "Interpreting_the_results_of_noninferiority_trials-.pdf")
     indexed = parse_and_index_pdf(test_pdf)
     res = engine.generate_appraisal(indexed)
     print("Generation Pipeline Check:")
