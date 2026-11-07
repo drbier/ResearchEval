@@ -3425,6 +3425,17 @@ def index_page():
                         </a>
                     ` : '';
 
+                    // Clean study title for Google Scholar exact-match query (strip punctuation and symbols that disrupt Scholar ranking)
+                    const cleanTitleForScholar = (p.title || '').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+                    const scholarQuery = cleanTitleForScholar ? `"${cleanTitleForScholar}"` : (p.doi || (p.pmid ? 'PMID ' + p.pmid : ''));
+                    const scholarUrl = 'https://scholar.google.com/scholar?q=' + encodeURIComponent(scholarQuery);
+
+                    const scholarBadge = `
+                        <a href="${scholarUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition" title="Search Google Scholar for author preprints, institutional repositories, and all free PDF versions">
+                            <span>🎓</span> <span>Scholar Versions ↗</span>
+                        </a>
+                    `;
+
                     const appraiseTargetUrl = (hasFullText && p.pmc_url) ? p.pmc_url : safeUrl;
                     const appraiseBtn = hasFullText ? `
                         <button 
@@ -3480,6 +3491,7 @@ def index_page():
                                         <span>🔗</span> <span>${safeUrl}</span>
                                     </a>
                                     ${pmcLinkHtml}
+                                    ${scholarBadge}
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button 
@@ -4769,9 +4781,10 @@ ${escapeHtml(thought)}
                         const modalPrompt = document.getElementById('abstractModalPrompt');
                         const scholarLink = document.getElementById('scholarSearchLink');
 
-                        // Construct pre-filled Google Scholar query link for this paper
+                        // Construct pre-filled Google Scholar exact-title query link for this paper
                         if (scholarLink) {
-                            const queryTerm = data.title || data.doi || (data.pmid ? 'PMID ' + data.pmid : '');
+                            const cleanT = (data.title || '').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+                            const queryTerm = cleanT ? `"${cleanT}"` : (data.doi || (data.pmid ? 'PMID ' + data.pmid : ''));
                             scholarLink.href = 'https://scholar.google.com/scholar?q=' + encodeURIComponent(queryTerm);
                         }
 
