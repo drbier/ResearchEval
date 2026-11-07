@@ -3425,10 +3425,19 @@ def index_page():
                         </a>
                     ` : '';
 
-                    // Clean study title for Google Scholar exact-match query (strip punctuation and symbols that disrupt Scholar ranking)
-                    const cleanTitleForScholar = (p.title || '').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
-                    const scholarQuery = cleanTitleForScholar ? `"${cleanTitleForScholar}"` : (p.doi || (p.pmid ? 'PMID ' + p.pmid : ''));
-                    const scholarUrl = 'https://scholar.google.com/scholar?q=' + encodeURIComponent(scholarQuery);
+                    // Construct Google Scholar query optimized for Scholar's citation & cluster grouping
+                    // Passing the core title (up to the colon or first 12 words) plus first author gives Scholar the exact cluster
+                    const rawTitle = p.title || '';
+                    const titleBase = rawTitle.includes(':') ? rawTitle.split(':')[0] : rawTitle;
+                    const cleanTitle = titleBase.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+                    const firstAuthor = (p.authors && p.authors.length > 0) ? p.authors[0].split(' ').pop().replace(/[^\w]/g, '') : '';
+                    
+                    const scholarQueryParts = [];
+                    if (cleanTitle) scholarQueryParts.push(cleanTitle);
+                    if (firstAuthor) scholarQueryParts.push(firstAuthor);
+                    
+                    const scholarQuery = scholarQueryParts.join(' ') || (p.doi || (p.pmid ? 'PMID ' + p.pmid : ''));
+                    const scholarUrl = 'https://scholar.google.com/scholar?hl=en&as_sdt=0%2C30&q=' + encodeURIComponent(scholarQuery) + '&btnG=';
 
                     const scholarBadge = `
                         <a href="${scholarUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 hover:bg-sky-50 text-slate-700 hover:text-sky-800 border border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700 transition" title="Search Google Scholar for author preprints, institutional repositories, and all free PDF versions">
@@ -4781,11 +4790,13 @@ ${escapeHtml(thought)}
                         const modalPrompt = document.getElementById('abstractModalPrompt');
                         const scholarLink = document.getElementById('scholarSearchLink');
 
-                        // Construct pre-filled Google Scholar exact-title query link for this paper
+                        // Construct pre-filled Google Scholar query optimized for Scholar's citation & cluster grouping
                         if (scholarLink) {
-                            const cleanT = (data.title || '').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
-                            const queryTerm = cleanT ? `"${cleanT}"` : (data.doi || (data.pmid ? 'PMID ' + data.pmid : ''));
-                            scholarLink.href = 'https://scholar.google.com/scholar?q=' + encodeURIComponent(queryTerm);
+                            const rawT = data.title || '';
+                            const tBase = rawT.includes(':') ? rawT.split(':')[0] : rawT;
+                            const cleanT = tBase.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+                            const queryTerm = cleanT || (data.doi || (data.pmid ? 'PMID ' + data.pmid : ''));
+                            scholarLink.href = 'https://scholar.google.com/scholar?hl=en&as_sdt=0%2C30&q=' + encodeURIComponent(queryTerm) + '&btnG=';
                         }
 
                         if (data.publisher_blocked) {
