@@ -644,17 +644,27 @@ class PaperFetcher:
         return {"status": "error", "message": f"Could not retrieve paper or abstract for PMID {pmid}."}
 
     def _fetch_via_doi_or_unpaywall(self, doi: str, source_url: str) -> Dict[str, Any]:
-        """Query Unpaywall API to resolve open access PDF for DOI, falling back to Europe PMC."""
+        """Query Unpaywall API to resolve open access PDF across all institutional repository locations, falling back to Europe PMC."""
         try:
             unpaywall_url = f"https://api.unpaywall.org/v2/{doi}?email=drbiernd@gmail.com"
             r = requests.get(unpaywall_url, timeout=10)
             if r.status_code == 200:
                 data = r.json()
                 title = data.get("title", f"DOI: {doi}")
+
+                # Collect all open access PDF candidates across institutional repositories and preprint mirrors
+                pdf_candidates = []
                 best_oa = data.get("best_oa_location")
                 if best_oa and best_oa.get("url_for_pdf"):
-                    pdf_link = best_oa["url_for_pdf"]
-                    # Try downloading
+                    pdf_candidates.append(best_oa["url_for_pdf"])
+
+                for loc in data.get("oa_locations", []):
+                    u = loc.get("url_for_pdf")
+                    if u and u not in pdf_candidates:
+                        pdf_candidates.append(u)
+
+                # Try each candidate until a valid PDF binary is downloaded
+                for pdf_link in pdf_candidates:
                     pdf_res = self._download_direct_pdf(pdf_link)
                     if pdf_res.get("status") == "full_text_pdf":
                         pdf_res["title"] = title

@@ -1455,6 +1455,20 @@ def index_page():
                             Open Paper on PubMed Central ↗
                         </a>
                     </div>
+                    <!-- Alternate Open-Access / Google Scholar Version Finder Box -->
+                    <div id="scholarAlternateBox" class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-md border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 flex items-center justify-between gap-3">
+                        <div class="space-y-0.5">
+                            <div class="font-semibold flex items-center gap-1.5 text-slate-900 dark:text-slate-100">
+                                <span>🎓</span> <span>Check Google Scholar for Alternate Free PDF:</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                                Find author-deposited institutional pre-prints or open university repositories:
+                            </p>
+                        </div>
+                        <a id="scholarSearchLink" href="#" target="_blank" rel="noopener noreferrer" class="shrink-0 px-3 py-1.5 rounded-md bg-white dark:bg-slate-700 hover:bg-sky-50 dark:hover:bg-slate-600 text-sky-700 dark:text-sky-300 border border-slate-300 dark:border-slate-600 font-semibold text-xs transition flex items-center gap-1 shadow-2xs">
+                            <span>🔍 Find on Scholar ↗</span>
+                        </a>
+                    </div>
                     <div class="p-3 bg-amber-50 rounded-md border border-amber-200 text-xs text-amber-900 max-h-36 overflow-y-auto font-serif italic" id="modalAbstractSnippet"></div>
                     <p id="abstractModalPrompt" class="text-xs font-semibold text-slate-700">Would you like to manually upload the PDF or analyze the abstract only?</p>
                     <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
@@ -4753,6 +4767,13 @@ ${escapeHtml(thought)}
                         const pubLink = document.getElementById('publisherDirectLink');
                         const uploadBtn = document.getElementById('modalUploadBtn');
                         const modalPrompt = document.getElementById('abstractModalPrompt');
+                        const scholarLink = document.getElementById('scholarSearchLink');
+
+                        // Construct pre-filled Google Scholar query link for this paper
+                        if (scholarLink) {
+                            const queryTerm = data.title || data.doi || (data.pmid ? 'PMID ' + data.pmid : '');
+                            scholarLink.href = 'https://scholar.google.com/scholar?q=' + encodeURIComponent(queryTerm);
+                        }
 
                         if (data.publisher_blocked) {
                             if (modalTitle) modalTitle.innerText = 'Publisher Download Restriction';
