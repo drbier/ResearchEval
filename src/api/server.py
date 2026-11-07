@@ -1753,7 +1753,7 @@ def index_page():
                                 <span>🔍</span> Verified Literature Finder
                             </h2>
                             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Search PubMed & Europe PMC studies using clinical criteria or trial recollections. Every result is independently verified against the published abstract.
+                                Search PubMed & Europe PMC studies using natural language. Every result is verified against the published abstract.
                             </p>
                         </div>
                     </div>
@@ -3250,7 +3250,7 @@ def index_page():
 
                 if (banner) {
                     banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-sky-50 text-sky-800 border-sky-200";
-                    banner.innerHTML = '<span>⏳ Searching PubMed & Europe PMC and verifying against clinical criteria...</span>';
+                    banner.innerHTML = '<span>⏳ Searching PubMed & Europe PMC and verifying against published abstracts...</span>';
                     banner.classList.remove('hidden');
                 }
 
