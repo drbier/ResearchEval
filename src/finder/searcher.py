@@ -240,6 +240,109 @@ def resilient_request(
     raise RuntimeError(f"Failed resilient request to {url} after {max_retries} attempts.")
 
 
+class CanonicalPaperStore:
+    """
+    Deterministic multi-attribute deduplication store for literature search candidates.
+    Enforces resolution hierarchy: DOI > PMID > PMCID > Normalized Title Hash.
+    Ensures candidates across PubMed, Europe PMC, and Semantic Scholar merge seamlessly
+    into a unified canonical citation record without duplicate cards.
+    """
+    def __init__(self):
+        self._store: Dict[str, Dict[str, Any]] = {}
+        self._key_to_canonical: Dict[str, str] = {}
+
+    @staticmethod
+    def extract_keys(paper: Dict[str, Any]) -> List[str]:
+        keys = []
+        # 1. Normalized DOI (highest precedence)
+        doi = str(paper.get("doi") or "").strip().lower()
+        if doi and doi != "none":
+            clean_doi = re.sub(r"^https?://(?:dx\.)?doi\.org/", "", doi).strip()
+            if clean_doi:
+                keys.append(f"doi:{clean_doi}")
+
+        # 2. PMID
+        pmid = str(paper.get("pmid") or "").strip()
+        if pmid and pmid.lower() != "none" and pmid.isdigit():
+            keys.append(f"pmid:{pmid}")
+
+        # 3. PMCID
+        pmcid = str(paper.get("pmcid") or "").strip().upper()
+        if pmcid and pmcid != "NONE":
+            if not pmcid.startswith("PMC"):
+                pmcid = f"PMC{pmcid}"
+            keys.append(f"pmc:{pmcid}")
+
+        # 4. Normalized Title Hash (fallback when identifiers are absent)
+        title = str(paper.get("title") or "").strip()
+        norm_title = re.sub(r"[^a-z0-9]", "", title.lower())
+        if len(norm_title) >= 12:
+            thash = hashlib.md5(norm_title.encode("utf-8")).hexdigest()[:16]
+            keys.append(f"title:{thash}")
+
+        return keys
+
+    def add_or_merge(self, paper: Dict[str, Any]) -> bool:
+        """
+        Add paper if new, or merge metadata into existing canonical record.
+        Returns True if a new paper was added, False if merged.
+        """
+        keys = self.extract_keys(paper)
+        if not keys:
+            raw_id = f"raw:{len(self._store)}"
+            self._store[raw_id] = dict(paper)
+            return True
+
+        canonical_id = None
+        for k in keys:
+            if k in self._key_to_canonical:
+                canonical_id = self._key_to_canonical[k]
+                break
+
+        if canonical_id is None:
+            # New unique candidate: pick primary key as canonical ID
+            canonical_id = keys[0]
+            self._store[canonical_id] = dict(paper)
+            for k in keys:
+                self._key_to_canonical[k] = canonical_id
+            return True
+        else:
+            # Merge missing fields and enrich links
+            existing = self._store[canonical_id]
+            for field in ["doi", "pmid", "pmcid", "pmc_url", "abstract", "journal"]:
+                if not existing.get(field) and paper.get(field):
+                    existing[field] = paper[field]
+
+            if not existing.get("has_full_text") and paper.get("has_full_text"):
+                existing["has_full_text"] = True
+                if paper.get("pmc_url"):
+                    existing["pmc_url"] = paper["pmc_url"]
+
+            # Merge source attribution if multi-source
+            if paper.get("source") and paper.get("source") != existing.get("source"):
+                existing["source"] = f"{existing.get('source', '')} + {paper.get('source', '')}"
+
+            # Map any new keys to the existing canonical ID (transitive closure)
+            for k in keys:
+                if k not in self._key_to_canonical:
+                    self._key_to_canonical[k] = canonical_id
+
+            # Keep higher match or priority score if present
+            if paper.get("match_score", 0) > existing.get("match_score", 0):
+                existing["match_score"] = paper["match_score"]
+            if paper.get("priority_score", 0) > existing.get("priority_score", 0):
+                existing["priority_score"] = paper["priority_score"]
+
+            return False
+
+    def get_all(self) -> List[Dict[str, Any]]:
+        return list(self._store.values())
+
+    def contains(self, paper: Dict[str, Any]) -> bool:
+        keys = self.extract_keys(paper)
+        return any(k in self._key_to_canonical for k in keys)
+
+
 class PaperFinder:
     """
     Precision-focused Research Paper Finder enforcing bidirectional entity expansion,
@@ -255,6 +358,7 @@ class PaperFinder:
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.ncbi_esearch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
         self.ncbi_efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+        self.europe_pmc_search_url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
         self.s2_search_url = "https://api.semanticscholar.org/graph/v1/paper/search"
         self.model_designation = MODEL_DESIGNATION
         self.cache = SearchQueryCache(db_path=cache_db_path)
@@ -744,6 +848,107 @@ class PaperFinder:
                     })
             except Exception as e:
                 print(f"[Finder:XML] Error parsing NCBI EFetch XML chunk: {str(e)}")
+
+        return candidates
+
+    def search_europe_pmc(self, entities: Dict[str, Any], retmax: int = 25, timeout: int = 12) -> List[Dict[str, Any]]:
+        """
+        Query Europe PMC REST API using MEDLINE/PMC filtering to retrieve high-relevance peer-reviewed candidates.
+        Enforces resultType=core so abstractText is included for subsequent qualification.
+        """
+        terms = []
+        # 1. Interventions (include primary agents and parent classes)
+        int_terms = entities.get("intervention", [])
+        if not int_terms and entities.get("parent_classes"):
+            int_terms = entities.get("parent_classes", [])
+        if int_terms:
+            int_clean = [
+                f'"{t.replace(chr(34), "")}"'
+                for t in int_terms[:3]
+                if t.lower() not in SEARCH_STOPWORDS and t.lower() not in AMBIGUOUS_ACRONYMS
+            ]
+            if int_clean:
+                terms.append(f"({' OR '.join(int_clean)})")
+
+        # 2. Condition
+        cond_terms = entities.get("condition", [])
+        if cond_terms:
+            cond_clean = [
+                f'"{c.replace(chr(34), "")}"'
+                for c in cond_terms[:2]
+                if c.lower() not in SEARCH_STOPWORDS
+            ]
+            if cond_clean:
+                terms.append(f"({' OR '.join(cond_clean)})")
+
+        # 3. Known study names
+        study_names = entities.get("known_study_names", [])
+        if study_names:
+            study_clean = [f'"{s.replace(chr(34), "")}"' for s in study_names[:2]]
+            if study_clean:
+                terms.append(f"({' OR '.join(study_clean)})")
+
+        if not terms:
+            return []
+
+        core_query = " AND ".join(terms)
+        full_query = f"(src:med OR src:pmc) AND ({core_query})"
+        params = {
+            "query": full_query,
+            "resultType": "core",
+            "pageSize": min(retmax, 50),
+            "format": "json"
+        }
+
+        candidates = []
+        try:
+            resp = resilient_request(self.europe_pmc_search_url, method="GET", params=params, timeout=timeout)
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("resultList", {}).get("result", [])
+                for item in results:
+                    title = (item.get("title") or "").rstrip(".")
+                    abstract = (item.get("abstractText") or "").strip()
+                    if not title or len(abstract) < 40:
+                        continue
+
+                    pmid = str(item.get("pmid") or "").strip()
+                    if not pmid.isdigit():
+                        pmid = None
+
+                    doi = item.get("doi")
+                    pmcid = item.get("pmcid")
+                    if pmcid and not str(pmcid).upper().startswith("PMC"):
+                        pmcid = f"PMC{pmcid}"
+
+                    year = str(item.get("pubYear") or "Unknown")
+                    journal = item.get("journalTitle") or "Europe PMC Indexed Journal"
+                    author_str = item.get("authorString") or ""
+                    authors = [a.strip() for a in author_str.split(",") if a.strip()]
+
+                    has_full_text = item.get("isOpenAccess") == "Y" or bool(pmcid)
+                    pmc_url = f"https://europepmc.org/articles/{pmcid}" if pmcid else None
+                    if not pmc_url and pmid:
+                        pmc_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+
+                    candidate = {
+                        "pmid": pmid,
+                        "title": title,
+                        "year": year,
+                        "authors": authors,
+                        "journal": journal,
+                        "abstract": abstract,
+                        "url": pmc_url or (f"https://doi.org/{doi}" if doi else f"https://europepmc.org/abstract/MED/{pmid or item.get('id')}"),
+                        "pmcid": pmcid,
+                        "doi": doi,
+                        "has_full_text": has_full_text,
+                        "pmc_url": pmc_url,
+                        "source": "Europe PMC",
+                        "is_fallback": False
+                    }
+                    candidates.append(candidate)
+        except Exception as e:
+            print(f"[Finder:EuropePMC] Error querying Europe PMC search: {e}")
 
         return candidates
 
@@ -1257,92 +1462,120 @@ class PaperFinder:
         has_parent_class = bool(entities.get("parent_classes"))
         has_endpoints = bool(entities.get("endpoints"))
 
-        tier_used_label = "Tier 1 (Strict Specific)"
+        tier_used_label = "Tier 1 (Strict Specific + Europe PMC)"
         source_db = "PubMed"
         is_fallback = False
         is_degraded = False
 
-        # Cumulative verified papers map by PMID to prevent duplicate re-evaluations
-        verified_by_pmid: Dict[str, Dict[str, Any]] = {}
-        evaluated_pmids: Set[str] = set()
+        # Cumulative verified papers store enforcing canonical deduplication (DOI > PMID > PMCID > Title Hash)
+        verified_store = CanonicalPaperStore()
+        candidate_store = CanonicalPaperStore()
 
         # Step 2: Modernized Relaxation Ladder Execution
-        # --- TIER 1 & 1b: Primary Candidate Retrieval (Specific + Parent-Class Expansion) ---
-        pmids_to_fetch = []
-        t1_query = self.build_pubmed_query(entities, tier=1, field_tag="[tw]")
-        if t1_query and remaining_budget() > 20.0:
-            pmids_t1 = self.search_ncbi_esearch(t1_query, retmax=60, timeout=min(12, int(remaining_budget())))
-            for pid in pmids_t1:
-                if pid not in evaluated_pmids:
-                    evaluated_pmids.add(pid)
-                    pmids_to_fetch.append(pid)
+        # --- TIER 1 & 1b: Primary Candidate Retrieval (Specific + Europe PMC + Parent-Class Expansion) ---
+        pubmed_pmids = []
+        epmc_candidates = []
+
+        if remaining_budget() > 20.0:
+            t1_query = self.build_pubmed_query(entities, tier=1, field_tag="[tw]")
+            # Concurrent execution of NCBI esearch and Europe PMC search
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                fut_pubmed = None
+                if t1_query:
+                    fut_pubmed = executor.submit(self.search_ncbi_esearch, t1_query, 60, min(12, int(remaining_budget())))
+                fut_epmc = executor.submit(self.search_europe_pmc, entities, 30, min(12, int(remaining_budget())))
+
+                if fut_pubmed:
+                    try:
+                        pubmed_pmids = fut_pubmed.result() or []
+                    except Exception as pe:
+                        print(f"[Finder:Tier1] PubMed esearch error: {pe}")
+                try:
+                    epmc_candidates = fut_epmc.result() or []
+                except Exception as ee:
+                    print(f"[Finder:Tier1] Europe PMC search error: {ee}")
+
+        # Ingest Europe PMC candidates directly into candidate_store
+        for c in epmc_candidates:
+            candidate_store.add_or_merge(c)
 
         # Include Tier 1b (Semantic Expansion) into candidate pool whenever parent classes exist
         if has_parent_class and remaining_budget() > 20.0:
-            tier_used_label = "Tier 1b (Specific + Parent Classes)"
+            tier_used_label = "Tier 1b (Specific + Parent Classes + Europe PMC)"
             t1b_query = self.build_pubmed_query(entities, tier="1b", field_tag="[tw]")
             if t1b_query:
-                pmids_1b = self.search_ncbi_esearch(t1b_query, retmax=100, timeout=min(15, int(remaining_budget())))
-                for pid in pmids_1b:
-                    if pid not in evaluated_pmids:
-                        evaluated_pmids.add(pid)
-                        pmids_to_fetch.append(pid)
+                try:
+                    pmids_1b = self.search_ncbi_esearch(t1b_query, retmax=100, timeout=min(15, int(remaining_budget())))
+                    pubmed_pmids.extend([p for p in pmids_1b if p not in pubmed_pmids])
+                except Exception as e1b:
+                    print(f"[Finder:Tier1b] PubMed esearch error: {e1b}")
 
-        if pmids_to_fetch and remaining_budget() > 20.0:
-            candidates_pool = self.fetch_pubmed_metadata(pmids_to_fetch, timeout=min(22, int(remaining_budget())))
+        # Ingest PubMed candidates
+        if pubmed_pmids and remaining_budget() > 20.0:
+            # Filter out PMIDs that are already fully present in candidate_store
+            pmids_to_fetch = [
+                pid for pid in pubmed_pmids
+                if not candidate_store.contains({"pmid": pid})
+            ]
+            if pmids_to_fetch:
+                try:
+                    pubmed_meta = self.fetch_pubmed_metadata(pmids_to_fetch, timeout=min(22, int(remaining_budget())))
+                    for c in pubmed_meta:
+                        candidate_store.add_or_merge(c)
+                except Exception as pfe:
+                    print(f"[Finder:Tier1] PubMed metadata fetch error: {pfe}")
+
+        # Batch verify all unique candidates across PubMed and Europe PMC
+        all_tier1_candidates = candidate_store.get_all()
+        if all_tier1_candidates and remaining_budget() > 18.0:
             verified = self.batch_verify_candidates(
-                candidates_pool,
+                all_tier1_candidates,
                 entities,
                 query_clean,
-                total_eval_limit=20,
+                total_eval_limit=25,
                 remaining_budget=remaining_budget()
             )
             for p in verified:
                 p["tier_used"] = "1b" if p.get("is_class_only") else 1
-                pmid = p.get("pmid", str(len(verified_by_pmid)))
-                verified_by_pmid[pmid] = p
+                verified_store.add_or_merge(p)
 
         # --- TIER 2: Relax Geography ---
-        if len(verified_by_pmid) < CASCADE_VERIFIED_THRESHOLD and has_geo and remaining_budget() > 18.0:
+        if len(verified_store.get_all()) < CASCADE_VERIFIED_THRESHOLD and has_geo and remaining_budget() > 18.0:
             print("[Finder:Ladder] Cascading to Tier 2 (Relax Geography)...")
             tier_used_label = "Tier 2 (Relax Geography)"
             t2_query = self.build_pubmed_query(entities, tier=2, field_tag="[tw]")
             if t2_query:
                 pmids_2 = self.search_ncbi_esearch(t2_query, retmax=60, timeout=min(12, int(remaining_budget())))
-                new_pmids = [pid for pid in pmids_2 if pid not in evaluated_pmids]
+                new_pmids = [pid for pid in pmids_2 if not candidate_store.contains({"pmid": pid})]
                 if new_pmids:
                     candidates_2 = self.fetch_pubmed_metadata(new_pmids, timeout=min(18, int(remaining_budget())))
                     for c in candidates_2:
-                        evaluated_pmids.add(c.get("pmid"))
+                        candidate_store.add_or_merge(c)
                     verified_2 = self.batch_verify_candidates(candidates_2, entities, query_clean, total_eval_limit=15, remaining_budget=remaining_budget())
                     for p in verified_2:
                         p["tier_used"] = 2
-                        pmid = p.get("pmid", str(len(verified_by_pmid)))
-                        if pmid not in verified_by_pmid or p.get("match_score", 0) > verified_by_pmid[pmid].get("match_score", 0):
-                            verified_by_pmid[pmid] = p
+                        verified_store.add_or_merge(p)
 
         # --- TIER 3: Relax Population / Endpoints (Core Clinical Only) ---
-        if len(verified_by_pmid) < CASCADE_VERIFIED_THRESHOLD and (has_pop or has_endpoints) and remaining_budget() > 16.0:
+        if len(verified_store.get_all()) < CASCADE_VERIFIED_THRESHOLD and (has_pop or has_endpoints) and remaining_budget() > 16.0:
             print("[Finder:Ladder] Cascading to Tier 3 (Core Clinical Only)...")
             tier_used_label = "Tier 3 (Core Clinical Only)"
             t3_query = self.build_pubmed_query(entities, tier=3, field_tag="[tw]")
             if t3_query:
                 pmids_3 = self.search_ncbi_esearch(t3_query, retmax=60, timeout=min(12, int(remaining_budget())))
-                new_pmids = [pid for pid in pmids_3 if pid not in evaluated_pmids]
+                new_pmids = [pid for pid in pmids_3 if not candidate_store.contains({"pmid": pid})]
                 if new_pmids:
                     candidates_3 = self.fetch_pubmed_metadata(new_pmids, timeout=min(18, int(remaining_budget())))
                     for c in candidates_3:
-                        evaluated_pmids.add(c.get("pmid"))
+                        candidate_store.add_or_merge(c)
                     verified_3 = self.batch_verify_candidates(candidates_3, entities, query_clean, total_eval_limit=15, remaining_budget=remaining_budget())
                     for p in verified_3:
                         p["tier_used"] = 3
-                        pmid = p.get("pmid", str(len(verified_by_pmid)))
-                        if pmid not in verified_by_pmid or p.get("match_score", 0) > verified_by_pmid[pmid].get("match_score", 0):
-                            verified_by_pmid[pmid] = p
+                        verified_store.add_or_merge(p)
 
-        # --- TIER 4: Semantic Scholar Fallback (Only if PubMed yielded 0 verified papers) ---
-        if not verified_by_pmid and remaining_budget() > 14.0:
-            print("[Finder:Ladder] PubMed search yielded 0 verified results. Cascading to Tier 4 (Semantic Scholar Fallback)...")
+        # --- TIER 4: Semantic Scholar Fallback (Only if PubMed and Europe PMC yielded 0 verified papers) ---
+        if len(verified_store.get_all()) == 0 and remaining_budget() > 14.0:
+            print("[Finder:Ladder] PubMed and Europe PMC yielded 0 verified results. Cascading to Tier 4 (Semantic Scholar Fallback)...")
             tier_used_label = "Tier 4 (Semantic Scholar Fallback)"
             source_db = "Semantic Scholar Fallback"
             is_fallback = True
@@ -1352,18 +1585,27 @@ class PaperFinder:
                 for p in verified_s2:
                     p["tier_used"] = 4
                     p["is_fallback"] = True
-                    verified_by_pmid[p.get("pmid") or p.get("url")] = p
+                    verified_store.add_or_merge(p)
 
         # Check if time budget triggered degraded state
-        if remaining_budget() <= 5.0 and len(verified_by_pmid) < CASCADE_VERIFIED_THRESHOLD:
+        all_verified = verified_store.get_all()
+        if remaining_budget() <= 5.0 and len(all_verified) < CASCADE_VERIFIED_THRESHOLD:
             is_degraded = True
 
-        all_verified = list(verified_by_pmid.values())
+        # Determine source database label based on surviving verified papers
+        if not is_fallback:
+            sources = {p.get("source", "") for p in all_verified}
+            if any("Europe PMC" in s for s in sources) and any("PubMed" in s for s in sources):
+                source_db = "PubMed / Europe PMC"
+            elif any("Europe PMC" in s for s in sources):
+                source_db = "Europe PMC"
+            else:
+                source_db = "PubMed"
 
         if not all_verified:
             return {
                 "status": "not_found",
-                "message": "Search Failed: No literature candidates matching clinical criteria located across PubMed and Semantic Scholar.",
+                "message": "Search Failed: No literature candidates matching clinical criteria located across PubMed, Europe PMC, and Semantic Scholar.",
                 "query": query_clean,
                 "entities": entities,
                 "tier_used": tier_used_label,
@@ -1406,7 +1648,7 @@ class PaperFinder:
             "source_database": source_db,
             "is_fallback": is_fallback,
             "is_degraded": is_degraded,
-            "total_evaluated": len(evaluated_pmids),
+            "total_evaluated": len(candidate_store.get_all()),
             "qualifying_count": len(final_papers),
             "qualifying_papers": final_papers,
             "formatted_output": strict_formatted_output,

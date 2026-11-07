@@ -93,6 +93,7 @@ class PaperSummarizer:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.ncbi_efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+        self.europe_pmc_search_url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
         self.s2_paper_url = "https://api.semanticscholar.org/graph/v1/paper"
         self.model_designation = MODEL_DESIGNATION
 
@@ -174,7 +175,24 @@ class PaperSummarizer:
                 "structured_abstract": None
             }
 
-        # 1. Check for PubMed ID in URL or raw numeric PMID
+        # 1. Check for Europe PMC URL
+        # Examples:
+        # https://europepmc.org/article/MED/12345678 or /abstract/MED/12345678
+        # https://europepmc.org/articles/PMC8073286 or /article/PMC/8073286
+        epmc_med = re.search(r"europepmc\.org/(?:article|abstract)/med/(\d+)", clean_input, re.IGNORECASE)
+        if epmc_med:
+            pmid = epmc_med.group(1)
+            res = self._fetch_pubmed_abstract(pmid, clean_input)
+            if res.get("status") == "success":
+                return res
+            return self._fetch_europe_pmc_abstract(pmid=pmid, original_url=clean_input)
+
+        epmc_pmc = re.search(r"europepmc\.org/(?:article/pmc/|articles/pmc?)(\d+)", clean_input, re.IGNORECASE)
+        if epmc_pmc:
+            pmcid = f"PMC{epmc_pmc.group(1)}"
+            return self._fetch_europe_pmc_abstract(pmcid=pmcid, original_url=clean_input)
+
+        # 2. Check for PubMed ID in URL or raw numeric PMID
         pmid_match = re.search(r"pubmed\.ncbi\.nlm\.nih\.gov/(\d+)", clean_input, re.IGNORECASE) or \
                      (re.match(r"^\d{6,9}$", clean_input) and re.search(r"(\d+)", clean_input))
 
@@ -182,13 +200,13 @@ class PaperSummarizer:
             pmid = pmid_match.group(1)
             return self._fetch_pubmed_abstract(pmid, clean_input)
 
-        # 2. Check for DOI in URL
+        # 3. Check for DOI in URL
         doi_match = re.search(r"10\.\d{4,9}/[-._;()/:A-Za-z0-9]+", clean_input)
         if doi_match:
             doi = doi_match.group(0)
             return self._fetch_doi_abstract(doi, clean_input)
 
-        # 3. Check for Semantic Scholar Paper ID
+        # 4. Check for Semantic Scholar Paper ID
         s2_match = re.search(r"semanticscholar\.org/paper/(?:[^/]+/)?([a-f0-9]{40})", clean_input, re.IGNORECASE)
         if s2_match:
             s2_id = s2_match.group(1)
@@ -350,6 +368,67 @@ class PaperSummarizer:
                 }
         except Exception:
             pass
+
+        return {
+            "input_url": original_url,
+            "status": "unavailable",
+            "error": "Unable to access content",
+            "title": "Unable to access content",
+            "structured_abstract": None
+        }
+
+    def _fetch_europe_pmc_abstract(
+        self,
+        pmid: Optional[str] = None,
+        pmcid: Optional[str] = None,
+        doi: Optional[str] = None,
+        original_url: str = ""
+    ) -> Dict[str, Any]:
+        """Fetch abstract from Europe PMC REST API with mandatory resultType=core and strict null-handling."""
+        time.sleep(0.35)
+        query = ""
+        if pmcid:
+            query = f"pmcid:{pmcid}"
+        elif pmid:
+            query = f"ext_id:{pmid} src:med"
+        elif doi:
+            query = f"doi:{doi}"
+        else:
+            return {
+                "input_url": original_url,
+                "status": "unavailable",
+                "error": "Unable to access content",
+                "title": "Unable to access content",
+                "structured_abstract": None
+            }
+
+        params = {
+            "query": query,
+            "resultType": "core",
+            "pageSize": 1,
+            "format": "json"
+        }
+        try:
+            resp = resilient_request(self.europe_pmc_search_url, params=params, timeout=12)
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("resultList", {}).get("result", [])
+                if results:
+                    item = results[0]
+                    title = (item.get("title") or "").rstrip(".")
+                    abstract = (item.get("abstractText") or "").strip()
+                    if title and abstract and len(abstract) >= 40:
+                        return {
+                            "input_url": original_url,
+                            "pmid": str(item.get("pmid") or "") or pmid,
+                            "pmcid": item.get("pmcid") or pmcid,
+                            "doi": item.get("doi") or doi,
+                            "status": "success",
+                            "title": title,
+                            "structured_abstract": abstract
+                        }
+        except Exception as e:
+            print(f"[Summarizer:EuropePMC] Error fetching Europe PMC abstract for {query}: {e}")
 
         return {
             "input_url": original_url,

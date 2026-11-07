@@ -200,7 +200,12 @@ class PaperFetcher:
                     doi_check["title"] = title
                     return doi_check
 
-            # 3. Paywalled article - retrieve official abstract snippet
+            # 3. Fallback check on Europe PMC Open Access Repository
+            epmc_check = self._check_europe_pmc_availability(pmid=pmid, doi=doi or "")
+            if epmc_check and epmc_check.get("full_text_available"):
+                return epmc_check
+
+            # 4. Paywalled article - retrieve official abstract snippet
             abstract_text = ""
             fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
             r_fetch = _resilient_get(fetch_url, timeout=8)
@@ -248,6 +253,12 @@ class PaperFetcher:
                     }
         except Exception:
             pass
+
+        # Check Europe PMC via DOI as fallback
+        epmc_check = self._check_europe_pmc_availability(doi=doi)
+        if epmc_check and epmc_check.get("full_text_available"):
+            return epmc_check
+
         return {
             "status": "success",
             "input_type": "doi",
@@ -258,6 +269,62 @@ class PaperFetcher:
             "title": f"DOI: {doi}",
             "message": f"No open-access PDF located for DOI {doi} (Paywalled)."
         }
+
+    def _check_europe_pmc_availability(self, pmid: str = "", doi: str = "") -> Optional[Dict[str, Any]]:
+        """Fast preliminary check to see if Europe PMC has free full text for a given PMID or DOI."""
+        if not pmid and not doi:
+            return None
+        query = f"ext_id:{pmid} src:med" if pmid else f"doi:{doi}"
+        url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={urllib.parse.quote(query)}&resultType=core&format=json"
+        try:
+            r = _resilient_get(url, headers=self.headers, timeout=10)
+            if r.status_code == 200:
+                results = r.json().get("resultList", {}).get("result", [])
+                if not results and pmid and doi:
+                    query = f"doi:{doi}"
+                    url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={urllib.parse.quote(query)}&resultType=core&format=json"
+                    r = _resilient_get(url, headers=self.headers, timeout=10)
+                    if r.status_code == 200:
+                        results = r.json().get("resultList", {}).get("result", [])
+                
+                if results:
+                    entry = results[0]
+                    pmcid = entry.get("pmcid")
+                    is_oa = entry.get("isOpenAccess") == "Y"
+                    title = entry.get("title", "").rstrip(".")
+                    if is_oa and pmcid:
+                        return {
+                            "status": "success",
+                            "input_type": "pubmed" if pmid else "doi",
+                            "pmid": pmid or entry.get("pmid", ""),
+                            "pmcid": pmcid,
+                            "doi": doi or entry.get("doi", ""),
+                            "full_text_available": True,
+                            "is_abstract_only": False,
+                            "source_type": "Europe PMC",
+                            "title": title,
+                            "message": f"Full text is available on Europe PMC ({pmcid}) via EBI Open Access API."
+                        }
+                    # Check for direct free PDF link
+                    ft_urls = entry.get("fullTextUrlList", {}).get("fullTextUrl", [])
+                    for ft in ft_urls:
+                        if (ft.get("availability") == "Free" or ft.get("availabilityCode") == "F") and ft.get("documentStyle") == "pdf":
+                            link = ft.get("url", "")
+                            if link and "europepmc.org/articles" not in link:
+                                return {
+                                    "status": "success",
+                                    "input_type": "pubmed" if pmid else "doi",
+                                    "pmid": pmid or entry.get("pmid", ""),
+                                    "doi": doi or entry.get("doi", ""),
+                                    "full_text_available": True,
+                                    "is_abstract_only": False,
+                                    "source_type": "Europe PMC",
+                                    "title": title,
+                                    "message": "Free full-text open access PDF found via Europe PMC repository."
+                                }
+        except Exception:
+            pass
+        return None
 
     def _download_direct_pdf(self, pdf_url: str) -> Dict[str, Any]:
         """Download direct PDF link."""
@@ -335,6 +402,7 @@ class PaperFetcher:
                                     return res
 
             # 2. Check esummary for DOI and open-access via Unpaywall
+            doi = None
             sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={pmid}&retmode=json"
             r_sum = _resilient_get(sum_url, timeout=10)
             if r_sum.status_code == 200:
@@ -342,12 +410,21 @@ class PaperFetcher:
                 article_ids = data.get('articleids', [])
                 for aid in article_ids:
                     if aid.get('idtype') == 'doi':
-                        res = self._fetch_via_doi_or_unpaywall(aid['value'], source_url)
+                        doi = aid['value']
+                        res = self._fetch_via_doi_or_unpaywall(doi, source_url)
                         if res.get("status") == "full_text_pdf":
                             res["pmid"] = pmid
                             return res
+                        break
 
-            # 3. If no free full-text found, fetch the official abstract via efetch
+            # 3. Fallback to Europe PMC Open Access Repository
+            epmc_res = self._query_europe_pmc_oa(pmid=pmid, doi=doi or "")
+            if epmc_res and epmc_res.get("status") == "full_text_pdf":
+                epmc_res["source_url"] = source_url
+                epmc_res["pmid"] = pmid
+                return epmc_res
+
+            # 4. If no free full-text found, fetch the official abstract via efetch
             fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml"
             r_fetch = _resilient_get(fetch_url, timeout=10)
             if r_fetch.status_code == 200:
@@ -425,7 +502,7 @@ class PaperFetcher:
         return {"status": "error", "message": f"Could not retrieve paper or abstract for PMID {pmid}."}
 
     def _fetch_via_doi_or_unpaywall(self, doi: str, source_url: str) -> Dict[str, Any]:
-        """Query Unpaywall API to resolve open access PDF for DOI."""
+        """Query Unpaywall API to resolve open access PDF for DOI, falling back to Europe PMC."""
         try:
             unpaywall_url = f"https://api.unpaywall.org/v2/{doi}?email=drbiernd@gmail.com"
             r = requests.get(unpaywall_url, timeout=10)
@@ -442,7 +519,114 @@ class PaperFetcher:
                         return pdf_res
         except Exception:
             pass
+
+        # Fallback to Europe PMC via DOI
+        try:
+            epmc_res = self._query_europe_pmc_oa(doi=doi)
+            if epmc_res and epmc_res.get("status") == "full_text_pdf":
+                epmc_res["source_url"] = source_url
+                return epmc_res
+        except Exception:
+            pass
+
         return {"status": "error", "message": f"Could not find open access PDF for DOI: {doi}"}
+
+    def _query_europe_pmc_oa(self, pmid: str = "", doi: str = "") -> Optional[Dict[str, Any]]:
+        """
+        Query Europe PMC REST API as an Open Access fallback when NCBI reports an article is paywalled.
+        Retrieves full JATS XML or direct open access PDF and renders it into a coordinate-indexable PDF.
+        """
+        if not pmid and not doi:
+            return None
+            
+        query = f"ext_id:{pmid} src:med" if pmid else f"doi:{doi}"
+        url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={urllib.parse.quote(query)}&resultType=core&format=json"
+        
+        try:
+            r = _resilient_get(url, headers=self.headers, timeout=12)
+            if r.status_code != 200:
+                # If PMID query failed, try DOI if provided
+                if pmid and doi:
+                    query = f"doi:{doi}"
+                    url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={urllib.parse.quote(query)}&resultType=core&format=json"
+                    r = _resilient_get(url, headers=self.headers, timeout=12)
+                    if r.status_code != 200:
+                        return None
+                else:
+                    return None
+                    
+            data = r.json()
+            results = data.get("resultList", {}).get("result", [])
+            if not results and pmid and doi and not query.startswith("doi:"):
+                # Try DOI query fallback
+                query = f"doi:{doi}"
+                url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={urllib.parse.quote(query)}&resultType=core&format=json"
+                r = _resilient_get(url, headers=self.headers, timeout=12)
+                if r.status_code == 200:
+                    results = r.json().get("resultList", {}).get("result", [])
+                    
+            if not results:
+                return None
+                
+            entry = results[0]
+            pmcid = entry.get("pmcid")
+            is_oa = entry.get("isOpenAccess") == "Y"
+            title = entry.get("title", "").rstrip(".")
+            if not title:
+                title = f"Europe PMC Article {pmid or doi}"
+                
+            # Path A: If PMCID is present and open access, fetch fullTextXML and convert to PDF via _generate_pdf_from_jats
+            if pmcid and is_oa:
+                xml_url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/{pmcid}/fullTextXML"
+                try:
+                    xr = _resilient_get(xml_url, headers=self.headers, timeout=15)
+                    if xr.status_code == 200 and len(xr.content) > 1000:
+                        root = ET.fromstring(xr.content)
+                        body = root.find('.//body')
+                        if body is not None:
+                            filename = f"EPMC_{pmcid}.pdf"
+                            pdf_path = os.path.join(self.upload_dir, filename)
+                            self._generate_pdf_from_jats(root, pdf_path, title, default_pmcid=pmcid)
+                            return {
+                                "status": "full_text_pdf",
+                                "pdf_filename": filename,
+                                "is_abstract_only": False,
+                                "title": title,
+                                "pmcid": pmcid,
+                                "pmid": pmid or entry.get("pmid", ""),
+                                "doi": doi or entry.get("doi", ""),
+                                "source_type": "Europe PMC",
+                                "message": f"Full text extracted from Europe PMC ({pmcid})."
+                            }
+                except Exception:
+                    pass
+
+            # Path B: Check fullTextUrlList for direct open access PDF
+            ft_urls = entry.get("fullTextUrlList", {}).get("fullTextUrl", [])
+            for ft in ft_urls:
+                avail = ft.get("availability", "")
+                avail_code = ft.get("availabilityCode", "")
+                doc_style = ft.get("documentStyle", "")
+                pdf_link = ft.get("url", "")
+                if (avail == "Free" or avail_code == "F") and doc_style == "pdf" and pdf_link:
+                    # Do not scrape europepmc.org HTML viewer directly to avoid bot blocks
+                    if "europepmc.org/articles" in pdf_link:
+                        continue
+                    try:
+                        pdf_res = self._download_direct_pdf(pdf_link)
+                        if pdf_res.get("status") == "full_text_pdf":
+                            pdf_res["title"] = title
+                            pdf_res["source_type"] = "Europe PMC (Open Access)"
+                            pdf_res["pmid"] = pmid or entry.get("pmid", "")
+                            pdf_res["doi"] = doi or entry.get("doi", "")
+                            pdf_res["message"] = f"Full text PDF retrieved via Europe PMC link: {pdf_link}"
+                            return pdf_res
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+            
+        return None
 
     def _fetch_generic_webpage(self, webpage_url: str) -> Dict[str, Any]:
         """Scrape webpage and detect whether full text or only abstract is present."""
@@ -567,11 +751,11 @@ class PaperFetcher:
         return text
 
     def _generate_pdf_from_jats(self, root: ET.Element, output_path: str, title: str, default_pmcid: str = ""):
-        """Construct a clean, coordinate-indexable PDF from PubMed Central JATS XML with full bibliographic header."""
+        """Construct a clean, coordinate-indexable PDF from PubMed Central / Europe PMC JATS XML with full bibliographic header."""
         doc = pymupdf.open()
         
         # 1. Extract Full Bibliographic Metadata from JATS XML
-        title_el = root.find('.//article-title')
+        title_el = root.find('.//front//article-title') or root.find('.//article-title')
         if title_el is not None:
             clean_title = ''.join(title_el.itertext()).strip()
             if clean_title:
@@ -589,9 +773,16 @@ class PaperFetcher:
                     g_txt = giv.text.strip() if giv is not None and giv.text else ''
                     if s_txt or g_txt:
                         authors.append(f"{g_txt} {s_txt}".strip())
+                else:
+                    # Support string-name dialect in Europe PMC / preprint conversions
+                    str_name = contrib.find('string-name')
+                    if str_name is not None:
+                        s_name = ''.join(str_name.itertext()).strip()
+                        if s_name:
+                            authors.append(s_name)
         authors_str = self.normalize_for_pdf_rendering(", ".join(authors) if authors else "Not specified")
 
-        j_el = root.find('.//journal-title')
+        j_el = root.find('.//journal-title') or root.find('.//journal-meta//journal-title')
         if j_el is None:
             for jid in root.findall('.//journal-id'):
                 if jid.text:
@@ -605,6 +796,12 @@ class PaperFetcher:
             if y_node is not None and y_node.text:
                 year = y_node.text.strip()
                 break
+            str_date = pd.find('string-date')
+            if str_date is not None and str_date.text:
+                m = re.search(r'\b(19\d\d|20\d\d)\b', str_date.text)
+                if m:
+                    year = m.group(1)
+                    break
         if not year:
             year = "Not specified"
 
@@ -612,20 +809,23 @@ class PaperFetcher:
         pmid = ""
         pmcid = default_pmcid
         for aid in root.findall('.//article-id'):
-            id_type = aid.get('pub-id-type')
-            if id_type == 'doi' and aid.text:
-                doi = aid.text.strip()
-            elif id_type == 'pmid' and aid.text:
-                pmid = aid.text.strip()
-            elif id_type == 'pmc' and aid.text:
-                pmcid = f"PMC{aid.text.strip()}"
+            id_type = (aid.get('pub-id-type') or "").strip().lower()
+            val = ''.join(aid.itertext()).strip() if aid.text is not None else ""
+            if not val:
+                val = (aid.text or "").strip()
+            if id_type == 'doi' and val:
+                doi = val
+            elif id_type == 'pmid' and val:
+                pmid = val
+            elif id_type in ('pmc', 'pmcid') and val:
+                pmcid = f"PMC{val}" if not val.upper().startswith("PMC") else val
 
         # Collect sections
         sections = []
-        abstract_el = root.find('.//abstract')
+        abstract_el = root.find('.//front//abstract') or root.find('.//abstract')
         if abstract_el is not None:
             abstract_sec_texts = []
-            sec_nodes = abstract_el.findall('.//sec')
+            sec_nodes = abstract_el.findall('.//sec') or abstract_el.findall('.//abstract-sec')
             if sec_nodes:
                 for s in sec_nodes:
                     s_title = self.normalize_for_pdf_rendering(s.findtext('title') or "")
@@ -649,12 +849,30 @@ class PaperFetcher:
             
         body = root.find('.//body')
         if body is not None:
-            for sec in body.findall('.//sec'):
-                sec_title_el = sec.find('title')
-                sec_title = self.normalize_for_pdf_rendering("".join(sec_title_el.itertext()).strip() if sec_title_el is not None else "Section")
-                paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in sec.findall('.//p')]
-                if paras:
-                    sections.append((sec_title, "\n\n".join(paras)))
+            # Check for direct child paragraphs before any sections
+            direct_paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in body.findall('./p')]
+            if direct_paras:
+                sections.append(("Introduction", "\n\n".join(filter(None, direct_paras))))
+
+            # Check for standard <sec> or <section> blocks
+            sec_nodes = body.findall('.//sec') or body.findall('.//section')
+            if sec_nodes:
+                for sec in sec_nodes:
+                    sec_title_el = sec.find('title')
+                    sec_title = self.normalize_for_pdf_rendering("".join(sec_title_el.itertext()).strip() if sec_title_el is not None else "Section")
+                    p_nodes = sec.findall('./p')
+                    if not p_nodes:
+                        p_nodes = sec.findall('.//p')
+                    paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in p_nodes]
+                    paras = list(filter(None, paras))
+                    if paras:
+                        sections.append((sec_title, "\n\n".join(paras)))
+            elif not direct_paras:
+                # Dialect fallback: if no <sec> or direct <p> tags, gather any descendant <p> in body
+                fallback_paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in body.findall('.//p')]
+                fallback_paras = list(filter(None, fallback_paras))
+                if fallback_paras:
+                    sections.append(("Main Text", "\n\n".join(fallback_paras)))
 
         # Render sections across PDF pages
         current_page = doc.new_page(width=595, height=842)

@@ -3351,26 +3351,46 @@ def index_page():
                                        matchScore >= 65 ? 'bg-sky-100 text-sky-800 border-sky-300' :
                                        'bg-amber-100 text-amber-800 border-amber-300';
                     
-                    const sourceBadge = p.is_fallback ?
-                        '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Semantic Scholar Fallback</span>' :
-                        '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">PubMed Verified</span>';
+                    const isEPMC = Boolean(
+                        (p.source && p.source.includes('Europe PMC')) ||
+                        (p.pmc_url && p.pmc_url.includes('europepmc.org')) ||
+                        (p.url && p.url.includes('europepmc.org'))
+                    );
+
+                    let sourceBadge = '';
+                    if (p.source && p.source.includes('Europe PMC') && p.source.includes('PubMed')) {
+                        sourceBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-900 border border-teal-300">PubMed + Europe PMC</span>';
+                    } else if (p.source === 'Europe PMC') {
+                        sourceBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-300">Europe PMC Verified</span>';
+                    } else if (p.is_fallback) {
+                        sourceBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Semantic Scholar Fallback</span>';
+                    } else {
+                        sourceBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">PubMed Verified</span>';
+                    }
 
                     const hasFullText = Boolean(p.has_full_text || p.pmcid);
-                    const fullTextBadge = hasFullText ?
-                        `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-300 flex items-center gap-1" title="Free full text available on PubMed Central (${p.pmcid || 'PMC'})">
+                    let fullTextBadge = '';
+                    if (hasFullText && isEPMC) {
+                        fullTextBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-300 flex items-center gap-1" title="Open Access Full Text via Europe PMC (${p.pmcid || 'Europe PMC'})">
+                            <span>🌐</span> <span>Europe PMC OA ${p.pmcid ? '(' + p.pmcid + ')' : ''}</span>
+                        </span>`;
+                    } else if (hasFullText) {
+                        fullTextBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-1" title="Free full text available on PubMed Central (${p.pmcid || 'PMC'})">
                             <span>🟢</span> <span>Free Full Text ${p.pmcid ? '(' + p.pmcid + ')' : ''}</span>
-                        </span>` :
-                        `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-200/80 text-slate-700 border border-slate-300 flex items-center gap-1" title="Paywalled: Only the published abstract is freely accessible. Full text requires institutional subscription or manual PDF upload.">
+                        </span>`;
+                    } else {
+                        fullTextBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-200/80 text-slate-700 border border-slate-300 flex items-center gap-1" title="Paywalled: Only the published abstract is freely accessible. Full text requires institutional subscription or manual PDF upload.">
                             <span>🔒</span> <span>Paywalled (Abstract Only)</span>
                         </span>`;
+                    }
 
                     const safeTitle = (p.title || 'Untitled Study').replace(/"/g, '&quot;');
                     const safeUrl = p.url || '';
                     const authorsStr = (p.authors && p.authors.length > 0) ? p.authors.slice(0, 3).join(', ') + (p.authors.length > 3 ? ' et al.' : '') : '';
 
                     const pmcLinkHtml = (hasFullText && p.pmcid) ? `
-                        <a href="${p.pmc_url || ('https://pmc.ncbi.nlm.nih.gov/articles/' + p.pmcid + '/')}" target="_blank" rel="noopener noreferrer" class="text-xs text-teal-700 hover:text-teal-900 underline flex items-center gap-1 font-mono font-medium" title="View Open Access Full Text on PubMed Central">
-                            <span>📄</span> <span>PMC: ${p.pmcid}</span>
+                        <a href="${p.pmc_url || (isEPMC ? 'https://europepmc.org/articles/' + p.pmcid : 'https://pmc.ncbi.nlm.nih.gov/articles/' + p.pmcid + '/')}" target="_blank" rel="noopener noreferrer" class="text-xs text-teal-700 hover:text-teal-900 underline flex items-center gap-1 font-mono font-medium" title="View Open Access Full Text on ${isEPMC ? 'Europe PMC' : 'PubMed Central'}">
+                            <span>📄</span> <span>${isEPMC ? 'Europe PMC' : 'PMC'}: ${p.pmcid}</span>
                         </a>
                     ` : '';
 
@@ -3378,10 +3398,10 @@ def index_page():
                     const appraiseBtn = hasFullText ? `
                         <button 
                             onclick="appraisePaperFromExternal('${appraiseTargetUrl}')" 
-                            class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
-                            title="Open full interactive analysis in Workbench (Full manuscript retrieved via PMC)"
+                            class="px-3 py-1.5 rounded-lg ${isEPMC ? 'bg-teal-600 hover:bg-teal-700' : 'bg-sky-600 hover:bg-sky-700'} text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1 cursor-pointer"
+                            title="Open full interactive analysis in Workbench (${isEPMC ? 'Full manuscript retrieved via Europe PMC' : 'Full manuscript retrieved via PMC'})"
                         >
-                            <span>🔬</span> <span>Analyze Full Text</span>
+                            <span>🔬</span> <span>Analyze Full Text ${isEPMC ? '(Europe PMC)' : ''}</span>
                         </button>
                     ` : `
                         <button 
