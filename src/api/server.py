@@ -4669,10 +4669,14 @@ ${escapeHtml(thought)}
 
             function switchToManualUpload() {
                 closeAbstractModal();
-                const fileInput = document.getElementById('fileUpload');
+                switchInputTab('pdf');
+                const fileInput = document.getElementById('pdfFile');
                 if (fileInput) {
                     fileInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    fileInput.click();
+                    // Automatically open the OS file selection dialog
+                    setTimeout(() => {
+                        fileInput.click();
+                    }, 50);
                 }
             }
 
