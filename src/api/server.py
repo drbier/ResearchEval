@@ -1310,7 +1310,10 @@ def index_page():
                         </div>
                     </div>
                     <div class="flex flex-col items-center text-center">
-                        <h1 class="text-xl font-bold fact-brand-title tracking-tight leading-none text-center">F.A.C.T.</h1>
+                        <div class="flex items-center gap-1.5">
+                            <h1 class="text-xl font-bold fact-brand-title tracking-tight leading-none text-center">F.A.C.T.</h1>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800 tracking-tight leading-none">v1.1</span>
+                        </div>
                         <p class="text-slate-500 dark:text-slate-400 text-[11px] font-medium mt-1 text-center whitespace-nowrap">Find<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Analyze<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Contextualize<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Talk</p>
                     </div>
                 </div>
