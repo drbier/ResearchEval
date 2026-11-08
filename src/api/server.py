@@ -418,6 +418,28 @@ async def ask_paper(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/extract-voice-profile")
+async def extract_voice_profile_endpoint(
+    samples_text: str = Form(...),
+    model_override: Optional[str] = Form(None),
+    api_key: Optional[str] = Form(None),
+    user_uid: Optional[str] = Form("anonymous"),
+    user_email: Optional[str] = Form("unauthenticated")
+):
+    """Extracts authentic clinical voice philosophy and phrasing directives from clinician writing samples."""
+    if not samples_text or not samples_text.strip():
+        raise HTTPException(status_code=400, detail="Writing samples text cannot be empty.")
+
+    try:
+        engine_inst = CommentaryAndQCEngine(api_key=api_key) if api_key else commentary_engine
+        result = engine_inst.extract_voice_profile_from_samples(
+            samples_text=samples_text,
+            model_override=model_override
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/generate-commentary")
 async def generate_commentary_endpoint(
     filename: str = Form(...),
@@ -1956,12 +1978,27 @@ def index_page():
                                 </div>
                             </div>
 
+                            <!-- AI Voice Directive Auto-Extraction Tool (For any user) -->
+                            <div class="p-3 rounded-lg border border-indigo-200 dark:border-indigo-900 bg-indigo-50/60 dark:bg-indigo-950/30 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="font-bold text-xs text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                                        <span>🧬</span> <span>Extract Voice Directives From Your Writing</span>
+                                    </span>
+                                    <button type="button" onclick="toggleVoiceExtractorModal()" class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:underline cursor-pointer">
+                                        Analyze My Writing &rarr;
+                                    </button>
+                                </div>
+                                <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Paste 1 or more of your past newsletters, critiques, or commentaries. F.A.C.T. will automatically analyze your syntax, philosophy, and preferred terminology, filling in your directives above.
+                                </p>
+                            </div>
+
                             <!-- Exemplar Writing Library -->
-                            <div class="space-y-2 pt-2">
+                            <div class="space-y-2 pt-1">
                                 <div class="flex items-center justify-between text-xs">
                                     <div class="flex items-center gap-1.5">
                                         <span class="font-semibold text-slate-700 dark:text-slate-300">Past Writing Exemplars</span>
-                                        <span class="text-[11px] text-slate-400">(Max 3 active, max 1,500 chars each)</span>
+                                        <span class="text-[11px] text-slate-400">(Max 4 active, max 1,500 chars each)</span>
                                     </div>
                                     <button type="button" onclick="toggleNewExemplarForm()" class="text-xs text-sky-600 dark:text-sky-400 hover:underline font-semibold cursor-pointer">
                                         + Add Exemplar
@@ -1998,6 +2035,36 @@ def index_page():
                         <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">F.A.C.T. v1.0.0</span>
                         <button id="settingsDoneBtn" onclick="closeSettingsModal()" class="btn-primary-accent px-4 py-2 rounded-lg text-white font-semibold text-xs shadow-xs transition cursor-pointer">
                             Done
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Voice DNA Auto-Extraction Modal (For All Users) -->
+            <div id="voiceExtractorModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-xl w-full flex flex-col max-h-[90vh] overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🧬</span>
+                            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Extract Voice Profile From Samples</h3>
+                        </div>
+                        <button onclick="toggleVoiceExtractorModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm">✕</button>
+                    </div>
+                    <div class="p-5 space-y-4 overflow-y-auto text-xs">
+                        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+                            Paste 1 to 4 of your authentic writing samples (commentaries, clinical reflections, or blog posts). F.A.C.T. will extract your authorial philosophy, preferred vocabulary, and prohibited terms, automatically filling your profile.
+                        </p>
+                        <div>
+                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Your Writing Samples:</label>
+                            <textarea id="voiceExtractorInput" rows="8" placeholder="Paste your authentic writing samples here..." class="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"></textarea>
+                        </div>
+                        <div id="voiceExtractorStatus" class="hidden p-3 rounded-lg text-xs"></div>
+                    </div>
+                    <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-end gap-2">
+                        <button type="button" onclick="toggleVoiceExtractorModal()" class="px-3 py-1.5 rounded text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800">Cancel</button>
+                        <button type="button" id="runVoiceExtractorBtn" onclick="runVoiceExtractor()" class="btn-primary-accent px-4 py-1.5 rounded text-xs text-white font-semibold flex items-center gap-1.5">
+                            <span id="extractorBtnSpinner" class="hidden animate-spin">⏳</span>
+                            <span id="extractorBtnText">⚡ Extract &amp; Apply Directives</span>
                         </button>
                     </div>
                 </div>
@@ -6504,7 +6571,21 @@ ${scopedHtml}
             // =========================================================================
             // Clinician Voice Profile & Adversarial QC Engine Client State & Sync
             // =========================================================================
-            const DEFAULT_CALIBRATED_VOICE = {
+            // Generic Clean Default Profile for New / Non-Admin Users
+            const GENERIC_DEFAULT_VOICE = {
+                schema_version: 1,
+                revision: 0,
+                base_revision: 0,
+                local_dirty: false,
+                updated_at_ms: Date.now(),
+                philosophy: "Prioritize clinical outcomes and absolute risk reductions over relative risk spin. Scrutinize methodological validity, surrogate endpoints, and baseline confounding.",
+                preferred_terms: "absolute risk reduction, clinical relevance, confounding, effect size",
+                prohibited_terms: "more research is needed, delve, it is crucial to note",
+                exemplars: []
+            };
+
+            // Master Administrator Calibrated Voice Profile (drbiernd@gmail.com)
+            const DR_BIER_CALIBRATED_VOICE = {
                 schema_version: 1,
                 revision: 1,
                 base_revision: 1,
@@ -6516,7 +6597,7 @@ ${scopedHtml}
                 exemplars: [
                     {
                         id: "ex_default_glucosamine",
-                        title: "Glucosamine & Dementia (Mechanism vs EHR Confounding)",
+                        title: "Glucosamine & Dementia (Mechanism vs EHR Confounding by Indication)",
                         text: "It is always tempting when an elegant preclinical mechanism is paired with human level data. However, we have to be incredibly careful when translating these findings.\n\nThe Preclinical Mechanism vs. The Non-Alzheimer’s Signal\nOn the basic science side, the authors present a compelling piece of spatial biology, demonstrating that transgenic Alzheimer’s disease (AD) mouse models exhibit a conserved phenotype of brain hyperglycosylation. When they flooded the hexosamine biosynthetic pathway of these AD-vulnerable mice with oral glucosamine, it accelerated their cognitive decline. However, the most critical piece of data in the animal models—and the one that will likely be overlooked by sensationalist headlines—is how glucosamine affected the wild-type (WT) control mice: the results were entirely flat. There was no increase in brain glycan abundance and absolutely no cognitive impairment. The normal brain clearly possesses robust, intrinsic metabolic resilience that easily buffers against this substrate influx.\n\nThe Human EHR Mirage: Confounding by Indication\nIn reality, the human dataset suffers from a fatal epidemiological flaw: confounding by indication. While the authors controlled for standard demographic and metabolic variables, they failed to control for any underlying pain conditions or arthritis. Glucosamine is not a random exposure; it is a surrogate marker for a patient suffering from chronic joint pain, osteoarthritis, or structural musculoskeletal degeneration. Chronic osteoarthritis represents a state of persistent, low-grade systemic inflammation and mobility loss, which is a well-documented driver of accelerated neurodegenerative decline. When a retrospective human model accidentally attributes the systemic toll of chronic arthritis and physical immobility to the supplement treating it, we are looking at an observational artifact, not a clinical finding.",
                         is_active: true,
                         updated_at_ms: Date.now()
@@ -6534,11 +6615,18 @@ ${scopedHtml}
                         text: "There is a pervasive habit in oncology of treating supportive care medications as biologically inert. However, outside of the cancer clinic, the epidemiological data is already glaringly clear: proton pump inhibitors (PPIs) are not benign. Chronic PPI use is definitively linked to increased risks of chronic kidney disease, major adverse cardiovascular events, and elevated all-cause mortality.\n\nThe Oncologic Penalty\nIn patients receiving consolidation durvalumab for stage III NSCLC, baseline exposure to PPIs slashed median Overall Survival from 57.9 months down to 33.0 months (HR 1.66). We are looking at a nearly two-year survival deficit associated with OTC acid blockers. We shouldn’t view these as passive supportive agents; they are active biological variables that effectively disarm the PD-L1 blockade.\n\nThe Placebo Validation\nWhat makes this biological penalty so convincing—and what pushes us past the usual 'confounding by indication' dismissals—is the placebo group. If this survival drop were simply a reflection of baseline frailty—arguing that patients taking PPIs were just sicker and destined to do poorly—we would expect to see a parallel survival drop in the placebo arm. We didn’t. In the placebo group, PPI exposure was not associated with changes in progression-free or overall survival. This strongly suggests a true, treatment-dependent interference: the microbiome disruption specifically neutralizes the durvalumab. PPIs are not benign antacids; they are serious systemic interventions.",
                         is_active: true,
                         updated_at_ms: Date.now()
+                    },
+                    {
+                        id: "ex_default_sun_exposure",
+                        title: "Sun Exposure & MISS Cohort (Hormesis vs Flawed Lab Timelines)",
+                        text: "I’ve always looked at the sun as a natural physiological signal rather than something we should instinctively fear. Our bodies evolved under it, and it makes clinical sense that gradual, low-dose exposure acts as an adaptive tonic for our health. The interesting tension in the literature is how a very real adaptive immune benefit gets complicated by artificial lab timelines and surrogate models.\n\nThe Melanoma in Southern Sweden (MISS) cohort reveals a stark structural reality: women who avoided sun exposure faced a two-fold increase in mortality rate compared to those in the highest exposure group (HR = 2.0; 95% CI: 1.6–2.5). Most provocatively, the data suggests that sun avoidance is a risk factor for death of a similar magnitude to smoking. In a clinical landscape where we spend billions to mitigate smoking-related harm, we should question why we actively prescribe UV avoidance.\n\nWhile episodic UV overexposure is linked to melanoma incidence, the review confirms a critical prognostic inversion: low sun exposure and deficient vitamin D levels are associated with thicker, more aggressive melanomas. 35% of women with low sun exposure died following a melanoma diagnosis, compared to only 10% of those with high exposure habits—an eight-fold increased risk of all-cause mortality for the 'avoiders', suggesting the sun is a protective metabolic signal.\n\nA 4-day window in a lab doesn't match real life. In the real world, we build a base gradually over months of Spring and Summer across years of seasons, allowing structural hardening of the skin barrier and tanning to achieve immune equilibrium. We just need to value the marathon of seasonal change over the sprint of a short lab protocol.",
+                        is_active: true,
+                        updated_at_ms: Date.now()
                     }
                 ]
             };
 
-            let voiceProfileState = JSON.parse(JSON.stringify(DEFAULT_CALIBRATED_VOICE));
+            let voiceProfileState = JSON.parse(JSON.stringify(GENERIC_DEFAULT_VOICE));
 
             function loadVoiceProfileFromLocal() {
                 try {
@@ -6546,14 +6634,9 @@ ${scopedHtml}
                     if (raw) {
                         const parsed = jsonParseSafe(raw, null);
                         if (parsed && typeof parsed === 'object') {
-                            // If user previously had empty exemplars, seed with calibrated defaults
-                            const exemplars = (parsed.exemplars && parsed.exemplars.length > 0)
-                                ? parsed.exemplars
-                                : DEFAULT_CALIBRATED_VOICE.exemplars;
                             voiceProfileState = {
                                 ...voiceProfileState,
-                                ...parsed,
-                                exemplars: exemplars
+                                ...parsed
                             };
                         }
                     }
@@ -6671,7 +6754,7 @@ ${scopedHtml}
                     id: 'ex_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                     title: (titleInput && titleInput.value.trim()) ? titleInput.value.trim() : 'Writing Exemplar',
                     text: textInput.value.trim().slice(0, 1500),
-                    is_active: (voiceProfileState.exemplars || []).filter(e => e.is_active).length < 3,
+                    is_active: (voiceProfileState.exemplars || []).filter(e => e.is_active).length < 4,
                     updated_at_ms: Date.now()
                 };
 
@@ -6698,8 +6781,8 @@ ${scopedHtml}
                 if (!ex) return;
                 
                 const currentActive = (voiceProfileState.exemplars || []).filter(e => e.is_active && e.id !== id).length;
-                if (!ex.is_active && currentActive >= 3) {
-                    alert("A maximum of 3 active exemplars can be used during commentary generation to preserve attention on manuscript data. Please uncheck another exemplar first.");
+                if (!ex.is_active && currentActive >= 4) {
+                    alert("A maximum of 4 active exemplars can be used during commentary generation to preserve attention on manuscript data. Please uncheck another exemplar first.");
                     renderVoiceModalUI();
                     return;
                 }
@@ -6718,6 +6801,89 @@ ${scopedHtml}
                 localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
                 renderVoiceModalUI();
                 updateVoiceUIElements();
+            }
+
+            function toggleVoiceExtractorModal() {
+                const modal = document.getElementById('voiceExtractorModal');
+                if (!modal) return;
+                modal.classList.toggle('hidden');
+                const status = document.getElementById('voiceExtractorStatus');
+                if (status) status.classList.add('hidden');
+            }
+
+            async function runVoiceExtractor() {
+                const inputEl = document.getElementById('voiceExtractorInput');
+                const statusEl = document.getElementById('voiceExtractorStatus');
+                const btn = document.getElementById('runVoiceExtractorBtn');
+                const spinner = document.getElementById('extractorBtnSpinner');
+                const btnText = document.getElementById('extractorBtnText');
+
+                const samples = inputEl ? inputEl.value.trim() : '';
+                if (!samples || samples.length < 50) {
+                    alert("Please paste at least 1-2 paragraphs of your authentic writing (minimum 50 characters).");
+                    return;
+                }
+
+                if (btn) btn.disabled = true;
+                if (spinner) spinner.classList.remove('hidden');
+                if (btnText) btnText.innerText = "Analyzing Stylometry...";
+                if (statusEl) {
+                    statusEl.className = "p-3 rounded-lg text-xs bg-sky-50 dark:bg-sky-950 text-sky-800 dark:text-sky-200 border border-sky-200 dark:border-sky-800";
+                    statusEl.innerText = "Extracting authorial philosophy, cadence, and clinical terminology...";
+                    statusEl.classList.remove('hidden');
+                }
+
+                try {
+                    const fd = new FormData();
+                    fd.append('samples_text', samples);
+                    if (currentUser) {
+                        fd.append('user_uid', currentUser.uid);
+                        fd.append('user_email', currentUser.email);
+                    }
+                    const resp = await fetch('/extract-voice-profile', { method: 'POST', body: fd });
+                    if (!resp.ok) {
+                        const err = await resp.json();
+                        throw new Error(err.detail || 'Failed extracting voice profile.');
+                    }
+                    const data = await resp.json();
+
+                    // Apply extracted profile directly to fields
+                    const philInput = document.getElementById('voicePhilosophyInput');
+                    const prefInput = document.getElementById('voicePreferredInput');
+                    const prohInput = document.getElementById('voiceProhibitedInput');
+
+                    if (philInput && data.philosophy) philInput.value = data.philosophy;
+                    if (prefInput && data.preferred_terms) prefInput.value = data.preferred_terms;
+                    if (prohInput && data.prohibited_terms) prohInput.value = data.prohibited_terms;
+
+                    voiceProfileState.philosophy = data.philosophy || voiceProfileState.philosophy;
+                    voiceProfileState.preferred_terms = data.preferred_terms || voiceProfileState.preferred_terms;
+                    voiceProfileState.prohibited_terms = data.prohibited_terms || voiceProfileState.prohibited_terms;
+                    voiceProfileState.local_dirty = true;
+                    localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+
+                    updateVoiceFieldCounts();
+                    updateVoiceUIElements();
+
+                    if (statusEl) {
+                        statusEl.className = "p-3 rounded-lg text-xs bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800";
+                        statusEl.innerText = `✓ Voice Directives Extracted & Applied! ${data.voice_summary ? '— ' + data.voice_summary : ''}`;
+                    }
+
+                    setTimeout(() => {
+                        toggleVoiceExtractorModal();
+                    }, 1400);
+
+                } catch (err) {
+                    if (statusEl) {
+                        statusEl.className = "p-3 rounded-lg text-xs bg-rose-50 dark:bg-rose-950 text-rose-800 dark:text-rose-200 border border-rose-200 dark:border-rose-800";
+                        statusEl.innerText = "Error: " + err.message;
+                    }
+                } finally {
+                    if (btn) btn.disabled = false;
+                    if (spinner) spinner.classList.add('hidden');
+                    if (btnText) btnText.innerText = "⚡ Extract & Apply Directives";
+                }
             }
 
             async function saveVoiceProfileAndNotify() {
@@ -6750,7 +6916,13 @@ ${scopedHtml}
                     const userDocRef = fbDb.collection('users').doc(uid);
                     const docSnap = await userDocRef.get();
                     const userData = docSnap.exists ? docSnap.data() : {};
-                    const remote = userData.voice_profile || null;
+                    let remote = userData.voice_profile || null;
+
+                    // If user is Master Admin (drbiernd@gmail.com) and has no voice profile yet, initialize with Dr. Bier's calibrated profile
+                    if (!remote && currentUser && currentUser.email && currentUser.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+                        remote = DR_BIER_CALIBRATED_VOICE;
+                        await userDocRef.set({ voice_profile: remote }, { merge: true });
+                    }
 
                     const localBaseRev = voiceProfileState.base_revision || 0;
                     const remoteRev = (remote && typeof remote.revision === 'number') ? remote.revision : 0;

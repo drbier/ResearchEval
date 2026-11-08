@@ -86,14 +86,14 @@ class CommentaryAndQCEngine:
         preferred_terms = str(profile.get("preferred_terms", "")).strip()[:300]
         prohibited_terms = str(profile.get("prohibited_terms", "")).strip()[:300]
 
-        # Extract active exemplars (max 3, max 1500 chars each)
+        # Extract active exemplars (max 4, max 1500 chars each)
         raw_exemplars = profile.get("exemplars", [])
         active_exemplars: List[Dict[str, Any]] = []
         if isinstance(raw_exemplars, list):
             candidates = [e for e in raw_exemplars if isinstance(e, dict) and e.get("is_active", True) and str(e.get("text", "")).strip()]
             # Sort by updated_at_ms desc if available
             candidates.sort(key=lambda x: x.get("updated_at_ms", 0), reverse=True)
-            active_exemplars = candidates[:3]
+            active_exemplars = candidates[:4]
 
         # Build exemplar XML blocks
         exemplar_blocks = []
@@ -126,16 +126,13 @@ class CommentaryAndQCEngine:
             "You are an expert clinician drafting an editorial commentary on a medical study to share with clinical colleagues.\n"
             "Your commentary must synthesize the clinical meaning of the findings, critically contextualize effect sizes, "
             "and emphasize real-world patient care implications.\n\n"
-            "MANDATORY CLINICAL VOICE & RHETORICAL DIRECTIVES:\n"
-            "1. OPENING HOOK: Begin with a reflective clinical observation on the tension between biological mechanism and human clinical reality (e.g., 'It is always tempting when an elegant preclinical mechanism is paired with human level data. However...').\n"
-            "2. RHETORICAL ARCHITECTURE & SUBHEADS: Break the commentary into 2 to 4 distinct, conceptually punchy subheadings (e.g., 'The Preclinical Mechanism vs. The Non-Alzheimer’s Signal', 'The Human EHR Mirage: Confounding by Indication', 'The Counter-Weight: Healthy User Bias', 'The Placebo Validation', 'The Takeaway'). Never use generic labels like 'Introduction' or 'Summary'.\n"
-            "3. EPIDEMIOLOGICAL RIGOR: Actively interrogate confounding by indication, healthy user bias, off-target survival artifacts, and immortal time bias. Check whether benefits or harms are observed in placebo/control arms to distinguish true pharmacological effects from baseline frailty.\n"
-            "4. ENDPOINTS: Prioritize hard outcomes (All-Cause Mortality, Overall Survival, MACE, functional independence) over surrogate biomarkers and short-term laboratory endpoints.\n"
-            f"5. CLINICAL PHILOSOPHY: {philosophy if philosophy else 'All-cause mortality and hard endpoints trump biological mechanism. Prioritize physiological resilience and non-dogmatic clinical reasoning over surrogate biomarker hype.'}\n"
-            f"6. PREFERRED TERMS / CONCEPTS: {preferred_terms if preferred_terms else 'structural reality, statistical quicksand, observational artifact, confounding by indication, healthy user bias, placebo validation, baseline frailty, absolute risk reduction'}\n"
-            f"7. PROHIBITED PHRASING: {prohibited_terms if prohibited_terms else 'Never say \"more research is needed\", \"delve\", \"it is crucial to note\", or \"promising avenue\". Avoid generic AI cheerleading.'}\n"
-            "8. CITATION INTEGRITY: When citing findings, you may include verified coordinate anchors like [Results, Table 2] or [Methods, Para 3]. Do NOT invent coordinate anchors.\n"
-            "9. FORMAT: Professional Markdown with bold subheadings and a concluding clinical takeaway paragraph."
+            "STYLISTIC DIRECTIVES (TAILORED BY CLINICIAN VOICE PROFILE):\n"
+            "1. VOICE & CADENCE: Mirror the rhetorical structure, sentence length rhythm, and opening hook style demonstrated in the active clinician exemplars below.\n"
+            f"2. CLINICAL PHILOSOPHY: {philosophy if philosophy else 'Prioritize patient safety, mechanistic plausibility, and clinical relevance over statistical significance.'}\n"
+            f"3. PREFERRED CONCEPTS / PHRASING: {preferred_terms if preferred_terms else 'Use clear, assertive clinical language with rigorous focus on absolute risk reductions.'}\n"
+            f"4. PROHIBITED PHRASING: {prohibited_terms if prohibited_terms else 'Never say \"more research is needed\". Avoid generic conversational AI filler.'}\n"
+            "5. CITATION INTEGRITY: When citing findings, you may include verified coordinate anchors like [Results, Table 2] or [Methods, Para 3]. Do NOT invent coordinate anchors.\n"
+            "6. FORMAT: Output 2 to 4 punchy, high-impact paragraphs in Markdown suitable for an email, newsletter, or medical discussion board."
         )
 
         user_prompt = f"""### CLINICIAN PAST WRITING EXEMPLARS (STUDY FOR VOICE, CADENCE & TONE):
@@ -415,5 +412,75 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
             "discrepancies": validated_discrepancies,
             "study_design_caveat": parsed.get("study_design_caveat"),
             "raw_output": raw_output
+        }
+
+    def extract_voice_profile_from_samples(
+        self,
+        samples_text: str,
+        model_override: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Analyzes 1 or more writing samples from any clinician and extracts:
+        - Core Clinical Philosophy (<= 500 chars)
+        - Preferred Terms / Concepts (comma-separated, <= 300 chars)
+        - Prohibited Boilerplate (comma-separated, <= 300 chars)
+        - Recommended Hook / Structural Style Summary
+        """
+        client = get_gemini_client(self.api_key)
+        used_model = model_override or PRIMARY_MODEL
+
+        system_instruction = (
+            "You are an expert psycholinguist and clinical editor specializing in physician writing styles.\n"
+            "Analyze the provided clinician's writing samples and extract their authentic authorial DNA:\n"
+            "1. 'philosophy': A concise synthesis (under 450 characters) of their core clinical philosophy, analytical stance, and epistemology.\n"
+            "2. 'preferred_terms': A comma-separated string (under 280 characters) of their distinctive terminology, rhetorical concepts, and analytical lenses.\n"
+            "3. 'prohibited_terms': A comma-separated string (under 280 characters) of clichéd phrases, generic filler, or AI tropes that clash with their authentic voice.\n"
+            "Return strictly valid JSON with keys: 'philosophy', 'preferred_terms', 'prohibited_terms', 'voice_summary'."
+        )
+
+        user_prompt = f"""### CLINICIAN WRITING SAMPLES TO ANALYZE:
+{samples_text[:12000]}
+
+### INSTRUCTIONS:
+Extract the voice profile in JSON matching the exact schema:
+{{
+  "philosophy": "...",
+  "preferred_terms": "term1, term2, term3",
+  "prohibited_terms": "filler1, filler2, filler3",
+  "voice_summary": "1-2 sentence description of their rhetorical cadence and analytical style"
+}}
+"""
+        response = client.models.generate_content(
+            model=used_model,
+            contents=[user_prompt],
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.2,
+                response_mime_type="application/json"
+            )
+        )
+        raw_text = (response.text or "").strip()
+        parsed = {}
+        try:
+            parsed = json.loads(raw_text)
+        except Exception:
+            clean = re.sub(r'```(?:json)?\s*', '', raw_text)
+            clean = re.sub(r'```', '', clean).strip()
+            try:
+                parsed = json.loads(clean)
+            except Exception:
+                parsed = {
+                    "philosophy": "Focus on clinical outcomes, patient safety, and absolute risk over surrogate metrics.",
+                    "preferred_terms": "absolute risk reduction, clinical relevance, confounding, effect size",
+                    "prohibited_terms": "more research is needed, delve, it is crucial to note",
+                    "voice_summary": "Assertive clinical peer voice focusing on epidemiological rigor."
+                }
+
+        return {
+            "status": "success",
+            "philosophy": str(parsed.get("philosophy", "")).strip()[:500],
+            "preferred_terms": str(parsed.get("preferred_terms", "")).strip()[:300],
+            "prohibited_terms": str(parsed.get("prohibited_terms", "")).strip()[:300],
+            "voice_summary": str(parsed.get("voice_summary", "")).strip()
         }
 
