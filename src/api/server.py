@@ -1956,6 +1956,22 @@ def index_page():
                                 </div>
                             </div>
 
+                            <!-- Therapeutic Lens / Clinical Orientation -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center text-xs">
+                                    <label for="voiceTherapeuticLens" class="font-semibold text-slate-700 dark:text-slate-300">Therapeutic Lens / Clinical Orientation</label>
+                                    <span class="text-[10px] text-slate-400">Guides commentary perspective</span>
+                                </div>
+                                <select id="voiceTherapeuticLens" class="w-full text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer">
+                                    <option value="integrative">Integrative / Naturopathic / Functional (Default)</option>
+                                    <option value="conventional">Conventional Allopathic / Evidence-Based</option>
+                                    <option value="methodological">Pure Methodological &amp; Biostatistical Focus</option>
+                                </select>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                                    Integrative/Naturopathic lens prioritizes biological resilience and whole-body physiology, actively preventing unsolicited conventional drug mandates (e.g. routine statin recommendations).
+                                </p>
+                            </div>
+
                             <!-- Editorial Philosophy -->
                             <div class="space-y-1.5">
                                 <div class="flex justify-between items-center text-xs">
@@ -2005,9 +2021,15 @@ def index_page():
                                         <span class="font-semibold text-slate-700 dark:text-slate-300">Past Writing Exemplars</span>
                                         <span class="text-[11px] text-slate-400">(Max 4 active, max 1,500 chars each)</span>
                                     </div>
-                                    <button type="button" onclick="toggleNewExemplarForm()" class="text-xs text-sky-600 dark:text-sky-400 hover:underline font-semibold cursor-pointer">
-                                        + Add Exemplar
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="toggleBatchExemplarModal()" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">
+                                            📥 Batch Import
+                                        </button>
+                                        <span class="text-slate-300 dark:text-slate-600">|</span>
+                                        <button type="button" onclick="toggleNewExemplarForm()" class="text-xs text-sky-600 dark:text-sky-400 hover:underline font-semibold cursor-pointer">
+                                            + Add Exemplar
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <!-- Add New Exemplar Box (Collapsible) -->
@@ -2040,6 +2062,34 @@ def index_page():
                         <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">F.A.C.T. v1.1.0</span>
                         <button id="settingsDoneBtn" onclick="closeSettingsModal()" class="btn-primary-accent px-4 py-2 rounded-lg text-white font-semibold text-xs shadow-xs transition cursor-pointer">
                             Done
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Exemplar Import Modal -->
+            <div id="batchExemplarModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-xl w-full flex flex-col max-h-[90vh] overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">📥</span>
+                            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Batch Import Writing Exemplars</h3>
+                        </div>
+                        <button onclick="toggleBatchExemplarModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm">✕</button>
+                    </div>
+                    <div class="p-5 space-y-4 overflow-y-auto text-xs">
+                        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">
+                            Paste multiple writing samples at once. Separate distinct exemplars with <code class="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-600 font-mono">---</code> or <code class="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-600 font-mono">COMMENTARY:</code>. You can optionally start each block with a title on line 1.
+                        </p>
+                        <div>
+                            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Paste Multiple Exemplars:</label>
+                            <textarea id="batchExemplarInput" rows="10" placeholder="Exemplar 1 Title&#10;Paste first writing sample here...&#10;&#10;---&#10;&#10;Exemplar 2 Title&#10;Paste second writing sample here..." class="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"></textarea>
+                        </div>
+                    </div>
+                    <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-end gap-2">
+                        <button type="button" onclick="toggleBatchExemplarModal()" class="px-3 py-1.5 rounded text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800">Cancel</button>
+                        <button type="button" onclick="importBatchExemplars()" class="btn-primary-accent px-4 py-1.5 rounded text-xs text-white font-semibold flex items-center gap-1.5">
+                            <span>📥 Add to Library</span>
                         </button>
                     </div>
                 </div>
@@ -6583,6 +6633,7 @@ ${scopedHtml}
                 base_revision: 0,
                 local_dirty: false,
                 updated_at_ms: Date.now(),
+                therapeutic_lens: "integrative",
                 philosophy: "Prioritize clinical outcomes and absolute risk reductions over relative risk spin. Scrutinize methodological validity, surrogate endpoints, and baseline confounding.",
                 preferred_terms: "absolute risk reduction, clinical relevance, confounding, effect size",
                 prohibited_terms: "more research is needed, delve, it is crucial to note",
@@ -6596,6 +6647,7 @@ ${scopedHtml}
                 base_revision: 1,
                 local_dirty: false,
                 updated_at_ms: Date.now(),
+                therapeutic_lens: "integrative",
                 philosophy: "All-cause mortality and hard clinical outcomes trump mechanism. Prioritize biological resilience and non-dogmatic clinical reasoning over surrogate biomarker hype. Always evaluate baseline confounding, healthy user bias, and the placebo arm.",
                 preferred_terms: "structural reality, statistical quicksand, observational artifact, confounding by indication, healthy user bias, placebo validation, baseline frailty, absolute risk reduction",
                 prohibited_terms: "more research is needed, delve, it is crucial to note, promising avenue, further studies are required",
@@ -6719,9 +6771,11 @@ ${scopedHtml}
             }
 
             function renderVoiceModalUI() {
+                const lens = document.getElementById('voiceTherapeuticLens');
                 const phil = document.getElementById('voicePhilosophyInput');
                 const pref = document.getElementById('voicePreferredInput');
                 const proh = document.getElementById('voiceProhibitedInput');
+                if (lens) lens.value = voiceProfileState.therapeutic_lens || 'integrative';
                 if (phil) phil.value = voiceProfileState.philosophy || '';
                 if (pref) pref.value = voiceProfileState.preferred_terms || '';
                 if (proh) proh.value = voiceProfileState.prohibited_terms || '';
@@ -6807,6 +6861,76 @@ ${scopedHtml}
                 toggleNewExemplarForm();
                 renderVoiceModalUI();
                 updateVoiceUIElements();
+            }
+
+            function toggleBatchExemplarModal() {
+                const modal = document.getElementById('batchExemplarModal');
+                if (!modal) return;
+                modal.classList.toggle('hidden');
+                if (!modal.classList.contains('hidden')) {
+                    const input = document.getElementById('batchExemplarInput');
+                    if (input) input.focus();
+                }
+            }
+
+            function importBatchExemplars() {
+                const input = document.getElementById('batchExemplarInput');
+                if (!input || !input.value.trim()) {
+                    alert("Please paste one or more exemplars separated by '---' or 'COMMENTARY:'.");
+                    return;
+                }
+
+                const raw = input.value.trim();
+                // Split by delimiter: --- or COMMENTARY:
+                const rawBlocks = raw.split(/(?:^|\n)\s*(?:---|COMMENTARY:?)\s*(?:\n|$)/i)
+                    .map(b => b.trim())
+                    .filter(b => b.length > 30);
+
+                if (rawBlocks.length === 0) {
+                    alert("No valid writing passages found. Ensure each passage has at least 30 characters.");
+                    return;
+                }
+
+                let currentList = voiceProfileState.exemplars || [];
+                let addedCount = 0;
+
+                for (let block of rawBlocks) {
+                    if (currentList.length >= 10) {
+                        alert(`Reached exemplar library limit of 10 items. Successfully added ${addedCount} exemplar(s).`);
+                        break;
+                    }
+
+                    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+                    let title = "Writing Exemplar";
+                    let text = block;
+
+                    if (lines.length > 1 && lines[0].length < 80 && !lines[0].endsWith('.')) {
+                        title = lines[0].replace(/^#+\s*/, '');
+                        text = lines.slice(1).join('\n\n').trim();
+                    }
+
+                    const activeCount = currentList.filter(e => e.is_active).length;
+                    const newEx = {
+                        id: 'ex_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                        title: title.slice(0, 80),
+                        text: text.slice(0, 1500),
+                        is_active: activeCount < 4,
+                        updated_at_ms: Date.now()
+                    };
+
+                    currentList = [newEx, ...currentList];
+                    addedCount++;
+                }
+
+                voiceProfileState.exemplars = currentList;
+                voiceProfileState.local_dirty = true;
+                localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+
+                input.value = '';
+                toggleBatchExemplarModal();
+                renderVoiceModalUI();
+                updateVoiceUIElements();
+                alert(`Successfully imported ${addedCount} exemplar(s) into your library! Click 'Save Voice Profile' to sync.`);
             }
 
             function toggleExemplarActive(id) {
@@ -6920,10 +7044,12 @@ ${scopedHtml}
             }
 
             async function saveVoiceProfileAndNotify() {
+                const lens = document.getElementById('voiceTherapeuticLens');
                 const phil = document.getElementById('voicePhilosophyInput');
                 const pref = document.getElementById('voicePreferredInput');
                 const proh = document.getElementById('voiceProhibitedInput');
 
+                if (lens) voiceProfileState.therapeutic_lens = lens.value;
                 if (phil) voiceProfileState.philosophy = phil.value.trim();
                 if (pref) voiceProfileState.preferred_terms = pref.value.trim();
                 if (proh) voiceProfileState.prohibited_terms = proh.value.trim();
@@ -6983,6 +7109,7 @@ ${scopedHtml}
                         const payloadToSave = {
                             schema_version: 1,
                             revision: nextRev,
+                            therapeutic_lens: voiceProfileState.therapeutic_lens || 'integrative',
                             philosophy: voiceProfileState.philosophy || '',
                             preferred_terms: voiceProfileState.preferred_terms || '',
                             prohibited_terms: voiceProfileState.prohibited_terms || '',
@@ -7019,6 +7146,7 @@ ${scopedHtml}
                         const mergedPayload = {
                             schema_version: 1,
                             revision: mergedRev,
+                            therapeutic_lens: remote.therapeutic_lens || voiceProfileState.therapeutic_lens || 'integrative',
                             philosophy: remote.philosophy || voiceProfileState.philosophy || '',
                             preferred_terms: remote.preferred_terms || voiceProfileState.preferred_terms || '',
                             prohibited_terms: remote.prohibited_terms || voiceProfileState.prohibited_terms || '',

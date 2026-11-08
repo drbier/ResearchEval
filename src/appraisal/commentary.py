@@ -85,6 +85,33 @@ class CommentaryAndQCEngine:
         philosophy = str(profile.get("philosophy", "")).strip()[:500]
         preferred_terms = str(profile.get("preferred_terms", "")).strip()[:300]
         prohibited_terms = str(profile.get("prohibited_terms", "")).strip()[:300]
+        therapeutic_lens = str(profile.get("therapeutic_lens", "integrative")).strip().lower()
+
+        # Therapeutic Lens Directives:
+        if therapeutic_lens in ("integrative", "naturopathic", "functional"):
+            lens_directive = (
+                "THERAPEUTIC ORIENTATION: Integrative / Naturopathic / Functional Medicine.\n"
+                "- Evaluate findings through the lens of whole-person physiology, biological resilience, nutritional biochemistry, and root-cause lifestyle modifications.\n"
+                "- NEVER reflexively prescribe, recommend, or assert conventional guideline pharmaceutical regimens (e.g., high-intensity statins, antiplatelet therapies, antihypertensives) as mandatory or bedrock care unless the study explicitly investigated those specific drugs.\n"
+                "- Scrutinize whether pharmacological interventions merely manipulate surrogate biomarkers without altering hard clinical outcomes or all-cause mortality."
+            )
+        elif therapeutic_lens in ("conventional", "allopathic"):
+            lens_directive = (
+                "THERAPEUTIC ORIENTATION: Conventional Allopathic / Evidence-Based Clinical Practice.\n"
+                "- Evaluate findings according to established guideline-directed medical therapy (GDMT) and standard of care algorithms.\n"
+                "- Contextualize results within prevailing consensus guidelines, standard pharmacotherapy indications, and recognized clinical trial endpoints."
+            )
+        elif therapeutic_lens in ("methodological", "biostatistical"):
+            lens_directive = (
+                "THERAPEUTIC ORIENTATION: Pure Methodological & Biostatistical Focus.\n"
+                "- Maintain an entirely neutral therapeutic stance; do not offer clinical prescribing guidance or advocate for any specific medical philosophy.\n"
+                "- Focus exclusively on study design validity, statistical power, confounding variables, selection bias, surrogate versus hard endpoint dissociation, and multiplicity control."
+            )
+        else:
+            lens_directive = (
+                "THERAPEUTIC ORIENTATION: Integrative / Naturopathic / Functional Medicine.\n"
+                "- Prioritize biological resilience, nutritional biochemistry, and root-cause lifestyle factors. Do NOT mandate conventional pharmaceutical regimens unless directly evaluating them."
+            )
 
         # Extract active exemplars (max 4, max 1500 chars each)
         raw_exemplars = profile.get("exemplars", [])
@@ -126,6 +153,7 @@ class CommentaryAndQCEngine:
             "You are an expert clinician drafting an editorial commentary on a medical study to share with clinical colleagues.\n"
             "Your commentary must synthesize the clinical meaning of the findings, critically contextualize effect sizes, "
             "and emphasize real-world patient care implications.\n\n"
+            f"{lens_directive}\n\n"
             "STYLISTIC DIRECTIVES (TAILORED BY CLINICIAN VOICE PROFILE):\n"
             "1. VOICE & CADENCE: Mirror the rhetorical structure, sentence length rhythm, and opening hook style demonstrated in the active clinician exemplars below.\n"
             f"2. CLINICAL PHILOSOPHY: {philosophy if philosophy else 'Prioritize patient safety, mechanistic plausibility, and clinical relevance over statistical significance.'}\n"
