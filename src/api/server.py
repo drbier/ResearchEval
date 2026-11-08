@@ -1397,13 +1397,14 @@ def index_page():
                 top: calc(100% + 8px);
                 right: 0;
                 width: 320px;
-                background-color: #0f172a;
-                color: #f8fafc;
+                background-color: #ffffff;
+                color: #0f172a;
+                border: 1px solid #e2e8f0;
                 border-radius: 8px;
                 padding: 12px 14px;
                 font-size: 12px;
                 line-height: 1.45;
-                box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2);
+                box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05);
                 z-index: 100;
                 transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
                 transform: translateY(-4px);
@@ -1416,6 +1417,27 @@ def index_page():
                 right: 20px;
                 border-width: 6px;
                 border-style: solid;
+                border-color: transparent transparent #e2e8f0 transparent;
+            }
+            .study-badge-tooltip::after {
+                content: '';
+                position: absolute;
+                bottom: 100%;
+                right: 21px;
+                border-width: 5px;
+                border-style: solid;
+                border-color: transparent transparent #ffffff transparent;
+            }
+            html.dark .study-badge-tooltip {
+                background-color: #0f172a;
+                color: #f8fafc;
+                border: 1px solid #1e293b;
+                box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.4);
+            }
+            html.dark .study-badge-tooltip::before {
+                border-color: transparent transparent #1e293b transparent;
+            }
+            html.dark .study-badge-tooltip::after {
                 border-color: transparent transparent #0f172a transparent;
             }
             .study-badge-container:hover .study-badge-tooltip {
@@ -1501,14 +1523,14 @@ def index_page():
                         </div>
                         <!-- Tooltip Container -->
                         <div class="study-badge-tooltip">
-                            <div class="font-bold text-sky-300 mb-1 flex items-center justify-between border-b border-slate-700 pb-1">
+                            <div class="font-bold text-sky-700 dark:text-sky-300 mb-1 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-1">
                                 <span id="tooltipFwId">Study Design</span>
-                                <span id="tooltipRulesCount" class="text-amber-300 font-normal text-[11px]">0 Rules</span>
+                                <span id="tooltipRulesCount" class="text-amber-700 dark:text-amber-300 font-semibold text-[11px]">0 Rules</span>
                             </div>
-                            <p id="tooltipFwDesc" class="text-slate-300 text-[11px] mb-2 leading-relaxed">Framework description</p>
-                            <div class="text-[11px] text-slate-400">
-                                <span class="font-semibold text-slate-200">Applicable Methodological Rules:</span>
-                                <ul id="tooltipRulesList" class="mt-1 list-disc list-inside space-y-0.5 text-[10px] text-slate-300">
+                            <p id="tooltipFwDesc" class="text-slate-600 dark:text-slate-300 text-[11px] mb-2 leading-relaxed">Framework description</p>
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                                <span class="font-semibold text-slate-800 dark:text-slate-200">Applicable Methodological Rules:</span>
+                                <ul id="tooltipRulesList" class="mt-1 list-disc list-inside space-y-0.5 text-[10px] text-slate-700 dark:text-slate-300">
                                     <li>Grounded Analysis Rules</li>
                                 </ul>
                             </div>
@@ -5922,9 +5944,9 @@ ${scopedHtml}
 
                     if (tipList) {
                         const rulesList = (data.active_rules_detail && data.active_rules_detail.length > 0)
-                            ? data.active_rules_detail.map(r => `<li><span class="text-sky-200 font-medium">${escapeHtml(r.target_domain || r.rule_id)}</span></li>`).join('')
+                            ? data.active_rules_detail.map(r => `<li><span class="text-slate-800 dark:text-sky-200 font-medium">${escapeHtml(r.target_domain || r.rule_id)}</span></li>`).join('')
                             : (applicableRules.length > 0 
-                                ? applicableRules.map(r => `<li><span class="text-sky-200 font-medium">${escapeHtml(r)}</span></li>`).join('')
+                                ? applicableRules.map(r => `<li><span class="text-slate-800 dark:text-sky-200 font-medium">${escapeHtml(r)}</span></li>`).join('')
                                 : '<li>Standard critical analysis framework</li>');
                         tipList.innerHTML = rulesList;
                     }
