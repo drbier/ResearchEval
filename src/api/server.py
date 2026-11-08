@@ -2116,12 +2116,72 @@ def index_page():
                             </div>
                             <div class="flex items-center gap-2">
                                 <span id="leftPaneHint" class="text-xs text-slate-400 italic hidden lg:inline">Click any pill to inspect</span>
-                                <button onclick="copyExportedAnalysis()" id="copyAnalysisBtn" title="Copy clinical analysis to clipboard with pills converted to text (e.g. Abs, p1)" class="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition shadow-2xs cursor-pointer">
-                                    <span>📋</span> <span id="copyAnalysisBtnText">Copy</span>
-                                </button>
-                                <button onclick="downloadExportedAnalysis()" id="downloadAnalysisBtn" title="Export / download clinical analysis with pills converted to text (e.g. Abs, p1)" class="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition shadow-2xs cursor-pointer">
-                                    <span>⬇️</span> <span>Export</span>
-                                </button>
+                                
+                                <!-- Consolidated Export & Copy Dropdown -->
+                                <div class="relative inline-block text-left" id="exportDropdownWrapper">
+                                    <button type="button" onclick="toggleExportMenu(event)" id="exportMenuBtn" class="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition shadow-2xs cursor-pointer">
+                                        <span>📤</span>
+                                        <span id="exportMenuBtnText">Export / Copy</span>
+                                        <svg class="w-3.5 h-3.5 ml-0.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </button>
+                                    
+                                    <div id="exportMenuDropdown" class="hidden absolute right-0 mt-1.5 w-72 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 text-xs py-2 divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in zoom-in-95 duration-100">
+                                        <!-- WordPress Formats -->
+                                        <div class="p-1.5 space-y-0.5">
+                                            <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                                                <span>🌐</span> <span>WordPress Formats</span>
+                                            </div>
+                                            <button type="button" onclick="handleExportAction('wp_visual')" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-800 dark:text-slate-200 flex items-start gap-2.5 transition cursor-pointer">
+                                                <span class="text-base leading-none">✨</span>
+                                                <div class="flex-1">
+                                                    <div class="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                                                        <span>Copy for WordPress (Visual)</span>
+                                                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 font-bold">Recommended</span>
+                                                    </div>
+                                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">Paste directly into Gutenberg. Preserves purple headers &amp; blue coordinate badge pills.</div>
+                                                </div>
+                                            </button>
+                                            <button type="button" onclick="handleExportAction('wp_html')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-start gap-2.5 transition cursor-pointer">
+                                                <span class="text-base leading-none">🏷️</span>
+                                                <div class="flex-1">
+                                                    <div class="font-bold text-slate-900 dark:text-slate-100">Copy WordPress HTML Code</div>
+                                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Formatted HTML for WordPress Custom HTML block.</div>
+                                                </div>
+                                            </button>
+                                            <button type="button" onclick="handleExportAction('wp_download')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2.5 transition cursor-pointer">
+                                                <span class="text-base leading-none">⬇️</span>
+                                                <span class="font-medium">Download WordPress HTML (.html)</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Markdown & Plain Text -->
+                                        <div class="p-1.5 space-y-0.5">
+                                            <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                                <span>📋</span> <span>Markdown &amp; Text</span>
+                                            </div>
+                                            <button type="button" onclick="handleExportAction('copy_markdown')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center gap-2.5 transition cursor-pointer">
+                                                <span class="text-base leading-none">📋</span>
+                                                <span class="font-semibold text-slate-900 dark:text-slate-100">Copy Clean Markdown</span>
+                                            </button>
+                                            <button type="button" onclick="handleExportAction('copy_text')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2.5 transition cursor-pointer">
+                                                <span class="text-base leading-none">📄</span>
+                                                <span class="font-medium">Copy Plain Text</span>
+                                            </button>
+                                            <button type="button" onclick="handleExportAction('download_markdown')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2.5 transition cursor-pointer">
+                                                <span class="text-base leading-none">⬇️</span>
+                                                <span class="font-medium">Download Markdown (.md)</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Optional Commentary Inclusion -->
+                                        <div class="p-2.5 bg-slate-50 dark:bg-slate-950/60 rounded-b-xl border-t border-slate-100 dark:border-slate-800">
+                                            <label class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                                                <input type="checkbox" id="exportIncludeCommentary" class="rounded text-sky-600 focus:ring-sky-500 cursor-pointer"/>
+                                                <span class="font-medium">Include Clinician Commentary</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -5262,37 +5322,260 @@ ${escapeHtml(thought)}
                 return text.replace(/[ \t]{2,}/g, ' ').trim();
             }
 
-            function copyExportedAnalysis() {
-                const text = getExportableAnalysisText();
-                if (!text) {
-                    alert('No clinical analysis available to copy.');
-                    return;
-                }
-                navigator.clipboard.writeText(text).then(() => {
-                    const btnText = document.getElementById('copyAnalysisBtnText');
-                    if (btnText) {
-                        const original = btnText.innerText;
-                        btnText.innerText = 'Copied!';
-                        setTimeout(() => { btnText.innerText = original; }, 2000);
-                    }
-                }).catch(err => {
-                    alert('Could not copy to clipboard: ' + err);
-                });
+            // -------------------------------------------------------------
+            // Consolidated Export & WordPress Conversion Engine
+            // -------------------------------------------------------------
+            function toggleExportMenu(e) {
+                if (e) e.stopPropagation();
+                const dd = document.getElementById('exportMenuDropdown');
+                if (dd) dd.classList.toggle('hidden');
             }
 
-            function downloadExportedAnalysis() {
-                const text = getExportableAnalysisText();
+            function closeExportMenu() {
+                const dd = document.getElementById('exportMenuDropdown');
+                if (dd) dd.classList.add('hidden');
+            }
+
+            document.addEventListener('click', function(e) {
+                const wrapper = document.getElementById('exportDropdownWrapper');
+                if (wrapper && !wrapper.contains(e.target)) {
+                    closeExportMenu();
+                }
+            });
+
+            function getRawAppraisalMarkdown() {
+                let text = (window.ResearchAppState && window.ResearchAppState.lastAppraisalMarkdown) 
+                    ? window.ResearchAppState.lastAppraisalMarkdown 
+                    : '';
                 if (!text) {
-                    alert('No clinical analysis available to export.');
+                    const out = document.getElementById('outputMarkdown');
+                    if (out) text = out.innerText.trim();
+                }
+                return text || '';
+            }
+
+            function getClinicianCommentaryText() {
+                const ta = document.getElementById('commentaryTextarea');
+                return ta ? ta.value.trim() : '';
+            }
+
+            function formatAnalysisForWordPress(asFullHtmlDocument = false) {
+                let markdown = getRawAppraisalMarkdown();
+                if (!markdown) return '';
+
+                const includeCommentary = document.getElementById('exportIncludeCommentary')?.checked;
+                const commentaryText = includeCommentary ? getClinicianCommentaryText() : '';
+
+                // 1. Clean LaTeX math macros and strip {R_...} tags
+                markdown = markdown.replace(/\s*\{R_[A-Z0-9_]+\}/g, '').replace(/\s*\[R_[A-Z0-9_]+\]/g, '');
+                markdown = markdown.replace(/(\[[^\]]*?\b)Paragraphs?\b/gi, '$1Para');
+
+                // 2. Convert coordinate anchor citations into static, beautiful inline badge pills
+                const pillStyle = 'display:inline-block; padding:1px 6px; margin:0 2px; font-size:11px; font-weight:600; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif; color:#0369a1; background-color:#f0f9ff; border:1px solid #7dd3fc; border-radius:4px; line-height:1.3; vertical-align:baseline; white-space:nowrap; text-decoration:none;';
+                
+                const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Patients?\s+and\s+Methods?|Materials?\s+and\s+Methods?|Results?|Res|Findings?|Discussion|Disc|Conclusions?|Concl|Appendix|Supp(?:lementary)?|Para(?:graph)?|Table(?:Note)?|Fig(?:ure)?(?:Legend)?|Box|p\d+)\b[^\]]*?)\]/gi;
+                
+                markdown = markdown.replace(bracketCoordRegex, function(fullMatch, inner) {
+                    const cleanText = formatAnchorDisplay(inner.trim());
+                    return `###FACT_PILL_START###${escapeHtml(cleanText)}###FACT_PILL_END###`;
+                });
+
+                // 3. Line by line parsing to semantic HTML
+                const lines = markdown.split('\n');
+                let htmlOut = [];
+                let inList = false;
+
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i].trim();
+                    if (!line) {
+                        if (inList) {
+                            htmlOut.push('</ul>');
+                            inList = false;
+                        }
+                        continue;
+                    }
+
+                    // Headers
+                    if (line.startsWith('# ')) {
+                        if (inList) { htmlOut.push('</ul>'); inList = false; }
+                        const title = line.replace(/^#\s+/, '').replace(/\*\*/g, '');
+                        htmlOut.push(`<h2 style="font-size:22px; font-weight:800; color:#0f172a; margin-top:0; margin-bottom:14px; line-height:1.3; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(title)}</h2>`);
+                        continue;
+                    }
+                    if (line.startsWith('## ')) {
+                        if (inList) { htmlOut.push('</ul>'); inList = false; }
+                        const h2 = line.replace(/^##\s+/, '').replace(/\*\*/g, '');
+                        htmlOut.push(`<h3 style="font-size:17px; font-weight:700; color:#4338ca; margin-top:24px; margin-bottom:10px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h2)}</h3>`);
+                        continue;
+                    }
+                    if (line.startsWith('### ')) {
+                        if (inList) { htmlOut.push('</ul>'); inList = false; }
+                        const h3 = line.replace(/^###\s+/, '').replace(/\*\*/g, '');
+                        htmlOut.push(`<h4 style="font-size:14px; font-weight:700; color:#1e293b; margin-top:16px; margin-bottom:8px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h3)}</h4>`);
+                        continue;
+                    }
+
+                    // Unordered list item
+                    if (/^[-*•]\s+/.test(line)) {
+                        if (!inList) {
+                            htmlOut.push('<ul style="margin:8px 0 16px 20px; padding:0; font-size:14px; line-height:1.65; color:#334155; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">');
+                            inList = true;
+                        }
+                        let itemContent = line.replace(/^[-*•]\s+/, '');
+                        itemContent = formatInlineFormatting(itemContent);
+                        htmlOut.push(`<li style="margin-bottom:6px;">${itemContent}</li>`);
+                        continue;
+                    }
+
+                    // Standard paragraph
+                    if (inList) {
+                        htmlOut.push('</ul>');
+                        inList = false;
+                    }
+                    let pContent = formatInlineFormatting(line);
+                    htmlOut.push(`<p style="font-size:14px; line-height:1.65; color:#334155; margin-top:0; margin-bottom:14px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${pContent}</p>`);
+                }
+                if (inList) {
+                    htmlOut.push('</ul>');
+                }
+
+                function formatInlineFormatting(str) {
+                    // Replace bold **text**
+                    let s = str.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#0f172a; font-weight:700;">$1</strong>');
+                    // Replace italic *text*
+                    s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+                    // Replace pills placeholder
+                    s = s.replace(/###FACT_PILL_START###(.*?)###FACT_PILL_END###/g, function(match, inner) {
+                        return `<span style="${pillStyle}">${inner}</span>`;
+                    });
+                    return s;
+                }
+
+                let bodyHtml = htmlOut.join('\n');
+
+                // Optional Clinician Commentary Box prepended
+                if (commentaryText) {
+                    const commentaryParagraphs = commentaryText.split('\n\n').map(p => {
+                        let formattedP = formatInlineFormatting(p.trim());
+                        return `<p style="margin-top:0; margin-bottom:10px; font-size:14px; line-height:1.65; color:#1e293b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${formattedP}</p>`;
+                    }).join('');
+
+                    const commentaryBox = `
+<div style="background-color:#f8fafc; border-left:4px solid #4338ca; border-top:1px solid #e2e8f0; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:16px 20px; margin-bottom:24px; border-radius:0 8px 8px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:#4338ca; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+        <span>✍️</span> <span>Clinician Editorial Commentary</span>
+    </div>
+    <div style="font-style:italic;">
+        ${commentaryParagraphs}
+    </div>
+</div>
+`;
+                    bodyHtml = commentaryBox + bodyHtml;
+                }
+
+                // Wrap in scoped container
+                const scopedHtml = `<!-- F.A.C.T. Clinical Appraisal Export -->\n<div class="fact-clinical-review" style="max-width:820px; margin:0 auto; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased;">\n${bodyHtml}\n</div>`;
+
+                if (asFullHtmlDocument) {
+                    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinical Research Appraisal</title>
+<style>
+body { background: #ffffff; color: #334155; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; margin: 0; }
+</style>
+</head>
+<body>
+${scopedHtml}
+</body>
+</html>`;
+                }
+
+                return scopedHtml;
+            }
+
+            async function handleExportAction(action) {
+                closeExportMenu();
+                const rawMarkdown = getRawAppraisalMarkdown();
+                if (!rawMarkdown) {
+                    alert('No clinical analysis available to export. Please run an appraisal on a paper first.');
                     return;
                 }
+
                 let baseName = (window.ResearchAppState && window.ResearchAppState.lastAppraisalFilename)
                     ? window.ResearchAppState.lastAppraisalFilename
                     : 'clinical_analysis';
                 baseName = baseName.replace(/\.pdf$/i, '').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_');
-                const filename = `${baseName}_analysis.md`;
-                
-                const blob = new Blob([text], { type: 'text/markdown;charset=utf-8;' });
+
+                const menuBtnText = document.getElementById('exportMenuBtnText');
+                function showToast(msg) {
+                    if (menuBtnText) {
+                        const orig = menuBtnText.innerText;
+                        menuBtnText.innerText = msg;
+                        setTimeout(() => { menuBtnText.innerText = orig; }, 2200);
+                    }
+                }
+
+                if (action === 'wp_visual') {
+                    // Copy rich text/html directly to clipboard for direct Ctrl+V into Gutenberg
+                    try {
+                        const htmlContent = formatAnalysisForWordPress(false);
+                        const plainText = getExportableAnalysisText();
+
+                        if (navigator.clipboard && window.ClipboardItem) {
+                            const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+                            const blobText = new Blob([plainText], { type: 'text/plain' });
+                            const item = new ClipboardItem({
+                                'text/html': blobHtml,
+                                'text/plain': blobText
+                            });
+                            await navigator.clipboard.write([item]);
+                            showToast('✓ Copied for WordPress!');
+                        } else {
+                            // Fallback
+                            await navigator.clipboard.writeText(htmlContent);
+                            showToast('✓ HTML Copied!');
+                        }
+                    } catch (err) {
+                        console.warn("ClipboardItem write error, falling back:", err);
+                        const htmlContent = formatAnalysisForWordPress(false);
+                        await navigator.clipboard.writeText(htmlContent);
+                        showToast('✓ HTML Copied!');
+                    }
+                } else if (action === 'wp_html') {
+                    // Copy pure HTML string for WordPress Custom HTML block
+                    const htmlCode = formatAnalysisForWordPress(false);
+                    await navigator.clipboard.writeText(htmlCode);
+                    showToast('✓ HTML Code Copied!');
+                } else if (action === 'wp_download') {
+                    // Download WordPress standalone HTML file
+                    const fullHtml = formatAnalysisForWordPress(true);
+                    const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8;' });
+                    downloadBlob(blob, `${baseName}_wordpress.html`);
+                    showToast('✓ HTML Downloaded!');
+                } else if (action === 'copy_markdown') {
+                    // Standard clean markdown
+                    const mdText = getExportableAnalysisText();
+                    await navigator.clipboard.writeText(mdText);
+                    showToast('✓ Markdown Copied!');
+                } else if (action === 'copy_text') {
+                    // Plain text stripped of markdown
+                    let plain = getExportableAnalysisText();
+                    plain = plain.replace(/^#+\s+/gm, '').replace(/\*\*([^*]+)\*\*/g, '$1');
+                    await navigator.clipboard.writeText(plain);
+                    showToast('✓ Plain Text Copied!');
+                } else if (action === 'download_markdown') {
+                    // Download .md file
+                    const mdText = getExportableAnalysisText();
+                    const blob = new Blob([mdText], { type: 'text/markdown;charset=utf-8;' });
+                    downloadBlob(blob, `${baseName}_analysis.md`);
+                    showToast('✓ .md Downloaded!');
+                }
+            }
+
+            function downloadBlob(blob, filename) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -5301,6 +5584,14 @@ ${escapeHtml(thought)}
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+            }
+
+            function copyExportedAnalysis() {
+                handleExportAction('copy_markdown');
+            }
+
+            function downloadExportedAnalysis() {
+                handleExportAction('download_markdown');
             }
 
             function renderAnchoredMarkdown(rawText) {
