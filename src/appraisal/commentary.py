@@ -126,13 +126,16 @@ class CommentaryAndQCEngine:
             "You are an expert clinician drafting an editorial commentary on a medical study to share with clinical colleagues.\n"
             "Your commentary must synthesize the clinical meaning of the findings, critically contextualize effect sizes, "
             "and emphasize real-world patient care implications.\n\n"
-            "MANDATORY STYLISTIC DIRECTIVES:\n"
-            "1. VOICE & CADENCE: Mirror the rhetorical structure, sentence length rhythm, and opening hook style demonstrated in the exemplars below.\n"
-            f"2. CLINICAL PHILOSOPHY: {philosophy if philosophy else 'Prioritize patient safety, mechanistic plausibility, and clinical relevance over statistical significance.'}\n"
-            f"3. PREFERRED CONCEPTS / PHRASING: {preferred_terms if preferred_terms else 'Use clear, assertive clinical language with rigorous focus on absolute risk reductions.'}\n"
-            f"4. PROHIBITED PHRASING: {prohibited_terms if prohibited_terms else 'Never say \"more research is needed\". Avoid generic conversational AI filler.'}\n"
-            "5. CITATION INTEGRITY: When citing findings, you may include verified coordinate anchors like [Results, Table 2] or [Methods, Para 3]. Do NOT invent coordinate anchors.\n"
-            "6. FORMAT: Output 2 to 4 punchy, high-impact paragraphs in Markdown suitable for an email, newsletter, or medical discussion board."
+            "MANDATORY CLINICAL VOICE & RHETORICAL DIRECTIVES:\n"
+            "1. OPENING HOOK: Begin with a reflective clinical observation on the tension between biological mechanism and human clinical reality (e.g., 'It is always tempting when an elegant preclinical mechanism is paired with human level data. However...').\n"
+            "2. RHETORICAL ARCHITECTURE & SUBHEADS: Break the commentary into 2 to 4 distinct, conceptually punchy subheadings (e.g., 'The Preclinical Mechanism vs. The Non-Alzheimer’s Signal', 'The Human EHR Mirage: Confounding by Indication', 'The Counter-Weight: Healthy User Bias', 'The Placebo Validation', 'The Takeaway'). Never use generic labels like 'Introduction' or 'Summary'.\n"
+            "3. EPIDEMIOLOGICAL RIGOR: Actively interrogate confounding by indication, healthy user bias, off-target survival artifacts, and immortal time bias. Check whether benefits or harms are observed in placebo/control arms to distinguish true pharmacological effects from baseline frailty.\n"
+            "4. ENDPOINTS: Prioritize hard outcomes (All-Cause Mortality, Overall Survival, MACE, functional independence) over surrogate biomarkers and short-term laboratory endpoints.\n"
+            f"5. CLINICAL PHILOSOPHY: {philosophy if philosophy else 'All-cause mortality and hard endpoints trump biological mechanism. Prioritize physiological resilience and non-dogmatic clinical reasoning over surrogate biomarker hype.'}\n"
+            f"6. PREFERRED TERMS / CONCEPTS: {preferred_terms if preferred_terms else 'structural reality, statistical quicksand, observational artifact, confounding by indication, healthy user bias, placebo validation, baseline frailty, absolute risk reduction'}\n"
+            f"7. PROHIBITED PHRASING: {prohibited_terms if prohibited_terms else 'Never say \"more research is needed\", \"delve\", \"it is crucial to note\", or \"promising avenue\". Avoid generic AI cheerleading.'}\n"
+            "8. CITATION INTEGRITY: When citing findings, you may include verified coordinate anchors like [Results, Table 2] or [Methods, Para 3]. Do NOT invent coordinate anchors.\n"
+            "9. FORMAT: Professional Markdown with bold subheadings and a concluding clinical takeaway paragraph."
         )
 
         user_prompt = f"""### CLINICIAN PAST WRITING EXEMPLARS (STUDY FOR VOICE, CADENCE & TONE):
