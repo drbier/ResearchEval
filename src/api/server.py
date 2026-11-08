@@ -2198,11 +2198,11 @@ def index_page():
                                             </button>
                                         </div>
 
-                                        <!-- Optional Commentary Inclusion -->
+                                        <!-- Dynamic Contextual Inclusion Toggle (Analysis vs Commentary) -->
                                         <div class="p-2.5 bg-slate-50 dark:bg-slate-950/60 rounded-b-xl border-t border-slate-100 dark:border-slate-800">
                                             <label class="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
                                                 <input type="checkbox" id="exportIncludeCommentary" class="rounded text-sky-600 focus:ring-sky-500 cursor-pointer"/>
-                                                <span class="font-medium">Include Clinician Commentary</span>
+                                                <span id="exportToggleLabel" class="font-medium">Include Clinician Commentary</span>
                                             </label>
                                         </div>
                                     </div>
@@ -4691,7 +4691,22 @@ def index_page():
                     .replace(/'/g, '&#039;');
             }
 
+            let currentActiveLeftTab = 'appraisal';
+
+            function updateExportToggleUI() {
+                const label = document.getElementById('exportToggleLabel');
+                const checkbox = document.getElementById('exportIncludeCommentary');
+                if (!label || !checkbox) return;
+                if (currentActiveLeftTab === 'commentary') {
+                    label.innerText = "Include Clinical Analysis";
+                } else {
+                    label.innerText = "Include Clinician Commentary";
+                }
+            }
+
             function switchLeftTab(tab) {
+                currentActiveLeftTab = tab;
+                updateExportToggleUI();
                 const appraisalView = document.getElementById('outputMarkdown');
                 const askView = document.getElementById('askContainer');
                 const thinkingView = document.getElementById('thinkingContainer');
@@ -5297,12 +5312,43 @@ ${escapeHtml(thought)}
             }
 
             function getExportableAnalysisText() {
+                const inCommentaryTab = (currentActiveLeftTab === 'commentary');
+                const toggleChecked = document.getElementById('exportIncludeCommentary')?.checked;
+
+                if (inCommentaryTab) {
+                    // Primary content: Clinician Commentary
+                    const commentary = getClinicianCommentaryText();
+                    if (!commentary && !toggleChecked) return '';
+
+                    let out = '';
+                    if (commentary) {
+                        out += `### Clinician Editorial Commentary\n\n${commentary}\n\n`;
+                    }
+                    if (toggleChecked) {
+                        // Include clinical analysis
+                        let rawAnalysis = getRawAppraisalMarkdown();
+                        if (rawAnalysis) {
+                            out += `---\n\n${rawAnalysis}`;
+                        }
+                    }
+                    return out.trim();
+                }
+
+                // In standard tabs (Appraisal / Ask / Thinking): Primary content is Clinical Analysis
                 let text = (window.ResearchAppState && window.ResearchAppState.lastAppraisalMarkdown) 
                     ? window.ResearchAppState.lastAppraisalMarkdown 
                     : '';
                 if (!text) {
                     const out = document.getElementById('outputMarkdown');
                     if (out) text = out.innerText.trim();
+                }
+
+                if (toggleChecked) {
+                    // Include clinician commentary prepended
+                    const commentary = getClinicianCommentaryText();
+                    if (commentary) {
+                        text = `### Clinician Editorial Commentary\n\n${commentary}\n\n---\n\n${text}`;
+                    }
                 }
                 if (!text) return '';
 
@@ -5385,22 +5431,14 @@ ${escapeHtml(thought)}
             }
 
             function formatAnalysisForWordPress(asFullHtmlDocument = false) {
-                let markdown = getRawAppraisalMarkdown();
-                if (!markdown) return '';
+                const inCommentaryTab = (currentActiveLeftTab === 'commentary');
+                const toggleChecked = document.getElementById('exportIncludeCommentary')?.checked;
 
-                const includeCommentary = document.getElementById('exportIncludeCommentary')?.checked;
-                const commentaryText = includeCommentary ? getClinicianCommentaryText() : '';
-
-                // 1. Clean LaTeX math macros and strip {R_...} tags
-                markdown = markdown.replace(/\s*\{R_[A-Z0-9_]+\}/g, '').replace(/\s*\[R_[A-Z0-9_]+\]/g, '');
-                markdown = markdown.replace(/(\[[^\]]*?\b)Paragraphs?\b/gi, '$1Para');
-
-                // Determine export theme styling based on user's active highlight/theme preference
+                // Determine active theme colors
                 const activeColor = (typeof currentHighlightColor !== 'undefined' && currentHighlightColor)
                     ? currentHighlightColor
                     : (localStorage.getItem('fact_highlight_color') || 'blue');
 
-                // Harmonious WordPress export palettes for each theme option
                 const exportThemeMap = {
                     emerald: { header: '#047857', pillText: '#065f46', pillBg: '#ecfdf5', pillBorder: '#6ee7b7' },
                     amber:   { header: '#b45309', pillText: '#92400e', pillBg: '#fffbeb', pillBorder: '#fcd34d' },
@@ -5412,98 +5450,87 @@ ${escapeHtml(thought)}
                     blue:    { header: '#0369a1', pillText: '#0369a1', pillBg: '#f0f9ff', pillBorder: '#7dd3fc' }
                 };
                 const themeTheme = exportThemeMap[activeColor] || exportThemeMap.blue;
-
-                // 2. Convert coordinate anchor citations into static, beautiful inline badge pills
                 const pillStyle = `display:inline-block; padding:1px 6px; margin:0 2px; font-size:11px; font-weight:600; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; color:${themeTheme.pillText}; background-color:${themeTheme.pillBg}; border:1px solid ${themeTheme.pillBorder}; border-radius:4px; line-height:1.3; vertical-align:baseline; white-space:nowrap; text-decoration:none;`;
-                
-                const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Patients?\s+and\s+Methods?|Materials?\s+and\s+Methods?|Results?|Res|Findings?|Discussion|Disc|Conclusions?|Concl|Appendix|Supp(?:lementary)?|Para(?:graph)?|Table(?:Note)?|Fig(?:ure)?(?:Legend)?|Box|p\d+)\b[^\]]*?)\]/gi;
-                
-                markdown = markdown.replace(bracketCoordRegex, function(fullMatch, inner) {
-                    const cleanText = formatAnchorDisplay(inner.trim());
-                    return `###FACT_PILL_START###${escapeHtml(cleanText)}###FACT_PILL_END###`;
-                });
-
-                // 3. Line by line parsing to semantic HTML
-                const lines = markdown.split('\n');
-                let htmlOut = [];
-                let inList = false;
-
-                for (let i = 0; i < lines.length; i++) {
-                    let line = lines[i].trim();
-                    if (!line) {
-                        if (inList) {
-                            htmlOut.push('</ul>');
-                            inList = false;
-                        }
-                        continue;
-                    }
-
-                    // Headers
-                    if (line.startsWith('# ')) {
-                        if (inList) { htmlOut.push('</ul>'); inList = false; }
-                        const title = line.replace(/^#\s+/, '').replace(/\*\*/g, '');
-                        htmlOut.push(`<h2 style="font-size:22px; font-weight:800; color:#0f172a; margin-top:0; margin-bottom:14px; line-height:1.3; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(title)}</h2>`);
-                        continue;
-                    }
-                    if (line.startsWith('## ')) {
-                        if (inList) { htmlOut.push('</ul>'); inList = false; }
-                        const h2 = line.replace(/^##\s+/, '').replace(/\*\*/g, '');
-                        htmlOut.push(`<h3 style="font-size:17px; font-weight:700; color:${themeTheme.header}; margin-top:24px; margin-bottom:10px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h2)}</h3>`);
-                        continue;
-                    }
-                    if (line.startsWith('### ')) {
-                        if (inList) { htmlOut.push('</ul>'); inList = false; }
-                        const h3 = line.replace(/^###\s+/, '').replace(/\*\*/g, '');
-                        htmlOut.push(`<h4 style="font-size:14px; font-weight:700; color:#1e293b; margin-top:16px; margin-bottom:8px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h3)}</h4>`);
-                        continue;
-                    }
-
-                    // Unordered list item
-                    if (/^[-*•]\s+/.test(line)) {
-                        if (!inList) {
-                            htmlOut.push('<ul style="margin:8px 0 16px 20px; padding:0; font-size:14px; line-height:1.65; color:#334155; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">');
-                            inList = true;
-                        }
-                        let itemContent = line.replace(/^[-*•]\s+/, '');
-                        itemContent = formatInlineFormatting(itemContent);
-                        htmlOut.push(`<li style="margin-bottom:6px;">${itemContent}</li>`);
-                        continue;
-                    }
-
-                    // Standard paragraph
-                    if (inList) {
-                        htmlOut.push('</ul>');
-                        inList = false;
-                    }
-                    let pContent = formatInlineFormatting(line);
-                    htmlOut.push(`<p style="font-size:14px; line-height:1.65; color:#334155; margin-top:0; margin-bottom:14px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${pContent}</p>`);
-                }
-                if (inList) {
-                    htmlOut.push('</ul>');
-                }
 
                 function formatInlineFormatting(str) {
-                    // Replace bold **text**
                     let s = str.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#0f172a; font-weight:700;">$1</strong>');
-                    // Replace italic *text*
                     s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-                    // Replace pills placeholder
                     s = s.replace(/###FACT_PILL_START###(.*?)###FACT_PILL_END###/g, function(match, inner) {
                         return `<span class="fact-pill" style="${pillStyle}">${inner}</span>`;
                     });
                     return s;
                 }
 
-                let bodyHtml = htmlOut.join('\n');
+                function markdownToSemanticHtml(md) {
+                    if (!md) return '';
+                    let cleaned = md.replace(/\s*\{R_[A-Z0-9_]+\}/g, '').replace(/\s*\[R_[A-Z0-9_]+\]/g, '');
+                    cleaned = cleaned.replace(/(\[[^\]]*?\b)Paragraphs?\b/gi, '$1Para');
 
-                // Optional Clinician Commentary Box prepended
-                if (commentaryText) {
-                    const commentaryParagraphs = commentaryText.split('\n\n').map(p => {
+                    const bracketCoordRegex = /\[([^\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Patients?\s+and\s+Methods?|Materials?\s+and\s+Methods?|Results?|Res|Findings?|Discussion|Disc|Conclusions?|Concl|Appendix|Supp(?:lementary)?|Para(?:graph)?|Table(?:Note)?|Fig(?:ure)?(?:Legend)?|Box|p\d+)\b[^\]]*?)\]/gi;
+                    cleaned = cleaned.replace(bracketCoordRegex, function(fullMatch, inner) {
+                        const cleanText = formatAnchorDisplay(inner.trim());
+                        return `###FACT_PILL_START###${escapeHtml(cleanText)}###FACT_PILL_END###`;
+                    });
+
+                    const lines = cleaned.split('\n');
+                    let htmlOut = [];
+                    let inList = false;
+
+                    for (let i = 0; i < lines.length; i++) {
+                        let line = lines[i].trim();
+                        if (!line) {
+                            if (inList) { htmlOut.push('</ul>'); inList = false; }
+                            continue;
+                        }
+                        if (line.startsWith('# ')) {
+                            if (inList) { htmlOut.push('</ul>'); inList = false; }
+                            const title = line.replace(/^#\s+/, '').replace(/\*\*/g, '');
+                            htmlOut.push(`<h2 style="font-size:22px; font-weight:800; color:#0f172a; margin-top:0; margin-bottom:14px; line-height:1.3; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(title)}</h2>`);
+                            continue;
+                        }
+                        if (line.startsWith('## ')) {
+                            if (inList) { htmlOut.push('</ul>'); inList = false; }
+                            const h2 = line.replace(/^##\s+/, '').replace(/\*\*/g, '');
+                            htmlOut.push(`<h3 style="font-size:17px; font-weight:700; color:${themeTheme.header}; margin-top:24px; margin-bottom:10px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h2)}</h3>`);
+                            continue;
+                        }
+                        if (line.startsWith('### ')) {
+                            if (inList) { htmlOut.push('</ul>'); inList = false; }
+                            const h3 = line.replace(/^###\s+/, '').replace(/\*\*/g, '');
+                            htmlOut.push(`<h4 style="font-size:14px; font-weight:700; color:#1e293b; margin-top:16px; margin-bottom:8px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h3)}</h4>`);
+                            continue;
+                        }
+                        if (/^[-*•]\s+/.test(line)) {
+                            if (!inList) {
+                                htmlOut.push('<ul style="margin:8px 0 16px 20px; padding:0; font-size:14px; line-height:1.65; color:#334155; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">');
+                                inList = true;
+                            }
+                            let itemContent = line.replace(/^[-*•]\s+/, '');
+                            itemContent = formatInlineFormatting(itemContent);
+                            htmlOut.push(`<li style="margin-bottom:6px;">${itemContent}</li>`);
+                            continue;
+                        }
+                        if (inList) {
+                            htmlOut.push('</ul>');
+                            inList = false;
+                        }
+                        let pContent = formatInlineFormatting(line);
+                        htmlOut.push(`<p style="font-size:14px; line-height:1.65; color:#334155; margin-top:0; margin-bottom:14px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${pContent}</p>`);
+                    }
+                    if (inList) {
+                        htmlOut.push('</ul>');
+                    }
+                    return htmlOut.join('\n');
+                }
+
+                function renderCommentaryBoxHtml(text) {
+                    if (!text) return '';
+                    const commentaryParagraphs = text.split('\n\n').map(p => {
                         let formattedP = formatInlineFormatting(p.trim());
                         return `<p style="margin-top:0; margin-bottom:10px; font-size:14px; line-height:1.65; color:#1e293b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${formattedP}</p>`;
                     }).join('');
 
-                    const commentaryBox = `
+                    return `
 <div class="fact-commentary-box" style="background-color:#f8fafc; border-left:4px solid ${themeTheme.header}; border-top:1px solid #e2e8f0; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:16px 20px; margin-bottom:24px; border-radius:0 8px 8px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
     <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:${themeTheme.header}; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
         <span>✍️</span> <span>Clinician Editorial Commentary</span>
@@ -5513,8 +5540,36 @@ ${escapeHtml(thought)}
     </div>
 </div>
 `;
-                    bodyHtml = commentaryBox + bodyHtml;
                 }
+
+                let bodyHtml = '';
+
+                if (inCommentaryTab) {
+                    // Commentary Tab: Primary is Commentary, optional is Clinical Analysis
+                    const commentaryText = getClinicianCommentaryText();
+                    const commentaryBox = renderCommentaryBoxHtml(commentaryText);
+                    bodyHtml += commentaryBox;
+
+                    if (toggleChecked) {
+                        const rawAnalysis = getRawAppraisalMarkdown();
+                        if (rawAnalysis) {
+                            bodyHtml += '\n' + markdownToSemanticHtml(rawAnalysis);
+                        }
+                    }
+                } else {
+                    // Standard Appraisal Tab: Primary is Clinical Analysis, optional is Commentary
+                    const rawAnalysis = getRawAppraisalMarkdown();
+                    const analysisHtml = markdownToSemanticHtml(rawAnalysis);
+
+                    let commentaryBox = '';
+                    if (toggleChecked) {
+                        const commentaryText = getClinicianCommentaryText();
+                        commentaryBox = renderCommentaryBoxHtml(commentaryText);
+                    }
+                    bodyHtml = commentaryBox ? (commentaryBox + '\n' + analysisHtml) : analysisHtml;
+                }
+
+                if (!bodyHtml.trim()) return '';
 
                 // Scoped CSS styles for complete theme immunity in WordPress
                 const embeddedStyle = `
@@ -5556,15 +5611,25 @@ ${scopedHtml}
 
             async function handleExportAction(action) {
                 closeExportMenu();
+                const inCommentaryTab = (currentActiveLeftTab === 'commentary');
                 const rawMarkdown = getRawAppraisalMarkdown();
-                if (!rawMarkdown) {
-                    alert('No clinical analysis available to export. Please run an appraisal on a paper first.');
-                    return;
+                const commentaryText = getClinicianCommentaryText();
+
+                if (inCommentaryTab) {
+                    if (!commentaryText && !rawMarkdown) {
+                        alert('No clinician commentary or analysis available to export. Please generate commentary or an appraisal first.');
+                        return;
+                    }
+                } else {
+                    if (!rawMarkdown) {
+                        alert('No clinical analysis available to export. Please run an appraisal on a paper first.');
+                        return;
+                    }
                 }
 
                 let baseName = (window.ResearchAppState && window.ResearchAppState.lastAppraisalFilename)
                     ? window.ResearchAppState.lastAppraisalFilename
-                    : 'clinical_analysis';
+                    : (inCommentaryTab ? 'clinician_commentary' : 'clinical_analysis');
                 baseName = baseName.replace(/\.pdf$/i, '').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_');
 
                 const menuBtnText = document.getElementById('exportMenuBtnText');
