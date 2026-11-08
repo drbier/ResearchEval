@@ -5315,6 +5315,16 @@ ${escapeHtml(thought)}
                 const inCommentaryTab = (currentActiveLeftTab === 'commentary');
                 const toggleChecked = document.getElementById('exportIncludeCommentary')?.checked;
 
+                function linkifyMarkdownDoi(str) {
+                    if (!str) return '';
+                    // Convert bare DOI or bare PubMed URL into markdown link [text](url) if not already markdown linked
+                    return str.replace(/(?<=\s|^)(https?:\/\/(?:dx\.)?doi\.org\/[^\s<>"'\)]+|https?:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/\d+\/?|10\.\d{4,9}\/[^\s<>"'\)]+)(?=[.,;)]?(\s|$))/gi, function(match, target) {
+                        const cleanTarget = target.trim();
+                        const url = cleanTarget.startsWith('http') ? cleanTarget : ('https://doi.org/' + cleanTarget);
+                        return `[${cleanTarget}](${url})`;
+                    });
+                }
+
                 if (inCommentaryTab) {
                     // Primary content: Clinician Commentary
                     const commentary = getClinicianCommentaryText();
@@ -5331,7 +5341,7 @@ ${escapeHtml(thought)}
                             out += `---\n\n${rawAnalysis}`;
                         }
                     }
-                    return out.trim();
+                    return linkifyMarkdownDoi(out.trim());
                 }
 
                 // In standard tabs (Appraisal / Ask / Thinking): Primary content is Clinical Analysis
@@ -5351,6 +5361,8 @@ ${escapeHtml(thought)}
                     }
                 }
                 if (!text) return '';
+
+                text = linkifyMarkdownDoi(text);
 
                 // Group consecutive coordinate anchor brackets so they export neatly demarcated as [Abs, p38; Abs, p39; Abs, p41]
                 const consecutiveCoordGroupRegex = /(\[\s*[^[\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Results?|Res|Disc(?:ussion)?|Concl(?:usions?)?|Conc|Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box|p\d+)\b[^\]]*?\](?:\s*\[\s*[^[\]]*?\b(?:Doc_Header|Header|Abstract|Abs|Intro(?:duction)?|Methods?|Meth|Results?|Res|Disc(?:ussion)?|Concl(?:usions?)?|Conc|Para(?:graph)?|Table(?:Note)?|Fig(?:Legend)?|Box|p\d+)\b[^\]]*?\])*)/gi;
@@ -5451,10 +5463,23 @@ ${escapeHtml(thought)}
                 };
                 const themeTheme = exportThemeMap[activeColor] || exportThemeMap.blue;
                 const pillStyle = `display:inline-block; padding:1px 6px; margin:0 2px; font-size:11px; font-weight:600; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; color:${themeTheme.pillText}; background-color:${themeTheme.pillBg}; border:1px solid ${themeTheme.pillBorder}; border-radius:4px; line-height:1.3; vertical-align:baseline; white-space:nowrap; text-decoration:none;`;
+                const linkStyle = `color:${themeTheme.header}; text-decoration:underline; font-weight:600; word-break:break-all;`;
 
                 function formatInlineFormatting(str) {
-                    let s = str.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#0f172a; font-weight:700;">$1</strong>');
+                    // Replace markdown links [text](url)
+                    let s = str.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, function(match, linkText, url) {
+                        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${linkText}</a>`;
+                    });
+                    // Replace raw URLs / DOIs (https://doi.org/..., 10.xxxx/..., https://pubmed...)
+                    s = s.replace(/(https?:\/\/(?:dx\.)?doi\.org\/[^\s<>"'\)]+)|(https?:\/\/pubmed\.ncbi\.nlm\.nih\.gov\/\d+\/?)|(?<=\s|^)(10\.\d{4,9}\/[^\s<>"'\)]+)/gi, function(match, fullDoi, pubmedUrl, rawDoi) {
+                        const targetUrl = fullDoi || pubmedUrl || ('https://doi.org/' + rawDoi);
+                        return `<a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${match}</a>`;
+                    });
+                    // Replace bold **text**
+                    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#0f172a; font-weight:700;">$1</strong>');
+                    // Replace italic *text*
                     s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+                    // Replace pills placeholder
                     s = s.replace(/###FACT_PILL_START###(.*?)###FACT_PILL_END###/g, function(match, inner) {
                         return `<span class="fact-pill" style="${pillStyle}">${inner}</span>`;
                     });
@@ -5583,6 +5608,7 @@ ${escapeHtml(thought)}
 .fact-clinical-review li { margin-bottom:6px !important; }
 .fact-clinical-review strong { color:#0f172a !important; font-weight:700 !important; }
 .fact-clinical-review .fact-pill { display:inline-block !important; padding:1px 6px !important; margin:0 2px !important; font-size:11px !important; font-weight:600 !important; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important; color:${themeTheme.pillText} !important; background-color:${themeTheme.pillBg} !important; border:1px solid ${themeTheme.pillBorder} !important; border-radius:4px !important; line-height:1.3 !important; vertical-align:baseline !important; white-space:nowrap !important; text-decoration:none !important; }
+.fact-clinical-review a { color:${themeTheme.header} !important; text-decoration:underline !important; font-weight:600 !important; word-break:break-all !important; }
 .fact-clinical-review .fact-commentary-box { background-color:#f8fafc !important; border:1px solid #e2e8f0 !important; border-left:4px solid ${themeTheme.header} !important; padding:16px 20px !important; margin-bottom:24px !important; border-radius:0 8px 8px 0 !important; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important; }
 </style>`;
 
