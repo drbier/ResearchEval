@@ -1,0 +1,286 @@
+<!-- F.A.C.T. Quick-Reference Guide — paste into a WordPress "Custom HTML" block.
+     Structure modeled on the GTSyncD Quick-Reference Guide (hero, nav pills, card grids, accordion FAQ). -->
+<div class="fact-guide-wrapper">
+<style>
+  .fact-guide-wrapper * { box-sizing: border-box; }
+  .fact-guide-wrapper { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #334155; }
+  .fact-hero { background: linear-gradient(135deg, #1e293b 0%, #334155 55%, #b45309 130%); color: #ffffff; padding: 40px 32px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(30, 41, 59, 0.35); margin-bottom: 32px; text-align: center; }
+  .fact-hero h1 { margin: 0 0 12px 0; font-size: 32px; font-weight: 800; letter-spacing: -0.02em; color: #ffffff; line-height: 1.2; }
+  .fact-hero p { margin: 0 auto; max-width: 720px; font-size: 16px; color: #fde68a; line-height: 1.5; }
+  .fact-nav-pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 24px 0 32px 0; }
+  .fact-nav-pill { display: inline-block; padding: 8px 16px; background: #fffbeb; color: #b45309; text-decoration: none; border-radius: 9999px; font-size: 13px; font-weight: 600; transition: all 0.2s ease; border: 1px solid #fde68a; }
+  .fact-nav-pill:hover { background: #d97706; color: #ffffff; border-color: #d97706; }
+  .fact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px; }
+  .fact-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .fact-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); }
+  .fact-card-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+  .fact-badge-amber { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+  .fact-badge-blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .fact-badge-purple { background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; }
+  .fact-badge-green { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  .fact-badge-red { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .fact-card h3 { margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #0f172a; }
+  .fact-card p { margin: 0 0 12px 0; font-size: 14px; color: #64748b; line-height: 1.5; }
+  .fact-card ul { margin: 0; padding-left: 20px; font-size: 13px; color: #334155; }
+  .fact-card ul li { margin-bottom: 6px; }
+  .fact-section-header { border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin: 40px 0 20px 0; scroll-margin-top: 20px; }
+  .fact-section-header h2 { margin: 0; font-size: 22px; font-weight: 800; color: #0f172a; }
+  .fact-lead { font-size: 14px; color: #64748b; }
+  .fact-callout { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px 20px; border-radius: 0 12px 12px 0; margin: 20px 0; font-size: 14px; color: #b45309; }
+  .fact-callout-ok { background: #ecfdf5; border-left: 4px solid #10b981; padding: 16px 20px; border-radius: 0 12px 12px 0; margin: 20px 0; font-size: 14px; color: #065f46; }
+  .fact-accordion { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+  .fact-accordion summary { padding: 16px 20px; font-weight: 700; font-size: 15px; color: #0f172a; cursor: pointer; user-select: none; background: #f8fafc; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  .fact-accordion summary::-webkit-details-marker { display: none; }
+  .fact-accordion summary::after { content: '+'; font-size: 20px; font-weight: 400; color: #64748b; }
+  .fact-accordion[open] summary::after { content: '−'; }
+  .fact-accordion-content { padding: 20px; font-size: 14px; color: #475569; border-top: 1px solid #e2e8f0; line-height: 1.6; }
+  .fact-accordion-content p { margin: 0 0 10px 0; }
+  .fact-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  .fact-table th { background: #f1f5f9; padding: 10px 14px; text-align: left; font-weight: 700; color: #1e293b; border-bottom: 2px solid #cbd5e1; }
+  .fact-table td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; color: #334155; vertical-align: top; }
+  .fact-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: ui-monospace, SFMono-Regular, monospace; white-space: nowrap; }
+  .fact-tag-green { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+  .fact-tag-teal { background: #ccfbf1; color: #115e59; border: 1px solid #99f6e4; }
+  .fact-tag-amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+  .fact-tag-sky { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+  .fact-tag-slate { background: #e2e8f0; color: #475569; border: 1px solid #cbd5e1; }
+  .fact-footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 40px; }
+</style>
+
+<!-- HERO -->
+<div class="fact-hero">
+  <h1>F.A.C.T.<br>Quick-Reference Guide</h1>
+  <p>Find · Analyze · Contextualize · Talk. Verified clinical literature and a source-anchored critical appraisal of any paper, in minutes.</p>
+</div>
+
+<!-- NAV PILLS -->
+<div class="fact-nav-pills">
+  <a href="#fact-start" class="fact-nav-pill">Quick Start</a>
+  <a href="#fact-find" class="fact-nav-pill">Find</a>
+  <a href="#fact-analyze" class="fact-nav-pill">Analyze</a>
+  <a href="#fact-fulltext" class="fact-nav-pill">Full Text vs. Abstract</a>
+  <a href="#fact-talk" class="fact-nav-pill">Talk</a>
+  <a href="#fact-context" class="fact-nav-pill">Contextualize</a>
+  <a href="#fact-badges" class="fact-nav-pill">Badges</a>
+  <a href="#fact-why" class="fact-nav-pill">Why F.A.C.T.</a>
+  <a href="#fact-faq" class="fact-nav-pill">Interactive FAQ</a>
+</div>
+
+<!-- 1. QUICK START -->
+<div id="fact-start" class="fact-section-header"><h2>🚀 Quick Start</h2></div>
+<p class="fact-lead">Three steps from a paper to a source-anchored appraisal.</p>
+<div class="fact-grid">
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-amber">Step 1</span>
+    <h3>Sign in</h3>
+    <p>Use <strong>Sign In</strong> at the top right. New accounts are approved by an administrator and unlock automatically.</p>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-amber">Step 2</span>
+    <h3>Give it a paper</h3>
+    <p>In <strong>Analyze</strong>, upload a PDF, or paste a PubMed link, PMID, PMC ID or DOI.</p>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-amber">Step 3</span>
+    <h3>Read &amp; click</h3>
+    <p>Read the appraisal, then click any citation pill, such as <code>[Res, p6]</code>, to jump to the exact source passage.</p>
+  </div>
+</div>
+
+<!-- 2. FIND -->
+<div id="fact-find" class="fact-section-header"><h2>🔍 Find: Verified Literature Search</h2></div>
+<p class="fact-lead">Describe a study in your own words, even a partial recollection. Searches PubMed &amp; Europe PMC, and every result is verified against the published abstract.</p>
+<div class="fact-grid">
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-blue">How</span>
+    <h3>Type, press Find</h3>
+    <ul>
+      <li>Natural language works: <em>“CoQ10 and cardiovascular mortality, Swedish cohort”</em></li>
+      <li>Tick <strong>Bypass 24h Cache</strong> for a fresh search</li>
+    </ul>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-blue">Each result shows</span>
+    <h3>Match, source, full-text status</h3>
+    <ul>
+      <li><strong>% Match</strong> to your description</li>
+      <li>Source badge and <strong>Free Full Text</strong> status</li>
+      <li><strong>Grounded Clinical Findings</strong> summary</li>
+    </ul>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-blue">Then</span>
+    <h3>Analyze, add, or look for copies</h3>
+    <ul>
+      <li><strong>Analyze Full Text</strong> opens it in Analyze</li>
+      <li><strong>➕ Add to Contextualizer</strong> collects it</li>
+      <li><strong>🎓 Scholar Versions ↗</strong> looks for other free copies</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 3. ANALYZE -->
+<div id="fact-analyze" class="fact-section-header"><h2>🔬 Analyze: Structured, Source-Anchored Appraisal</h2></div>
+<p class="fact-lead">F.A.C.T. identifies the study design, applies the methodological rules for that design, and anchors every claim to its source.</p>
+<div class="fact-grid">
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-purple">Input</span>
+    <h3>Two ways in</h3>
+    <ul>
+      <li><strong>📄 PDF</strong> → <strong>Analyze</strong></li>
+      <li><strong>🔗 Link / PMID</strong> (URL, PMID, PMC ID, DOI) → <strong>Fetch &amp; Analyze</strong></li>
+    </ul>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-purple">Output</span>
+    <h3>Sections you get</h3>
+    <ul>
+      <li><strong>Clinical Bottom Line</strong></li>
+      <li><strong>Results in Context</strong> (effects, CIs, NNT, harms)</li>
+      <li><strong>Assertive Critical Appraisal</strong></li>
+      <li>Objective, Design, Participants, Bibliographic Data</li>
+    </ul>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-purple">Verify</span>
+    <h3>Click to check</h3>
+    <ul>
+      <li>Citation pills jump to the source passage</li>
+      <li>Hover the <strong>study-type badge</strong> to see which rules applied</li>
+      <li>Drag the divider to resize the panels</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 4. FULL TEXT VS ABSTRACT -->
+<div id="fact-fulltext" class="fact-section-header"><h2>📄 Full Text vs. Abstract</h2></div>
+<p class="fact-lead">F.A.C.T. always uses full text when it can get it, and it never analyzes an abstract without asking you first.</p>
+<table class="fact-table">
+  <thead><tr><th>What you see</th><th>What it means</th><th>Your options</th></tr></thead>
+  <tbody>
+    <tr><td><span class="fact-tag fact-tag-green">Free Full Text</span></td><td>Retrieved automatically.</td><td>Just press <strong>Fetch &amp; Analyze</strong>.</td></tr>
+    <tr><td><span class="fact-tag fact-tag-sky">Publisher Download Restriction</span></td><td>Free to read, but the publisher blocks automated download.</td><td>Open the link, download the PDF, then <strong>📤 Upload PDF Manually</strong>, or <strong>Analyze Abstract Only</strong>.</td></tr>
+    <tr><td><span class="fact-tag fact-tag-amber">Full Text Unavailable</span></td><td>Paywalled. Only the abstract is available.</td><td><strong>Analyze Abstract Only</strong>, or <strong>Cancel</strong> and get the paper first.</td></tr>
+  </tbody>
+</table>
+<div class="fact-callout">
+  <strong>Abstract-only analyses are stamped</strong> <code>[ABSTRACT-ONLY EVALUATION]</code> on the source document, so they can't be mistaken for a full-text appraisal.
+</div>
+<div class="fact-callout-ok">
+  <strong>Tip, finding another free copy:</strong> click <strong>🎓 Scholar Versions ↗</strong> (or <strong>Find on Scholar</strong> in the dialog). The paper is normally the top result. Click <strong>All N versions</strong> under it, download the PDF, then use <strong>Upload PDF Manually</strong>.
+</div>
+
+<!-- 5. TALK -->
+<div id="fact-talk" class="fact-section-header"><h2>💬 Talk: Ask the Paper</h2></div>
+<div class="fact-grid">
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-green">How</span>
+    <h3>Use the Ask tab</h3>
+    <p>With a paper open, switch to <strong>💬 Ask</strong>, type a question, and press Enter.</p>
+    <ul>
+      <li><em>What was the blinding method?</em></li>
+      <li><em>How many were excluded after randomization?</em></li>
+    </ul>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-green">Answers</span>
+    <h3>Cited, never loose</h3>
+    <p>Each answer carries citation pills that link to the passage in the paper it came from.</p>
+  </div>
+</div>
+
+<!-- 6. CONTEXTUALIZE -->
+<div id="fact-context" class="fact-section-header"><h2>📝 Contextualize: Multi-Study Synthesis</h2></div>
+<p class="fact-lead">Combine 3–10 papers into one unified clinical briefing.</p>
+<div class="fact-grid">
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-red">How</span>
+    <h3>Add papers, generate</h3>
+    <ul>
+      <li>Add from Find, or paste 3–10 URLs, PMIDs or DOIs (one per line)</li>
+      <li>Press <strong>🚀 Generate Science Briefing</strong></li>
+      <li><strong>📋 Copy to Clipboard</strong> to use it elsewhere</li>
+    </ul>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-red">Remember</span>
+    <h3>Based on abstracts</h3>
+    <p>The briefing synthesizes abstracts, not full texts. For depth on one paper, use <strong>Analyze</strong>.</p>
+  </div>
+</div>
+
+<!-- 7. BADGES -->
+<div id="fact-badges" class="fact-section-header"><h2>🏷️ Badge Cheat Sheet</h2></div>
+<table class="fact-table">
+  <thead><tr><th>Badge</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><span class="fact-tag fact-tag-green">PubMed Verified</span></td><td>Matched to a PubMed record and verified against its abstract.</td></tr>
+    <tr><td><span class="fact-tag fact-tag-teal">Europe PMC Verified</span></td><td>Matched to a Europe PMC record.</td></tr>
+    <tr><td><span class="fact-tag fact-tag-teal">PubMed + Europe PMC</span></td><td>Found in both databases.</td></tr>
+    <tr><td><span class="fact-tag fact-tag-amber">Semantic Scholar Fallback</span></td><td>Neither database matched, so verify carefully.</td></tr>
+    <tr><td><span class="fact-tag fact-tag-green">Free Full Text</span> / <span class="fact-tag fact-tag-teal">Europe PMC OA</span></td><td>Complete paper available free.</td></tr>
+    <tr><td><span class="fact-tag fact-tag-slate">Paywalled (Abstract Only)</span></td><td>Only the abstract is freely accessible.</td></tr>
+  </tbody>
+</table>
+
+<!-- 8. WHY -->
+<div id="fact-why" class="fact-section-header"><h2>🧭 Why F.A.C.T. Works This Way (in brief)</h2></div>
+<div class="fact-grid">
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-amber">Sources</span>
+    <h3>PubMed &amp; Europe PMC</h3>
+    <p>Curated biomedical records with controlled subject terms, flagged retractions and repeatable searches, not an open-web crawl.</p>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-amber">Verified</span>
+    <h3>Real papers only</h3>
+    <p>Each Find result is checked against its published abstract, so papers and links are real.</p>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-amber">Matched</span>
+    <h3>Right rules, right design</h3>
+    <p>Ten study types, each appraised with rules drawn from standards such as RoB 2, CONSORT, PRISMA, STROBE and STARD.</p>
+  </div>
+  <div class="fact-card">
+    <span class="fact-card-badge fact-badge-amber">Auditable</span>
+    <h3>Every claim anchored</h3>
+    <p>Click a citation to read the source passage. You never have to take a claim on trust.</p>
+  </div>
+</div>
+<p class="fact-lead">The full reasoning is in the <strong>Master Operational Guide</strong>, Part 2.</p>
+
+<!-- 9. FAQ -->
+<div id="fact-faq" class="fact-section-header"><h2>❓ Interactive FAQ &amp; Troubleshooting</h2></div>
+
+<details class="fact-accordion">
+  <summary>Does F.A.C.T. ever analyze only an abstract without telling me?</summary>
+  <div class="fact-accordion-content"><p><strong>No.</strong> Whenever only an abstract is available, whether from a paywall or a publisher block, F.A.C.T. stops and asks. Analysis proceeds only after you click <strong>Analyze Abstract Only</strong>.</p></div>
+</details>
+<details class="fact-accordion">
+  <summary>The paper is free in my browser. Why won't F.A.C.T. fetch it?</summary>
+  <div class="fact-accordion-content"><p>Some publishers let people read a paper but block software from downloading it. F.A.C.T. tells you when this happens. Open the link it gives you, download the PDF yourself, then press <strong>📤 Upload PDF Manually</strong>.</p></div>
+</details>
+<details class="fact-accordion">
+  <summary>Why did I see “Access Authorization Pending”?</summary>
+  <div class="fact-accordion-content"><p>New accounts are reviewed by an administrator. The screen unlocks automatically the moment you are approved, with no refresh needed.</p></div>
+</details>
+<details class="fact-accordion">
+  <summary>What is the difference between Analyze and Contextualize?</summary>
+  <div class="fact-accordion-content"><p><strong>Analyze</strong> is a deep critical appraisal of one paper (full text where available). <strong>Contextualize</strong> is a broad synthesis across 3–10 papers, based on their abstracts.</p></div>
+</details>
+<details class="fact-accordion">
+  <summary>My search results look out of date.</summary>
+  <div class="fact-accordion-content"><p>Find caches results for 24 hours. Tick <strong>Bypass 24h Cache (Force Refresh)</strong> and search again.</p></div>
+</details>
+<details class="fact-accordion">
+  <summary>Can I trust the appraisal?</summary>
+  <div class="fact-accordion-content"><p>Treat it as a structured aid to your own judgment. Click the citation pills to confirm any claim that matters to a decision against the original passage.</p></div>
+</details>
+
+<!-- SETTINGS -->
+<div class="fact-section-header"><h2>⚙️ Settings</h2></div>
+<p class="fact-lead">The gear icon at the top right: <strong>Light / Dark mode</strong>, <strong>default startup view</strong>, and <strong>highlight color</strong> for citation pills and the source highlight box (default Warm Amber).</p>
+
+<div class="fact-footer">F.A.C.T. • Find · Analyze · Contextualize · Talk • Verified, source-anchored clinical evidence appraisal</div>
+</div>
+

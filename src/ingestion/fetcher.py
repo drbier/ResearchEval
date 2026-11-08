@@ -536,11 +536,12 @@ class PaperFetcher:
                             if links:
                                 pmc_digits = str(links[0])
                                 res = self._fetch_pmc_fulltext(pmc_digits, source_url)
-                                if res.get("status") == "full_text_pdf":
+                                if res.get("status") in ("full_text_pdf", "abstract_only"):
                                     res["pmid"] = pmid
                                     res["pmcid"] = f"PMC{pmc_digits}"
-                                    res["source_type"] = "PMC"
-                                    res["message"] = f"Full text verified on PubMed Central (PMC{pmc_digits}) and retrieved via PubMed/NCBI API."
+                                    if res.get("status") == "full_text_pdf":
+                                        res["source_type"] = "PMC"
+                                        res["message"] = f"Full text verified on PubMed Central (PMC{pmc_digits}) and retrieved via PubMed/NCBI API."
                                     return res
 
             # 2. Check esummary for DOI and open-access via Unpaywall
