@@ -244,6 +244,8 @@ Draft an editorial commentary in the clinician's authentic voice, applying their
             "5. OUTPUT FORMAT: Respond ONLY with a valid JSON object matching the requested schema."
         )
 
+        commentary_section_prompt = f"### SUBMITTED CLINICIAN COMMENTARY TO AUDIT:\n{commentary_text}\n" if commentary_text.strip() else "### SUBMITTED CLINICIAN COMMENTARY TO AUDIT:\n(None submitted. Audit the Research Appraisal alone against the manuscript coordinates.)\n"
+
         user_prompt = f"""### STUDY DESIGN FRAMEWORK:
 ID: {framework_id} ({framework_name})
 Active Evaluation Rules: {json.dumps(applicable_rules)}
@@ -251,9 +253,7 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
 ### MANUSCRIPT DOCUMENT HEADER:
 {indexed_doc.doc_header}
 
-### SUBMITTED CLINICIAN COMMENTARY TO AUDIT:
-{commentary_text}
-
+{commentary_section_prompt}
 ### SUBMITTED RESEARCH APPRAISAL TO AUDIT:
 {appraisal_markdown[:4000]}
 

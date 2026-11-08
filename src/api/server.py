@@ -5122,11 +5122,39 @@ ${escapeHtml(thought)}
                         </div>
                     </div>
 
-                    <!-- Card 3: Model Deliberation & Chain of Thought (Clean Light Mode Theme) -->
+                    <!-- Card 2.5: Independent Adversarial QC Audit (Evaluates Clinical Analysis & Commentary) -->
+                    <div id="auditCardQC" class="bg-slate-50 border border-slate-200 rounded-lg p-5 space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-slate-800">3. Independent Adversarial QC Audit</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-sky-100 text-sky-800 border border-sky-200">Evidence-Bound Auditor</span>
+                            </div>
+                            <button id="runQCAuditThinkingBtn" type="button" onclick="runSecondaryQCAudit('thinking')" class="px-3.5 py-1.5 rounded-md bg-white hover:bg-sky-50 text-sky-700 border border-sky-300 font-semibold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
+                                <span>🛡️</span> <span id="runQCAuditThinkingBtnText">Run Adversarial QC Verification</span>
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Run an adversarial cross-examination of the clinical appraisal directly against the raw manuscript coordinates. Audits all numerical claims, hazard ratios, surrogate-to-hard outcome dissociations, and omitted harm signals.
+                        </p>
+                        <div id="thinking_QcAuditSection" class="hidden space-y-3 pt-2">
+                            <div id="thinking_QcAuditHeaderCard" class="p-3.5 rounded-lg border border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-slate-800">Audit Status:</span>
+                                    <span id="thinking_QcIntegrityBadge" class="px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Verified</span>
+                                </div>
+                                <span class="text-[11px] font-mono text-slate-500">Deterministic temp=0.0</span>
+                            </div>
+                            <p id="thinking_QcSummaryVerdict" class="text-xs text-slate-700 bg-white p-3 rounded-md border border-slate-200 leading-relaxed"></p>
+                            <div id="thinking_QcDesignCaveatBox" class="hidden p-3 rounded-md bg-amber-50 border border-amber-200 text-xs text-amber-950 leading-relaxed"></div>
+                            <div id="thinking_QcDiscrepanciesFeed" class="space-y-3"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Model Deliberation & Chain of Thought (Clean Light Mode Theme) -->
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-5">
                         <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-200 pb-2.5">
                             <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-slate-800">3. Synthesis Deliberation & Chain-of-Thought</span>
+                                <span class="text-sm font-bold text-slate-800">4. Synthesis Deliberation & Chain-of-Thought</span>
                             </div>
                             <span class="font-mono text-[11px] text-sky-800 bg-sky-50 px-2.5 py-0.5 rounded border border-sky-200 font-semibold">${escapeHtml(selectedModel)}</span>
                         </div>
@@ -7254,30 +7282,49 @@ ${scopedHtml}
                 }
             }
 
-            async function runSecondaryQCAudit() {
+            async function runSecondaryQCAudit(sourceOrigin = 'commentary') {
                 if (!currentFilename) {
                     alert("Please load a manuscript before running QC audit.");
                     return;
                 }
                 const ta = document.getElementById('commentaryTextarea');
-                const draftText = ta ? ta.value.trim() : '';
-                if (!draftText) {
-                    alert("Please generate or paste commentary text to audit.");
-                    return;
+                let draftText = ta ? ta.value.trim() : '';
+
+                // If initiated from the Thinking/Audit tab, draft commentary is optional
+                if (!draftText && sourceOrigin === 'commentary') {
+                    // Check if user wants to audit appraisal alone
+                    if (!confirm("No commentary text has been drafted yet. Would you like to run an Adversarial QC Audit on the Clinical Analysis alone?")) {
+                        return;
+                    }
                 }
 
                 const appraisalText = (window.ResearchAppState && window.ResearchAppState.lastAppraisalMarkdown) 
                     ? window.ResearchAppState.lastAppraisalMarkdown 
                     : (document.getElementById('outputMarkdown')?.innerText || '');
 
-                const qcBtn = document.getElementById('runQCAuditBtn');
-                const qcBtnText = document.getElementById('runQCAuditBtnText');
-                const origText = qcBtnText ? qcBtnText.innerText : 'Run Adversarial QC Audit';
-                if (qcBtn) qcBtn.disabled = true;
-                if (qcBtnText) qcBtnText.innerText = "Auditing (temp=0.0)...";
+                if (!appraisalText) {
+                    alert("No clinical analysis found to audit. Please analyze a manuscript first.");
+                    return;
+                }
 
-                const qcSec = document.getElementById('qcAuditSection');
-                if (qcSec) qcSec.classList.remove('hidden');
+                const qcBtnCommentary = document.getElementById('runQCAuditBtn');
+                const qcBtnThinking = document.getElementById('runQCAuditThinkingBtn');
+                const qcBtnText = document.getElementById('runQCAuditBtnText');
+                const qcBtnTextThinking = document.getElementById('runQCAuditThinkingBtnText');
+
+                if (qcBtnCommentary) qcBtnCommentary.disabled = true;
+                if (qcBtnThinking) qcBtnThinking.disabled = true;
+                if (qcBtnText) qcBtnText.innerText = "Auditing (temp=0.0)...";
+                if (qcBtnTextThinking) qcBtnTextThinking.innerText = "Auditing (temp=0.0)...";
+
+                const qcSecCommentary = document.getElementById('qcAuditSection');
+                const qcSecThinking = document.getElementById('qcAuditThinkingContainer');
+                if (sourceOrigin === 'thinking' && qcSecThinking) {
+                    qcSecThinking.classList.remove('hidden');
+                    qcSecThinking.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else if (qcSecCommentary) {
+                    qcSecCommentary.classList.remove('hidden');
+                }
 
                 try {
                     const formData = new FormData();
@@ -7303,123 +7350,136 @@ ${scopedHtml}
                     }
 
                     const data = await resp.json();
-                    renderQCAuditResults(data);
+                    renderQCAuditResults(data, sourceOrigin);
                 } catch (e) {
                     alert("QC audit failed: " + e.message);
                 } finally {
-                    if (qcBtn) qcBtn.disabled = false;
-                    if (qcBtnText) qcBtnText.innerText = origText;
+                    if (qcBtnCommentary) qcBtnCommentary.disabled = false;
+                    if (qcBtnThinking) qcBtnThinking.disabled = false;
+                    if (qcBtnText) qcBtnText.innerText = 'Run Adversarial QC Audit';
+                    if (qcBtnTextThinking) qcBtnTextThinking.innerText = 'Run Adversarial QC Verification';
                 }
             }
 
             let lastQCAuditData = null;
 
-            function renderQCAuditResults(data) {
+            function renderQCAuditResults(data, sourceOrigin = 'both') {
                 lastQCAuditData = data;
-                const qcSec = document.getElementById('qcAuditSection');
-                const integrityBadge = document.getElementById('qcIntegrityBadge');
-                const summaryVerdict = document.getElementById('qcSummaryVerdict');
-                const caveatBox = document.getElementById('qcDesignCaveatBox');
-                const feed = document.getElementById('qcDiscrepanciesFeed');
-
-                if (!qcSec) return;
-                qcSec.classList.remove('hidden');
-
                 const integrity = (data.overall_integrity || 'VERIFIED').toUpperCase();
-                if (integrityBadge) {
-                    if (integrity === 'VERIFIED') {
-                        integrityBadge.innerText = "✓ Grounding Verified";
-                        integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700";
-                    } else if (integrity === 'CAUTION') {
-                        integrityBadge.innerText = "⚠ Nuance / Overreach Identified";
-                        integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700";
-                    } else {
-                        integrityBadge.innerText = "✗ Discrepancy Flagged";
-                        integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700";
-                    }
-                }
-
-                if (summaryVerdict) {
-                    summaryVerdict.innerText = data.summary_verdict || 'Audit evaluation complete.';
-                }
-
-                if (caveatBox) {
-                    if (data.study_design_caveat) {
-                        caveatBox.innerHTML = `<strong>Methodological Design Caveat:</strong> ${renderCoordinatePillsInText(data.study_design_caveat)}`;
-                        caveatBox.classList.remove('hidden');
-                    } else {
-                        caveatBox.classList.add('hidden');
-                    }
-                }
-
-                if (!feed) return;
                 const discrepancies = data.discrepancies || [];
 
-                if (discrepancies.length === 0) {
-                    feed.innerHTML = `
-                        <div class="p-4 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-2">
-                            <span class="text-base font-bold text-emerald-600">✓</span>
-                            <span><strong>No discrepancies or ungrounded claims detected.</strong> All numerical findings, effect sizes, and causal statements are supported by manuscript coordinates.</span>
-                        </div>
-                    `;
-                    return;
-                }
+                // Helper to populate a QC block
+                const populateQCBlock = (prefix) => {
+                    const qcSec = document.getElementById(prefix ? `${prefix}QcAuditSection` : 'qcAuditSection');
+                    const integrityBadge = document.getElementById(prefix ? `${prefix}QcIntegrityBadge` : 'qcIntegrityBadge');
+                    const summaryVerdict = document.getElementById(prefix ? `${prefix}QcSummaryVerdict` : 'qcSummaryVerdict');
+                    const caveatBox = document.getElementById(prefix ? `${prefix}QcDesignCaveatBox` : 'qcDesignCaveatBox');
+                    const feed = document.getElementById(prefix ? `${prefix}QcDiscrepanciesFeed` : 'qcDiscrepanciesFeed');
 
-                feed.innerHTML = discrepancies.map((d, idx) => {
-                    const isRed = (d.severity || '').toUpperCase() === 'RED';
-                    const category = (d.category || 'ANALYSIS').replace(/_/g, ' ');
-                    const scope = (d.scope || 'LOCALIZED_CLAIM').replace(/_/g, ' ');
-                    
-                    let citationsHtml = '';
-                    if (d.citations && d.citations.length > 0) {
-                        citationsHtml = `
-                            <div class="flex items-center gap-1.5 flex-wrap pt-1">
-                                <span class="text-[11px] font-semibold text-slate-500">Evidence Anchors:</span>
-                                ${d.citations.map(c => {
-                                    const clean = String(c).replace(/^\[|\]$/g, '').trim();
-                                    const rawId = `[${clean}]`;
-                                    const enc = encodeURIComponent(rawId);
-                                    return `<button type="button" onclick="inspectAnchor('${enc}')" data-anchor="${rawId}" class="anchor-pill inline-flex items-center px-2 py-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none cursor-pointer" title="Jump to proof on PDF">${formatAnchorDisplay(clean)}</button>`;
-                                }).join(' ')}
-                            </div>
-                        `;
+                    if (!qcSec) return;
+                    qcSec.classList.remove('hidden');
+
+                    if (integrityBadge) {
+                        if (integrity === 'VERIFIED') {
+                            integrityBadge.innerText = "✓ Grounding Verified";
+                            integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700";
+                        } else if (integrity === 'CAUTION') {
+                            integrityBadge.innerText = "⚠ Nuance / Overreach Identified";
+                            integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700";
+                        } else {
+                            integrityBadge.innerText = "✗ Discrepancy Flagged";
+                            integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700";
+                        }
                     }
 
-                    return `
-                        <div class="p-3.5 rounded-lg border ${isRed ? 'border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20' : 'border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20'} space-y-2 text-xs">
-                            <div class="flex items-center justify-between gap-2">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isRed ? 'bg-rose-200 text-rose-900 border border-rose-300' : 'bg-amber-200 text-amber-900 border border-amber-300'}">${escapeHtml(category)}</span>
-                                    <span class="text-[10px] font-mono text-slate-500 uppercase">${escapeHtml(scope)}</span>
+                    if (summaryVerdict) {
+                        summaryVerdict.innerText = data.summary_verdict || 'Audit evaluation complete.';
+                    }
+
+                    if (caveatBox) {
+                        if (data.study_design_caveat) {
+                            caveatBox.innerHTML = `<strong>Methodological Design Caveat:</strong> ${renderCoordinatePillsInText(data.study_design_caveat)}`;
+                            caveatBox.classList.remove('hidden');
+                        } else {
+                            caveatBox.classList.add('hidden');
+                        }
+                    }
+
+                    if (!feed) return;
+
+                    if (discrepancies.length === 0) {
+                        feed.innerHTML = `
+                            <div class="p-4 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-2">
+                                <span class="text-base font-bold text-emerald-600">✓</span>
+                                <span><strong>No discrepancies or ungrounded claims detected.</strong> All numerical findings, effect sizes, and causal statements are supported by manuscript coordinates.</span>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    feed.innerHTML = discrepancies.map((d, idx) => {
+                        const isRed = (d.severity || '').toUpperCase() === 'RED';
+                        const category = (d.category || 'ANALYSIS').replace(/_/g, ' ');
+                        const scope = (d.scope || 'LOCALIZED_CLAIM').replace(/_/g, ' ');
+                        
+                        let citationsHtml = '';
+                        if (d.citations && d.citations.length > 0) {
+                            citationsHtml = `
+                                <div class="flex items-center gap-1.5 flex-wrap pt-1">
+                                    <span class="text-[11px] font-semibold text-slate-500">Evidence Anchors:</span>
+                                    ${d.citations.map(c => {
+                                        const clean = String(c).replace(/^\[|\]$/g, '').trim();
+                                        const rawId = `[${clean}]`;
+                                        const enc = encodeURIComponent(rawId);
+                                        return `<button type="button" onclick="inspectAnchor('${enc}')" data-anchor="${rawId}" class="anchor-pill inline-flex items-center px-2 py-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none cursor-pointer" title="Jump to proof on PDF">${formatAnchorDisplay(clean)}</button>`;
+                                    }).join(' ')}
                                 </div>
-                                <span class="text-[10px] font-bold ${isRed ? 'text-rose-700' : 'text-amber-700'}">${isRed ? 'CRITICAL DISCREPANCY' : 'CAUTION / NUANCE'}</span>
-                            </div>
+                            `;
+                        }
 
-                            <div class="bg-white dark:bg-slate-900 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
-                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quoted Claim in Draft:</span>
-                                <p class="text-xs text-slate-800 dark:text-slate-200 font-serif italic">"${escapeHtml(d.quoted_claim || '')}"</p>
-                            </div>
+                        const hasCommentaryInput = Boolean(document.getElementById('commentaryTextarea')?.value.trim());
 
-                            <div class="space-y-1">
-                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Manuscript Proof / Finding:</span>
-                                <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">${renderCoordinatePillsInText(d.manuscript_evidence || '')}</p>
-                                ${citationsHtml}
-                            </div>
-
-                            ${d.suggested_edit ? `
-                                <div class="p-2.5 rounded bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 flex items-start justify-between gap-3">
-                                    <div class="space-y-0.5">
-                                        <span class="text-[10px] font-bold text-sky-900 dark:text-sky-300 uppercase block">Suggested Alignment:</span>
-                                        <p class="text-xs text-sky-950 dark:text-sky-200 font-serif italic">${escapeHtml(d.suggested_edit)}</p>
+                        return `
+                            <div class="p-3.5 rounded-lg border ${isRed ? 'border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20' : 'border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20'} space-y-2 text-xs">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isRed ? 'bg-rose-200 text-rose-900 border border-rose-300' : 'bg-amber-200 text-amber-900 border border-amber-300'}">${escapeHtml(category)}</span>
+                                        <span class="text-[10px] font-mono text-slate-500 uppercase">${escapeHtml(scope)}</span>
                                     </div>
-                                    <button type="button" onclick="applyQCSuggestion(${idx})" class="shrink-0 px-2.5 py-1 rounded bg-white dark:bg-slate-850 hover:bg-sky-600 hover:text-white text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 text-[11px] font-semibold transition shadow-2xs cursor-pointer">
-                                        Apply Fix
-                                    </button>
+                                    <span class="text-[10px] font-bold ${isRed ? 'text-rose-700' : 'text-amber-700'}">${isRed ? 'CRITICAL DISCREPANCY' : 'CAUTION / NUANCE'}</span>
                                 </div>
-                            ` : ''}
-                        </div>
-                    `;
-                }).join('');
+
+                                <div class="bg-white dark:bg-slate-900 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Audited Claim:</span>
+                                    <p class="text-xs text-slate-800 dark:text-slate-200 font-serif italic">"${escapeHtml(d.quoted_claim || '')}"</p>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Manuscript Proof / Finding:</span>
+                                    <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">${renderCoordinatePillsInText(d.manuscript_evidence || '')}</p>
+                                    ${citationsHtml}
+                                </div>
+
+                                ${d.suggested_edit ? `
+                                    <div class="p-2.5 rounded bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 flex items-start justify-between gap-3">
+                                        <div class="space-y-0.5">
+                                            <span class="text-[10px] font-bold text-sky-900 dark:text-sky-300 uppercase block">Suggested Alignment:</span>
+                                            <p class="text-xs text-sky-950 dark:text-sky-200 font-serif italic">${escapeHtml(d.suggested_edit)}</p>
+                                        </div>
+                                        ${hasCommentaryInput ? `
+                                        <button type="button" onclick="applyQCSuggestion(${idx})" class="shrink-0 px-2.5 py-1 rounded bg-white dark:bg-slate-850 hover:bg-sky-600 hover:text-white text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 text-[11px] font-semibold transition shadow-2xs cursor-pointer">
+                                            Apply Fix
+                                        </button>` : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                };
+
+                // Render both in Commentary tab and in Thinking/Audit tab
+                populateQCBlock('');
+                populateQCBlock('thinking_');
             }
 
             function applyQCSuggestion(index) {
