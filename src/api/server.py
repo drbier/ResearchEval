@@ -5471,7 +5471,7 @@ ${escapeHtml(thought)}
                     s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
                     // Replace pills placeholder
                     s = s.replace(/###FACT_PILL_START###(.*?)###FACT_PILL_END###/g, function(match, inner) {
-                        return `<span style="${pillStyle}">${inner}</span>`;
+                        return `<span class="fact-pill" style="${pillStyle}">${inner}</span>`;
                     });
                     return s;
                 }
@@ -5486,7 +5486,7 @@ ${escapeHtml(thought)}
                     }).join('');
 
                     const commentaryBox = `
-<div style="background-color:#f8fafc; border-left:4px solid #4338ca; border-top:1px solid #e2e8f0; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:16px 20px; margin-bottom:24px; border-radius:0 8px 8px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div class="fact-commentary-box" style="background-color:#f8fafc; border-left:4px solid #4338ca; border-top:1px solid #e2e8f0; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:16px 20px; margin-bottom:24px; border-radius:0 8px 8px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
     <div style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; color:#4338ca; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
         <span>✍️</span> <span>Clinician Editorial Commentary</span>
     </div>
@@ -5498,8 +5498,23 @@ ${escapeHtml(thought)}
                     bodyHtml = commentaryBox + bodyHtml;
                 }
 
-                // Wrap in scoped container
-                const scopedHtml = `<!-- F.A.C.T. Clinical Appraisal Export -->\n<div class="fact-clinical-review" style="max-width:820px; margin:0 auto; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased;">\n${bodyHtml}\n</div>`;
+                // Scoped CSS styles for complete theme immunity in WordPress
+                const embeddedStyle = `
+<style>
+.fact-clinical-review { max-width:820px; margin:0 auto; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased; color:#334155; line-height:1.65; }
+.fact-clinical-review h2 { font-size:22px !important; font-weight:800 !important; color:#0f172a !important; margin-top:0 !important; margin-bottom:14px !important; line-height:1.3 !important; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important; border:none !important; }
+.fact-clinical-review h3 { font-size:17px !important; font-weight:700 !important; color:#4338ca !important; margin-top:24px !important; margin-bottom:10px !important; line-height:1.4 !important; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important; border:none !important; }
+.fact-clinical-review h4 { font-size:14px !important; font-weight:700 !important; color:#1e293b !important; margin-top:16px !important; margin-bottom:8px !important; line-height:1.4 !important; }
+.fact-clinical-review p { font-size:14px !important; line-height:1.65 !important; color:#334155 !important; margin-top:0 !important; margin-bottom:14px !important; }
+.fact-clinical-review ul { margin:8px 0 16px 20px !important; padding:0 !important; font-size:14px !important; line-height:1.65 !important; color:#334155 !important; }
+.fact-clinical-review li { margin-bottom:6px !important; }
+.fact-clinical-review strong { color:#0f172a !important; font-weight:700 !important; }
+.fact-clinical-review .fact-pill { display:inline-block !important; padding:1px 6px !important; margin:0 2px !important; font-size:11px !important; font-weight:600 !important; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important; color:#0369a1 !important; background-color:#f0f9ff !important; border:1px solid #7dd3fc !important; border-radius:4px !important; line-height:1.3 !important; vertical-align:baseline !important; white-space:nowrap !important; text-decoration:none !important; }
+.fact-clinical-review .fact-commentary-box { background-color:#f8fafc !important; border:1px solid #e2e8f0 !important; border-left:4px solid #4338ca !important; padding:16px 20px !important; margin-bottom:24px !important; border-radius:0 8px 8px 0 !important; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif !important; }
+</style>`;
+
+                // Wrap in scoped container and native Gutenberg block comment
+                const scopedHtml = `<!-- wp:html -->\n${embeddedStyle}\n<div class="fact-clinical-review">\n${bodyHtml}\n</div>\n<!-- /wp:html -->`;
 
                 if (asFullHtmlDocument) {
                     return `<!DOCTYPE html>
