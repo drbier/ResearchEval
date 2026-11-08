@@ -180,6 +180,90 @@ def sanitize_and_verify_appraisal(markdown_text: str, valid_anchor_set: Dict[str
         is_valid=(len(invalid) == 0)
     )
 
+def truncate_markdown_safely(text: str, max_chars: int = 1500) -> str:
+    """
+    Markdown-aware truncation that guarantees no unclosed formatting tags,
+    dangling links, or broken code fences bleed into prompt injections.
+    """
+    if not text:
+        return ""
+    
+    clean_text = text.strip()
+    # Prevent XML breakout from prompt wrapper
+    clean_text = re.sub(r'</?exemplar(?:\s+[^>]*)?>', '', clean_text, flags=re.IGNORECASE)
+
+    if len(clean_text) <= max_chars:
+        truncated = clean_text
+    else:
+        # Step A: Block-Boundary Accumulation
+        paragraphs = clean_text.split("\n\n")
+        accumulated: List[str] = []
+        curr_len = 0
+        for p in paragraphs:
+            p_len = len(p)
+            add_len = p_len if not accumulated else (p_len + 2)
+            if curr_len + add_len <= max_chars:
+                accumulated.append(p)
+                curr_len += add_len
+            else:
+                break
+        
+        if accumulated:
+            truncated = "\n\n".join(accumulated).strip()
+        else:
+            # Step B: Sentence Boundary Fallback on first block
+            first_block = paragraphs[0]
+            sentence_matches = list(re.finditer(r'[.!?](?=\s|$)', first_block[:max_chars]))
+            if sentence_matches:
+                cut_idx = sentence_matches[-1].end()
+                truncated = first_block[:cut_idx].strip()
+            else:
+                # Word boundary fallback
+                last_space = first_block[:max_chars].rfind(" ")
+                if last_space > 0:
+                    truncated = first_block[:last_space].strip() + "..."
+                else:
+                    truncated = first_block[:max_chars].strip() + "..."
+
+    # Step C: Dangling link or image stripping
+    truncated = re.sub(r'!?\[[^\]]*(?:\]\([^\)]*)?$', '', truncated).strip()
+
+    # Step D: Symmetric Delimiter Parity Balancing
+    # 1. Fenced code blocks
+    fence_count = len(re.findall(r'(?m)^```', truncated))
+    if fence_count % 2 != 0:
+        truncated += "\n```"
+
+    # 2. Inline code ticks (outside of multi-backtick fences)
+    # Remove complete ``` blocks for counting inline delimiters
+    text_no_fences = re.sub(r'```[\s\S]*?```', '', truncated)
+    # Count single backticks
+    single_ticks = len(re.findall(r'(?<!`)`(?!`)', text_no_fences))
+    if single_ticks % 2 != 0:
+        truncated += "`"
+
+    # 3. Bold (** or __) and Italic (* or _)
+    # Count double asterisks
+    double_stars = len(re.findall(r'\*\*', text_no_fences))
+    if double_stars % 2 != 0:
+        truncated += "**"
+
+    double_underscores = len(re.findall(r'__', text_no_fences))
+    if double_underscores % 2 != 0:
+        truncated += "__"
+
+    # Single asterisks (not part of **)
+    single_stars = len(re.findall(r'(?<!\*)\*(?!\*)', text_no_fences))
+    if single_stars % 2 != 0:
+        truncated += "*"
+
+    # Single underscores (not part of __ and not within words like var_name)
+    single_underscores = len(re.findall(r'(?:(?<=\s)|^)_(?!_)|(?<!_)_(?=(?:\s|$))', text_no_fences))
+    if single_underscores % 2 != 0:
+        truncated += "_"
+
+    return truncated.strip()
+
 if __name__ == "__main__":
     test_md = """# Clinical Trial Appraisal
 ## Executive Appraisal & Baseline Rigor

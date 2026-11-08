@@ -29,6 +29,7 @@ from src.ingestion.indexer import parse_and_index_pdf, IndexedDocument
 from src.ingestion.fetcher import PaperFetcher
 from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL
 from src.appraisal.qa import PaperQAEngine
+from src.appraisal.commentary import CommentaryAndQCEngine
 from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_DESIGNATION
 from src.summarizer.engine import PaperSummarizer, MODEL_DESIGNATION as SUMMARIZER_MODEL_DESIGNATION
 from src.telemetry.tracker import log_usage, get_aggregated_usage, get_recent_usage_logs
@@ -141,6 +142,7 @@ CACHED_INDEX: Dict[str, IndexedDocument] = {}
 finder = PaperFinder()
 summarizer = PaperSummarizer()
 qa_engine = PaperQAEngine()
+commentary_engine = CommentaryAndQCEngine()
 
 
 class FinderSearchRequest(BaseModel):
@@ -387,6 +389,112 @@ async def ask_paper(
         except Exception as te:
             print(f"[Telemetry] Logging warning: {te}")
             
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate-commentary")
+async def generate_commentary_endpoint(
+    filename: str = Form(...),
+    appraisal_markdown: str = Form(...),
+    voice_profile: Optional[str] = Form(None),
+    model_override: Optional[str] = Form(None),
+    api_key: Optional[str] = Form(None),
+    user_uid: Optional[str] = Form("anonymous"),
+    user_email: Optional[str] = Form("unauthenticated")
+):
+    """Generates clinician commentary grounded in the study appraisal and personalized by voice profile."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Requested manuscript file not found on server.")
+
+    try:
+        indexed = CACHED_INDEX.get(filename)
+        if not indexed:
+            indexed = parse_and_index_pdf(file_path)
+            CACHED_INDEX[filename] = indexed
+
+        profile_data = {}
+        if voice_profile:
+            try:
+                profile_data = json.loads(voice_profile)
+            except Exception:
+                profile_data = {}
+
+        engine_inst = CommentaryAndQCEngine(api_key=api_key) if api_key else commentary_engine
+        result = engine_inst.generate_commentary(
+            indexed_doc=indexed,
+            appraisal_markdown=appraisal_markdown,
+            voice_profile=profile_data,
+            model_override=model_override
+        )
+
+        try:
+            log_usage(
+                uid=user_uid or "anonymous",
+                email=user_email or "unauthenticated",
+                feature="generate_commentary",
+                model=model_override or PRIMARY_MODEL,
+                prompt_tokens=2500,
+                candidates_tokens=1200
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/audit-commentary")
+async def audit_commentary_endpoint(
+    filename: str = Form(...),
+    appraisal_markdown: str = Form(...),
+    commentary_text: str = Form(...),
+    triage: Optional[str] = Form(None),
+    model_override: Optional[str] = Form(None),
+    api_key: Optional[str] = Form(None),
+    user_uid: Optional[str] = Form("anonymous"),
+    user_email: Optional[str] = Form("unauthenticated")
+):
+    """Independent adversarial QC audit of appraisal and commentary against manuscript coordinates."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Requested manuscript file not found on server.")
+
+    try:
+        indexed = CACHED_INDEX.get(filename)
+        if not indexed:
+            indexed = parse_and_index_pdf(file_path)
+            CACHED_INDEX[filename] = indexed
+
+        triage_data = {}
+        if triage:
+            try:
+                triage_data = json.loads(triage)
+            except Exception:
+                triage_data = {}
+
+        engine_inst = CommentaryAndQCEngine(api_key=api_key) if api_key else commentary_engine
+        result = engine_inst.audit_appraisal_and_commentary(
+            indexed_doc=indexed,
+            appraisal_markdown=appraisal_markdown,
+            commentary_text=commentary_text,
+            triage_data=triage_data,
+            model_override=model_override
+        )
+
+        try:
+            log_usage(
+                uid=user_uid or "anonymous",
+                email=user_email or "unauthenticated",
+                feature="audit_commentary",
+                model=model_override or PRIMARY_MODEL,
+                prompt_tokens=4500,
+                candidates_tokens=1500
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
+
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1761,6 +1869,81 @@ def index_page():
                                 </div>
                             </div>
                         </section>
+
+                        <!-- Section 5: Clinician Voice Profile & Exemplars (Dual Firestore / Local Sync) -->
+                        <section id="settingsVoiceSection" class="space-y-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">5. Clinician Voice Profile &amp; Exemplars</h3>
+                                    <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">Calibrate editorial commentary voice, clinical philosophy, and past writing exemplars.</p>
+                                </div>
+                                <span id="voiceSyncBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                    Rev 0 · Local
+                                </span>
+                            </div>
+
+                            <!-- Editorial Philosophy -->
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-center text-xs">
+                                    <label class="font-semibold text-slate-700 dark:text-slate-300">Core Clinical Philosophy</label>
+                                    <span class="text-[11px] text-slate-400 font-mono" id="voicePhilCount">0/500</span>
+                                </div>
+                                <textarea id="voicePhilosophyInput" maxlength="500" oninput="updateVoiceFieldCounts()" rows="3" class="w-full text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500" placeholder="e.g. Prioritize natural therapies and nutritional interventions when safety profiles favor them; focus on absolute risk reductions over relative risk spin."></textarea>
+                            </div>
+
+                            <!-- Preferred & Prohibited Phrasing -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between items-center">
+                                        <label class="font-semibold text-slate-700 dark:text-slate-300">Preferred Terms / Concepts</label>
+                                        <span class="text-[11px] text-slate-400 font-mono" id="voicePrefCount">0/300</span>
+                                    </div>
+                                    <input type="text" id="voicePreferredInput" maxlength="300" oninput="updateVoiceFieldCounts()" class="w-full text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500" placeholder="e.g. absolute risk reduction, confounding, clinical relevance"/>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between items-center">
+                                        <label class="font-semibold text-slate-700 dark:text-slate-300">Prohibited Boilerplate</label>
+                                        <span class="text-[11px] text-slate-400 font-mono" id="voiceProhCount">0/300</span>
+                                    </div>
+                                    <input type="text" id="voiceProhibitedInput" maxlength="300" oninput="updateVoiceFieldCounts()" class="w-full text-xs bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500" placeholder="e.g. more research is needed, delve, crucial to note"/>
+                                </div>
+                            </div>
+
+                            <!-- Exemplar Writing Library -->
+                            <div class="space-y-2 pt-2">
+                                <div class="flex items-center justify-between text-xs">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-semibold text-slate-700 dark:text-slate-300">Past Writing Exemplars</span>
+                                        <span class="text-[11px] text-slate-400">(Max 3 active, max 1,500 chars each)</span>
+                                    </div>
+                                    <button type="button" onclick="toggleNewExemplarForm()" class="text-xs text-sky-600 dark:text-sky-400 hover:underline font-semibold cursor-pointer">
+                                        + Add Exemplar
+                                    </button>
+                                </div>
+
+                                <!-- Add New Exemplar Box (Collapsible) -->
+                                <div id="newExemplarBox" class="hidden p-3 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-950/30 space-y-2">
+                                    <input type="text" id="newExemplarTitle" placeholder="Exemplar Title (e.g. Statin vs Red Yeast Rice post)" class="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-2.5 py-1.5 text-slate-800 dark:text-slate-200 focus:outline-none"/>
+                                    <div class="relative">
+                                        <textarea id="newExemplarText" maxlength="1500" oninput="updateNewExemplarCharCount()" rows="4" placeholder="Paste 1-3 paragraphs of your authentic writing style here..." class="w-full text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md p-2.5 text-slate-800 dark:text-slate-200 focus:outline-none"></textarea>
+                                        <span id="newExemplarCharCount" class="absolute bottom-2 right-2 text-[10px] text-slate-400 font-mono">0/1500</span>
+                                    </div>
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button" onclick="toggleNewExemplarForm()" class="px-2.5 py-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Cancel</button>
+                                        <button type="button" onclick="saveNewExemplar()" class="btn-primary-accent px-3 py-1 rounded text-xs text-white font-semibold">Save to Library</button>
+                                    </div>
+                                </div>
+
+                                <!-- Exemplars List Container -->
+                                <div id="exemplarsList" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                            </div>
+
+                            <div class="flex justify-end pt-2">
+                                <button type="button" onclick="saveVoiceProfileAndNotify()" class="btn-primary-accent text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow-xs cursor-pointer flex items-center gap-1.5">
+                                    <span>💾</span> <span>Save Voice Profile</span>
+                                </button>
+                            </div>
+                        </section>
                     </div>
 
                     <!-- Modal Footer -->
@@ -1926,6 +2109,9 @@ def index_page():
                                     <button id="leftTabThinkingBtn" onclick="switchLeftTab('thinking')" class="px-3 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center gap-1.5 cursor-pointer">
                                         <span>🧠</span> <span>Show Thinking / Audit</span>
                                     </button>
+                                    <button id="leftTabCommentaryBtn" onclick="switchLeftTab('commentary')" class="px-3 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition flex items-center gap-1.5 cursor-pointer">
+                                        <span>✍️</span> <span>Commentary &amp; QC</span>
+                                    </button>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
@@ -1973,6 +2159,62 @@ def index_page():
                                 </div>
                             </div>
                             <div id="thinkingContainer" class="hidden flex-1 space-y-4"></div>
+
+                            <!-- Commentary & Adversarial QC Tab Container -->
+                            <div id="commentaryContainer" class="hidden flex-1 flex flex-col min-h-0 space-y-4">
+                                <!-- Commentary Header Toolbar -->
+                                <div class="flex-shrink-0 bg-slate-50 dark:bg-slate-950/70 p-3 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                            <span>✍️</span> <span>Clinician Editorial Commentary</span>
+                                        </span>
+                                        <span id="commentaryVoiceBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">Voice Calibrated</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="openSettingsModal('voice')" class="text-xs text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300 font-medium transition cursor-pointer flex items-center gap-1">
+                                            <span>⚙️</span> <span>Calibrate Voice</span>
+                                        </button>
+                                        <button id="generateCommentaryBtn" onclick="generateClinicalCommentary()" class="btn-primary-accent text-white font-semibold text-xs px-3.5 py-1.5 rounded-md transition shadow-2xs flex items-center gap-1.5 cursor-pointer">
+                                            <span>✨</span> <span id="generateCommentaryBtnText">Generate Commentary</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Editable Draft Commentary Panel -->
+                                <div class="flex flex-col bg-slate-50 dark:bg-slate-950/70 p-4 rounded-lg border border-slate-200 dark:border-slate-800 space-y-2.5">
+                                    <div class="flex items-center justify-between text-xs border-b border-slate-200 dark:border-slate-800 pb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold text-slate-700 dark:text-slate-300">Draft Post (Editable)</span>
+                                            <span class="text-[11px] text-slate-400 dark:text-slate-500 font-sans">Ready to copy for colleagues or newsletters</span>
+                                        </div>
+                                        <button onclick="copyCommentaryToClipboard()" id="copyCommentaryBtn" class="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-2 py-1 rounded bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-700 shadow-2xs transition cursor-pointer">
+                                            <span>📋</span> <span id="copyCommentaryBtnText">Copy Post</span>
+                                        </button>
+                                    </div>
+                                    <textarea id="commentaryTextarea" oninput="updateCommentaryCharCount()" class="w-full min-h-[160px] text-xs sm:text-sm font-sans leading-relaxed text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs resize-y" placeholder="Click 'Generate Commentary' above or write/paste your commentary here to run an adversarial audit..."></textarea>
+                                    
+                                    <div class="flex items-center justify-between pt-1">
+                                        <span class="text-[11px] text-slate-400 font-mono" id="commentaryCharCount">0 characters</span>
+                                        <button id="runQCAuditBtn" onclick="runSecondaryQCAudit()" class="px-3.5 py-1.5 rounded-md bg-white dark:bg-slate-850 hover:bg-sky-50 dark:hover:bg-slate-800 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 font-semibold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
+                                            <span>🛡️</span> <span id="runQCAuditBtnText">Run Adversarial QC Audit</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- QC Audit Results Container -->
+                                <div id="qcAuditSection" class="hidden flex-1 flex flex-col space-y-3">
+                                    <div id="qcAuditHeaderCard" class="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 flex flex-wrap items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs font-bold text-slate-800 dark:text-slate-100">Adversarial QC Audit</span>
+                                            <span id="qcIntegrityBadge" class="px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Verified</span>
+                                        </div>
+                                        <span id="qcModelBadge" class="text-[11px] font-mono text-slate-500 dark:text-slate-400">Deterministic temp=0.0</span>
+                                    </div>
+                                    <p id="qcSummaryVerdict" class="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-3 rounded-md border border-slate-200 dark:border-slate-800 leading-relaxed"></p>
+                                    <div id="qcDesignCaveatBox" class="hidden p-3 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-950 dark:text-amber-200 leading-relaxed"></div>
+                                    <div id="qcDiscrepanciesFeed" class="space-y-3"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2209,6 +2451,7 @@ def index_page():
                     }
 
                     setupPendingUsersListener();
+                    syncVoiceProfileWithFirestore(user.uid);
                     return;
                 }
 
@@ -2244,6 +2487,7 @@ def index_page():
                     } catch (e) {
                         console.warn("Preapproved user sync:", e);
                     }
+                    syncVoiceProfileWithFirestore(user.uid);
                     return;
                 }
 
@@ -2279,6 +2523,7 @@ def index_page():
                         if (isApproved) {
                             if (pendingApprovalModal) pendingApprovalModal.classList.add('hidden');
                             closeAuthModal();
+                            syncVoiceProfileWithFirestore(user.uid);
                         } else {
                             if (pendingApprovalModal) {
                                 pendingApprovalModal.classList.remove('hidden');
@@ -3168,11 +3413,18 @@ def index_page():
                 }
             }
 
-            function openSettingsModal() {
+            function openSettingsModal(section) {
                 const m = document.getElementById('settingsModal');
                 if (m) {
                     m.classList.remove('hidden');
                     updateThemeModalUI();
+                    renderVoiceModalUI();
+                    if (section === 'voice') {
+                        setTimeout(() => {
+                            const vs = document.getElementById('settingsVoiceSection');
+                            if (vs) vs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 50);
+                    }
                 }
             }
 
@@ -4358,9 +4610,11 @@ def index_page():
                 const appraisalView = document.getElementById('outputMarkdown');
                 const askView = document.getElementById('askContainer');
                 const thinkingView = document.getElementById('thinkingContainer');
+                const commentaryView = document.getElementById('commentaryContainer');
                 const tabAppraisalBtn = document.getElementById('leftTabAppraisalBtn');
                 const tabAskBtn = document.getElementById('leftTabAskBtn');
                 const tabThinkingBtn = document.getElementById('leftTabThinkingBtn');
+                const tabCommentaryBtn = document.getElementById('leftTabCommentaryBtn');
                 const hint = document.getElementById('leftPaneHint');
 
                 const activeClass = "px-3 py-1 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-semibold transition flex items-center gap-1.5 cursor-pointer";
@@ -4369,10 +4623,12 @@ def index_page():
                 if (appraisalView) appraisalView.classList.add('hidden');
                 if (askView) askView.classList.add('hidden');
                 if (thinkingView) thinkingView.classList.add('hidden');
+                if (commentaryView) commentaryView.classList.add('hidden');
 
                 if (tabAppraisalBtn) tabAppraisalBtn.className = inactiveClass;
                 if (tabAskBtn) tabAskBtn.className = inactiveClass;
                 if (tabThinkingBtn) tabThinkingBtn.className = inactiveClass;
+                if (tabCommentaryBtn) tabCommentaryBtn.className = inactiveClass;
 
                 if (tab === 'appraisal') {
                     if (appraisalView) appraisalView.classList.remove('hidden');
@@ -4384,10 +4640,15 @@ def index_page():
                     if (hint) hint.innerText = "Interactive QA grounded in manuscript anchors";
                     const inp = document.getElementById('askQuestionInput');
                     if (inp) inp.focus();
-                } else {
+                } else if (tab === 'thinking') {
                     if (thinkingView) thinkingView.classList.remove('hidden');
                     if (tabThinkingBtn) tabThinkingBtn.className = activeClass;
                     if (hint) hint.innerText = "Auditing triage rationale, rules AST & reasoning trace";
+                } else if (tab === 'commentary') {
+                    if (commentaryView) commentaryView.classList.remove('hidden');
+                    if (tabCommentaryBtn) tabCommentaryBtn.className = activeClass;
+                    if (hint) hint.innerText = "Personalized clinician commentary with adversarial QC audit";
+                    updateVoiceUIElements();
                 }
             }
 
@@ -5256,6 +5517,7 @@ ${escapeHtml(thought)}
                 if (window.ResearchAppState) {
                     window.ResearchAppState.lastAppraisalMarkdown = content;
                     window.ResearchAppState.lastAppraisalFilename = currentFilename || 'clinical_analysis';
+                    window.ResearchAppState.lastAppraisalData = data;
                 }
 
                 const container = document.getElementById('outputMarkdown');
@@ -5776,6 +6038,584 @@ ${escapeHtml(thought)}
                 setTimeout(() => repositionHitbox(true), 80);
                 setTimeout(() => repositionHitbox(true), 250);
             }
+
+            // =========================================================================
+            // Clinician Voice Profile & Adversarial QC Engine Client State & Sync
+            // =========================================================================
+            let voiceProfileState = {
+                schema_version: 1,
+                revision: 0,
+                base_revision: 0,
+                local_dirty: false,
+                updated_at_ms: 0,
+                philosophy: "Prioritize natural therapies and nutritional interventions when safety profiles favor them; focus on absolute risk reductions over relative risk spin.",
+                preferred_terms: "absolute risk reduction, clinical relevance, confounding, effect size",
+                prohibited_terms: "more research is needed, delve, it is crucial to note",
+                exemplars: []
+            };
+
+            function loadVoiceProfileFromLocal() {
+                try {
+                    const raw = localStorage.getItem('fact_voice_profile');
+                    if (raw) {
+                        const parsed = jsonParseSafe(raw, null);
+                        if (parsed && typeof parsed === 'object') {
+                            voiceProfileState = {
+                                ...voiceProfileState,
+                                ...parsed
+                            };
+                        }
+                    }
+                } catch (e) {
+                    console.warn("[VoiceProfile] Failed reading local profile:", e);
+                }
+                updateVoiceUIElements();
+            }
+
+            function jsonParseSafe(str, fallback) {
+                try { return JSON.parse(str); } catch (e) { return fallback; }
+            }
+
+            function updateVoiceUIElements() {
+                const badge = document.getElementById('commentaryVoiceBadge');
+                if (badge) {
+                    const activeCount = (voiceProfileState.exemplars || []).filter(e => e.is_active).length;
+                    badge.innerText = activeCount > 0 ? `Voice Calibrated (${activeCount} Exemplars)` : `Voice Calibrated (Philosophy Only)`;
+                }
+                const syncBadge = document.getElementById('voiceSyncBadge');
+                if (syncBadge) {
+                    const rev = voiceProfileState.revision || 0;
+                    if (voiceProfileState.local_dirty) {
+                        syncBadge.innerText = `Rev ${rev} · Unsynced Edits`;
+                        syncBadge.className = "text-[11px] font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300";
+                    } else if (currentUser) {
+                        syncBadge.innerText = `Rev ${rev} · Synced to Cloud`;
+                        syncBadge.className = "text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300";
+                    } else {
+                        syncBadge.innerText = `Rev ${rev} · Local Cache`;
+                        syncBadge.className = "text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700";
+                    }
+                }
+            }
+
+            function updateVoiceFieldCounts() {
+                const phil = document.getElementById('voicePhilosophyInput');
+                const pref = document.getElementById('voicePreferredInput');
+                const proh = document.getElementById('voiceProhibitedInput');
+                const philCount = document.getElementById('voicePhilCount');
+                const prefCount = document.getElementById('voicePrefCount');
+                const prohCount = document.getElementById('voiceProhCount');
+
+                if (phil && philCount) philCount.innerText = `${phil.value.length}/500`;
+                if (pref && prefCount) prefCount.innerText = `${pref.value.length}/300`;
+                if (proh && prohCount) prohCount.innerText = `${proh.value.length}/300`;
+            }
+
+            function renderVoiceModalUI() {
+                const phil = document.getElementById('voicePhilosophyInput');
+                const pref = document.getElementById('voicePreferredInput');
+                const proh = document.getElementById('voiceProhibitedInput');
+                if (phil) phil.value = voiceProfileState.philosophy || '';
+                if (pref) pref.value = voiceProfileState.preferred_terms || '';
+                if (proh) proh.value = voiceProfileState.prohibited_terms || '';
+                updateVoiceFieldCounts();
+
+                const listCont = document.getElementById('exemplarsList');
+                if (!listCont) return;
+
+                const exemplars = voiceProfileState.exemplars || [];
+                if (exemplars.length === 0) {
+                    listCont.innerHTML = `<div class="p-3 text-xs text-slate-400 dark:text-slate-500 italic bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 text-center">No writing exemplars stored yet. Add 1 to 3 past reviews or newsletter posts so F.A.C.T. can mirror your sentence cadence and tone.</div>`;
+                    return;
+                }
+
+                listCont.innerHTML = exemplars.map((ex, idx) => {
+                    const charLen = (ex.text || '').length;
+                    const isActive = Boolean(ex.is_active);
+                    return `
+                        <div class="p-2.5 rounded-lg border ${isActive ? 'border-sky-300 dark:border-sky-800 bg-white dark:bg-slate-900' : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 opacity-75'} text-xs space-y-1.5 transition">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleExemplarActive('${ex.id}')" id="exCheck_${ex.id}" class="rounded text-sky-600 focus:ring-sky-500 cursor-pointer"/>
+                                    <label for="exCheck_${ex.id}" class="font-bold text-slate-800 dark:text-slate-200 cursor-pointer">${escapeHtml(ex.title || ('Exemplar ' + (idx + 1)))}</label>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-mono text-slate-400">${charLen} chars</span>
+                                    <button type="button" onclick="deleteExemplar('${ex.id}')" class="text-rose-500 hover:text-rose-700 text-xs font-bold px-1 transition" title="Delete exemplar">✕</button>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed font-serif italic">${escapeHtml(ex.text || '')}</p>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function toggleNewExemplarForm() {
+                const box = document.getElementById('newExemplarBox');
+                if (!box) return;
+                box.classList.toggle('hidden');
+                if (!box.classList.contains('hidden')) {
+                    const titleInput = document.getElementById('newExemplarTitle');
+                    if (titleInput) titleInput.focus();
+                }
+            }
+
+            function updateNewExemplarCharCount() {
+                const txt = document.getElementById('newExemplarText');
+                const badge = document.getElementById('newExemplarCharCount');
+                if (txt && badge) {
+                    badge.innerText = `${txt.value.length}/1500`;
+                }
+            }
+
+            function saveNewExemplar() {
+                const titleInput = document.getElementById('newExemplarTitle');
+                const textInput = document.getElementById('newExemplarText');
+                if (!textInput || !textInput.value.trim()) {
+                    alert("Please paste writing exemplar text before saving.");
+                    return;
+                }
+
+                const newEx = {
+                    id: 'ex_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                    title: (titleInput && titleInput.value.trim()) ? titleInput.value.trim() : 'Writing Exemplar',
+                    text: textInput.value.trim().slice(0, 1500),
+                    is_active: (voiceProfileState.exemplars || []).filter(e => e.is_active).length < 3,
+                    updated_at_ms: Date.now()
+                };
+
+                const currentList = voiceProfileState.exemplars || [];
+                if (currentList.length >= 10) {
+                    alert("Maximum 10 exemplars allowed in your library. Please remove an older exemplar first.");
+                    return;
+                }
+
+                voiceProfileState.exemplars = [newEx, ...currentList];
+                voiceProfileState.local_dirty = true;
+                localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+
+                if (titleInput) titleInput.value = '';
+                if (textInput) textInput.value = '';
+                updateNewExemplarCharCount();
+                toggleNewExemplarForm();
+                renderVoiceModalUI();
+                updateVoiceUIElements();
+            }
+
+            function toggleExemplarActive(id) {
+                const ex = (voiceProfileState.exemplars || []).find(e => e.id === id);
+                if (!ex) return;
+                
+                const currentActive = (voiceProfileState.exemplars || []).filter(e => e.is_active && e.id !== id).length;
+                if (!ex.is_active && currentActive >= 3) {
+                    alert("A maximum of 3 active exemplars can be used during commentary generation to preserve attention on manuscript data. Please uncheck another exemplar first.");
+                    renderVoiceModalUI();
+                    return;
+                }
+
+                ex.is_active = !ex.is_active;
+                ex.updated_at_ms = Date.now();
+                voiceProfileState.local_dirty = true;
+                localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+                renderVoiceModalUI();
+                updateVoiceUIElements();
+            }
+
+            function deleteExemplar(id) {
+                voiceProfileState.exemplars = (voiceProfileState.exemplars || []).filter(e => e.id !== id);
+                voiceProfileState.local_dirty = true;
+                localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+                renderVoiceModalUI();
+                updateVoiceUIElements();
+            }
+
+            async function saveVoiceProfileAndNotify() {
+                const phil = document.getElementById('voicePhilosophyInput');
+                const pref = document.getElementById('voicePreferredInput');
+                const proh = document.getElementById('voiceProhibitedInput');
+
+                if (phil) voiceProfileState.philosophy = phil.value.trim();
+                if (pref) voiceProfileState.preferred_terms = pref.value.trim();
+                if (proh) voiceProfileState.prohibited_terms = proh.value.trim();
+
+                voiceProfileState.local_dirty = true;
+                voiceProfileState.updated_at_ms = Date.now();
+                localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+
+                if (currentUser && fbDb) {
+                    await syncVoiceProfileWithFirestore(currentUser.uid, true);
+                } else {
+                    updateVoiceUIElements();
+                }
+
+                alert("Voice profile and exemplar library saved successfully!");
+                closeSettingsModal();
+            }
+
+            // Monotonic Revision Counter + Dirty State Machine Synchronization
+            async function syncVoiceProfileWithFirestore(uid, forcePush = false) {
+                if (!uid || !fbDb) return;
+                try {
+                    const userDocRef = fbDb.collection('users').doc(uid);
+                    const docSnap = await userDocRef.get();
+                    const userData = docSnap.exists ? docSnap.data() : {};
+                    const remote = userData.voice_profile || null;
+
+                    const localBaseRev = voiceProfileState.base_revision || 0;
+                    const remoteRev = (remote && typeof remote.revision === 'number') ? remote.revision : 0;
+
+                    if (!voiceProfileState.local_dirty && !forcePush) {
+                        // Case 1: Clean local state, remote is newer or equal
+                        if (remote && remoteRev !== localBaseRev) {
+                            voiceProfileState = {
+                                ...voiceProfileState,
+                                ...remote,
+                                base_revision: remoteRev,
+                                revision: remoteRev,
+                                local_dirty: false
+                            };
+                            localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+                            renderVoiceModalUI();
+                            updateVoiceUIElements();
+                            console.log(`[VoiceProfile] Hydrated remote revision ${remoteRev} into local state.`);
+                        }
+                    } else if (voiceProfileState.local_dirty && (!remote || remoteRev === localBaseRev || forcePush)) {
+                        // Case 2: Local edits occurred without remote conflict -> commit incremented revision
+                        const nextRev = remoteRev + 1;
+                        const payloadToSave = {
+                            schema_version: 1,
+                            revision: nextRev,
+                            philosophy: voiceProfileState.philosophy || '',
+                            preferred_terms: voiceProfileState.preferred_terms || '',
+                            prohibited_terms: voiceProfileState.prohibited_terms || '',
+                            exemplars: voiceProfileState.exemplars || [],
+                            updated_by_device: 'browser',
+                            server_updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+
+                        await userDocRef.set({ voice_profile: payloadToSave }, { merge: true });
+                        voiceProfileState.revision = nextRev;
+                        voiceProfileState.base_revision = nextRev;
+                        voiceProfileState.local_dirty = false;
+                        localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+                        updateVoiceUIElements();
+                        console.log(`[VoiceProfile] Committed local changes as revision ${nextRev} to Firestore.`);
+                    } else if (voiceProfileState.local_dirty && remoteRev > localBaseRev) {
+                        // Case 3: Concurrent conflict -> adopt remote revision and rescue unique local exemplars
+                        const remoteTexts = new Set((remote.exemplars || []).map(e => (e.text || '').trim()));
+                        const rescued = [];
+                        (voiceProfileState.exemplars || []).forEach(localEx => {
+                            if (localEx.text && !remoteTexts.has(localEx.text.trim())) {
+                                rescued.push({
+                                    id: localEx.id || ('ex_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
+                                    title: (localEx.title || 'Untitled Exemplar') + ' (Offline Draft)',
+                                    text: localEx.text,
+                                    is_active: false,
+                                    updated_at_ms: Date.now()
+                                });
+                            }
+                        });
+
+                        const mergedExemplars = [...(remote.exemplars || []), ...rescued].slice(0, 10);
+                        const mergedRev = remoteRev + 1;
+                        const mergedPayload = {
+                            schema_version: 1,
+                            revision: mergedRev,
+                            philosophy: remote.philosophy || voiceProfileState.philosophy || '',
+                            preferred_terms: remote.preferred_terms || voiceProfileState.preferred_terms || '',
+                            prohibited_terms: remote.prohibited_terms || voiceProfileState.prohibited_terms || '',
+                            exemplars: mergedExemplars,
+                            updated_by_device: 'browser',
+                            server_updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+
+                        await userDocRef.set({ voice_profile: mergedPayload }, { merge: true });
+                        voiceProfileState = {
+                            ...mergedPayload,
+                            base_revision: mergedRev,
+                            local_dirty: false
+                        };
+                        localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+                        renderVoiceModalUI();
+                        updateVoiceUIElements();
+                        console.warn(`[VoiceProfile] Case 3 Concurrent conflict merged into revision ${mergedRev}. Rescued ${rescued.length} local exemplar(s).`);
+                    }
+                } catch (err) {
+                    console.error("[VoiceProfile] Firestore synchronization error:", err);
+                }
+            }
+
+            // Commentary & Adversarial QC Execution Functions
+            function updateCommentaryCharCount() {
+                const ta = document.getElementById('commentaryTextarea');
+                const cc = document.getElementById('commentaryCharCount');
+                if (ta && cc) {
+                    cc.innerText = `${ta.value.length} characters`;
+                }
+            }
+
+            function copyCommentaryToClipboard() {
+                const ta = document.getElementById('commentaryTextarea');
+                const btnText = document.getElementById('copyCommentaryBtnText');
+                if (!ta || !ta.value.trim()) {
+                    alert("No commentary to copy.");
+                    return;
+                }
+                navigator.clipboard.writeText(ta.value.trim()).then(() => {
+                    if (btnText) {
+                        btnText.innerText = "✓ Copied!";
+                        setTimeout(() => { btnText.innerText = "Copy Post"; }, 2000);
+                    }
+                }).catch(err => {
+                    alert("Copy failed: " + err);
+                });
+            }
+
+            async function generateClinicalCommentary() {
+                if (!currentFilename) {
+                    alert("Please upload or analyze a manuscript before generating commentary.");
+                    return;
+                }
+                const appraisalText = (window.ResearchAppState && window.ResearchAppState.lastAppraisalMarkdown) 
+                    ? window.ResearchAppState.lastAppraisalMarkdown 
+                    : (document.getElementById('outputMarkdown')?.innerText || '');
+
+                if (!appraisalText) {
+                    alert("Please run an appraisal on this paper first.");
+                    return;
+                }
+
+                const genBtn = document.getElementById('generateCommentaryBtn');
+                const genBtnText = document.getElementById('generateCommentaryBtnText');
+                const origText = genBtnText ? genBtnText.innerText : 'Generate Commentary';
+                if (genBtn) genBtn.disabled = true;
+                if (genBtnText) genBtnText.innerText = "Drafting...";
+
+                try {
+                    const formData = new FormData();
+                    formData.append('filename', currentFilename);
+                    formData.append('appraisal_markdown', appraisalText);
+                    formData.append('voice_profile', JSON.stringify(voiceProfileState));
+                    if (currentUser) {
+                        formData.append('user_uid', currentUser.uid || 'anonymous');
+                        formData.append('user_email', currentUser.email || 'unauthenticated');
+                    }
+
+                    const resp = await fetch('/generate-commentary', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!resp.ok) {
+                        const err = await resp.text();
+                        throw new Error(`Server returned HTTP ${resp.status}: ${err}`);
+                    }
+
+                    const data = await resp.json();
+                    const ta = document.getElementById('commentaryTextarea');
+                    if (ta && data.commentary) {
+                        ta.value = data.commentary;
+                        updateCommentaryCharCount();
+                    }
+
+                    // Auto-trigger background adversarial QC audit after draft generation
+                    runSecondaryQCAudit();
+                } catch (e) {
+                    alert("Commentary generation failed: " + e.message);
+                } finally {
+                    if (genBtn) genBtn.disabled = false;
+                    if (genBtnText) genBtnText.innerText = origText;
+                }
+            }
+
+            async function runSecondaryQCAudit() {
+                if (!currentFilename) {
+                    alert("Please load a manuscript before running QC audit.");
+                    return;
+                }
+                const ta = document.getElementById('commentaryTextarea');
+                const draftText = ta ? ta.value.trim() : '';
+                if (!draftText) {
+                    alert("Please generate or paste commentary text to audit.");
+                    return;
+                }
+
+                const appraisalText = (window.ResearchAppState && window.ResearchAppState.lastAppraisalMarkdown) 
+                    ? window.ResearchAppState.lastAppraisalMarkdown 
+                    : (document.getElementById('outputMarkdown')?.innerText || '');
+
+                const qcBtn = document.getElementById('runQCAuditBtn');
+                const qcBtnText = document.getElementById('runQCAuditBtnText');
+                const origText = qcBtnText ? qcBtnText.innerText : 'Run Adversarial QC Audit';
+                if (qcBtn) qcBtn.disabled = true;
+                if (qcBtnText) qcBtnText.innerText = "Auditing (temp=0.0)...";
+
+                const qcSec = document.getElementById('qcAuditSection');
+                if (qcSec) qcSec.classList.remove('hidden');
+
+                try {
+                    const formData = new FormData();
+                    formData.append('filename', currentFilename);
+                    formData.append('appraisal_markdown', appraisalText);
+                    formData.append('commentary_text', draftText);
+                    if (window.ResearchAppState && window.ResearchAppState.lastAppraisalData && window.ResearchAppState.lastAppraisalData.triage) {
+                        formData.append('triage', JSON.stringify(window.ResearchAppState.lastAppraisalData.triage));
+                    }
+                    if (currentUser) {
+                        formData.append('user_uid', currentUser.uid || 'anonymous');
+                        formData.append('user_email', currentUser.email || 'unauthenticated');
+                    }
+
+                    const resp = await fetch('/audit-commentary', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!resp.ok) {
+                        const err = await resp.text();
+                        throw new Error(`Server returned HTTP ${resp.status}: ${err}`);
+                    }
+
+                    const data = await resp.json();
+                    renderQCAuditResults(data);
+                } catch (e) {
+                    alert("QC audit failed: " + e.message);
+                } finally {
+                    if (qcBtn) qcBtn.disabled = false;
+                    if (qcBtnText) qcBtnText.innerText = origText;
+                }
+            }
+
+            let lastQCAuditData = null;
+
+            function renderQCAuditResults(data) {
+                lastQCAuditData = data;
+                const qcSec = document.getElementById('qcAuditSection');
+                const integrityBadge = document.getElementById('qcIntegrityBadge');
+                const summaryVerdict = document.getElementById('qcSummaryVerdict');
+                const caveatBox = document.getElementById('qcDesignCaveatBox');
+                const feed = document.getElementById('qcDiscrepanciesFeed');
+
+                if (!qcSec) return;
+                qcSec.classList.remove('hidden');
+
+                const integrity = (data.overall_integrity || 'VERIFIED').toUpperCase();
+                if (integrityBadge) {
+                    if (integrity === 'VERIFIED') {
+                        integrityBadge.innerText = "✓ Grounding Verified";
+                        integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700";
+                    } else if (integrity === 'CAUTION') {
+                        integrityBadge.innerText = "⚠ Nuance / Overreach Identified";
+                        integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700";
+                    } else {
+                        integrityBadge.innerText = "✗ Discrepancy Flagged";
+                        integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700";
+                    }
+                }
+
+                if (summaryVerdict) {
+                    summaryVerdict.innerText = data.summary_verdict || 'Audit evaluation complete.';
+                }
+
+                if (caveatBox) {
+                    if (data.study_design_caveat) {
+                        caveatBox.innerHTML = `<strong>Methodological Design Caveat:</strong> ${renderCoordinatePillsInText(data.study_design_caveat)}`;
+                        caveatBox.classList.remove('hidden');
+                    } else {
+                        caveatBox.classList.add('hidden');
+                    }
+                }
+
+                if (!feed) return;
+                const discrepancies = data.discrepancies || [];
+
+                if (discrepancies.length === 0) {
+                    feed.innerHTML = `
+                        <div class="p-4 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-2">
+                            <span class="text-base font-bold text-emerald-600">✓</span>
+                            <span><strong>No discrepancies or ungrounded claims detected.</strong> All numerical findings, effect sizes, and causal statements are supported by manuscript coordinates.</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                feed.innerHTML = discrepancies.map((d, idx) => {
+                    const isRed = (d.severity || '').toUpperCase() === 'RED';
+                    const category = (d.category || 'ANALYSIS').replace(/_/g, ' ');
+                    const scope = (d.scope || 'LOCALIZED_CLAIM').replace(/_/g, ' ');
+                    
+                    let citationsHtml = '';
+                    if (d.citations && d.citations.length > 0) {
+                        citationsHtml = `
+                            <div class="flex items-center gap-1.5 flex-wrap pt-1">
+                                <span class="text-[11px] font-semibold text-slate-500">Evidence Anchors:</span>
+                                ${d.citations.map(c => {
+                                    const clean = String(c).replace(/^\[|\]$/g, '').trim();
+                                    const rawId = `[${clean}]`;
+                                    const enc = encodeURIComponent(rawId);
+                                    return `<button type="button" onclick="inspectAnchor('${enc}')" data-anchor="${rawId}" class="anchor-pill inline-flex items-center px-2 py-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none cursor-pointer" title="Jump to proof on PDF">${formatAnchorDisplay(clean)}</button>`;
+                                }).join(' ')}
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="p-3.5 rounded-lg border ${isRed ? 'border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20' : 'border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20'} space-y-2 text-xs">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isRed ? 'bg-rose-200 text-rose-900 border border-rose-300' : 'bg-amber-200 text-amber-900 border border-amber-300'}">${escapeHtml(category)}</span>
+                                    <span class="text-[10px] font-mono text-slate-500 uppercase">${escapeHtml(scope)}</span>
+                                </div>
+                                <span class="text-[10px] font-bold ${isRed ? 'text-rose-700' : 'text-amber-700'}">${isRed ? 'CRITICAL DISCREPANCY' : 'CAUTION / NUANCE'}</span>
+                            </div>
+
+                            <div class="bg-white dark:bg-slate-900 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quoted Claim in Draft:</span>
+                                <p class="text-xs text-slate-800 dark:text-slate-200 font-serif italic">"${escapeHtml(d.quoted_claim || '')}"</p>
+                            </div>
+
+                            <div class="space-y-1">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Manuscript Proof / Finding:</span>
+                                <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">${renderCoordinatePillsInText(d.manuscript_evidence || '')}</p>
+                                ${citationsHtml}
+                            </div>
+
+                            ${d.suggested_edit ? `
+                                <div class="p-2.5 rounded bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 flex items-start justify-between gap-3">
+                                    <div class="space-y-0.5">
+                                        <span class="text-[10px] font-bold text-sky-900 dark:text-sky-300 uppercase block">Suggested Alignment:</span>
+                                        <p class="text-xs text-sky-950 dark:text-sky-200 font-serif italic">${escapeHtml(d.suggested_edit)}</p>
+                                    </div>
+                                    <button type="button" onclick="applyQCSuggestion(${idx})" class="shrink-0 px-2.5 py-1 rounded bg-white dark:bg-slate-850 hover:bg-sky-600 hover:text-white text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 text-[11px] font-semibold transition shadow-2xs cursor-pointer">
+                                        Apply Fix
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            function applyQCSuggestion(index) {
+                if (!lastQCAuditData || !lastQCAuditData.discrepancies || !lastQCAuditData.discrepancies[index]) return;
+                const d = lastQCAuditData.discrepancies[index];
+                const ta = document.getElementById('commentaryTextarea');
+                if (!ta || !d.quoted_claim || !d.suggested_edit) return;
+
+                const currentVal = ta.value;
+                if (currentVal.includes(d.quoted_claim)) {
+                    ta.value = currentVal.replace(d.quoted_claim, d.suggested_edit);
+                    updateCommentaryCharCount();
+                    alert("Applied suggestion to your commentary draft!");
+                } else {
+                    ta.value = currentVal + "\n\n" + d.suggested_edit;
+                    updateCommentaryCharCount();
+                    alert("Added suggested alignment to the end of your draft.");
+                }
+            }
+
+            // Initialize Clinician Voice Profile from Local Storage on Load
+            loadVoiceProfileFromLocal();
 
             // Initialize Firebase Authentication & Governance on Load
             initFirebaseAuth();
