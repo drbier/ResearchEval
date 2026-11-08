@@ -1946,9 +1946,14 @@ def index_page():
                                     <h3 class="font-bold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">5. Clinician Voice Profile &amp; Exemplars</h3>
                                     <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">Calibrate editorial commentary voice, clinical philosophy, and past writing exemplars.</p>
                                 </div>
-                                <span id="voiceSyncBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                                    Rev 0 · Local
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" id="adminSeedVoiceBtn" onclick="seedDrBierVoiceProfile()" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-900 border border-indigo-300 transition cursor-pointer" title="Reset/Seed Dr. Bier's Calibrated Voice & 4 Canonical Exemplars">
+                                        ⚡ Reset Dr. Bier Voice
+                                    </button>
+                                    <span id="voiceSyncBadge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                        Rev 0 · Local
+                                    </span>
+                                </div>
                             </div>
 
                             <!-- Editorial Philosophy -->
@@ -2032,7 +2037,7 @@ def index_page():
 
                     <!-- Modal Footer -->
                     <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between">
-                        <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">F.A.C.T. v1.0.0</span>
+                        <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">F.A.C.T. v1.1.0</span>
                         <button id="settingsDoneBtn" onclick="closeSettingsModal()" class="btn-primary-accent px-4 py-2 rounded-lg text-white font-semibold text-xs shadow-xs transition cursor-pointer">
                             Done
                         </button>
@@ -6640,6 +6645,13 @@ ${scopedHtml}
                             };
                         }
                     }
+                    // If user is Master Admin and has no exemplars loaded, seed with Dr. Bier's calibrated profile
+                    if (currentUser && currentUser.email && currentUser.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+                        if (!voiceProfileState.exemplars || voiceProfileState.exemplars.length === 0) {
+                            voiceProfileState = JSON.parse(JSON.stringify(DR_BIER_CALIBRATED_VOICE));
+                            localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+                        }
+                    }
                 } catch (e) {
                     console.warn("[VoiceProfile] Failed reading local profile:", e);
                 }
@@ -6655,6 +6667,14 @@ ${scopedHtml}
                 if (badge) {
                     const activeCount = (voiceProfileState.exemplars || []).filter(e => e.is_active).length;
                     badge.innerText = activeCount > 0 ? `Voice Calibrated (${activeCount} Exemplars)` : `Voice Calibrated (Philosophy Only)`;
+                }
+                const adminBtn = document.getElementById('adminSeedVoiceBtn');
+                if (adminBtn) {
+                    if (currentUser && currentUser.email && currentUser.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+                        adminBtn.classList.remove('hidden');
+                    } else {
+                        adminBtn.classList.add('hidden');
+                    }
                 }
                 const syncBadge = document.getElementById('voiceSyncBadge');
                 if (syncBadge) {
@@ -6683,6 +6703,19 @@ ${scopedHtml}
                 if (phil && philCount) philCount.innerText = `${phil.value.length}/500`;
                 if (pref && prefCount) prefCount.innerText = `${pref.value.length}/300`;
                 if (proh && prohCount) prohCount.innerText = `${proh.value.length}/300`;
+            }
+
+            async function seedDrBierVoiceProfile() {
+                if (!confirm("Load Dr. Bier's calibrated Voice Profile, core philosophy, and 4 canonical exemplars?")) return;
+                voiceProfileState = JSON.parse(JSON.stringify(DR_BIER_CALIBRATED_VOICE));
+                voiceProfileState.local_dirty = true;
+                localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+                renderVoiceModalUI();
+                updateVoiceUIElements();
+                if (currentUser && fbDb) {
+                    await syncVoiceProfileWithFirestore(currentUser.uid, true);
+                }
+                alert("Dr. Bier's Voice Profile & 4 Canonical Exemplars successfully loaded and synced!");
             }
 
             function renderVoiceModalUI() {
@@ -6918,10 +6951,12 @@ ${scopedHtml}
                     const userData = docSnap.exists ? docSnap.data() : {};
                     let remote = userData.voice_profile || null;
 
-                    // If user is Master Admin (drbiernd@gmail.com) and has no voice profile yet, initialize with Dr. Bier's calibrated profile
-                    if (!remote && currentUser && currentUser.email && currentUser.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
-                        remote = DR_BIER_CALIBRATED_VOICE;
-                        await userDocRef.set({ voice_profile: remote }, { merge: true });
+                    // If user is Master Admin (drbiernd@gmail.com) and exemplars are empty, seed with Dr. Bier's calibrated profile
+                    if (currentUser && currentUser.email && currentUser.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+                        if (!remote || !remote.exemplars || remote.exemplars.length === 0) {
+                            remote = DR_BIER_CALIBRATED_VOICE;
+                            await userDocRef.set({ voice_profile: remote }, { merge: true });
+                        }
                     }
 
                     const localBaseRev = voiceProfileState.base_revision || 0;
