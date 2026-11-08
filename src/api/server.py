@@ -3,6 +3,8 @@ import os
 import sys
 import shutil
 import io
+import time
+import json
 import urllib.parse
 import re
 from typing import Optional, Dict, List, Any
@@ -132,6 +134,29 @@ def get_favicon():
             return FileResponse(f, media_type="image/x-icon")
     raise HTTPException(status_code=404, detail="Favicon not found")
     raise HTTPException(status_code=404, detail="Favicon not found")
+
+def prune_ephemeral_uploads(max_age_hours: int = 24):
+    """Purge temporary PDF and abstract files older than max_age_hours to prevent copyright retention."""
+    if not os.path.exists(UPLOAD_DIR):
+        return
+    now = time.time()
+    cutoff = now - (max_age_hours * 3600)
+    purged = 0
+    for fname in os.listdir(UPLOAD_DIR):
+        if fname.startswith("."):
+            continue
+        fpath = os.path.join(UPLOAD_DIR, fname)
+        try:
+            if os.path.isfile(fpath) and os.path.getmtime(fpath) < cutoff:
+                os.remove(fpath)
+                purged += 1
+        except Exception as e:
+            print(f"[StorageCleaner] Warning removing {fname}: {e}")
+    if purged > 0:
+        print(f"[StorageCleaner] Ephemeral pruning complete: {purged} file(s) removed.")
+
+# Run initial pruning on server module initialization
+prune_ephemeral_uploads(24)
 
 engine = SynthesisEngine(DATA_DIR)
 fetcher = PaperFetcher(UPLOAD_DIR)
@@ -849,11 +874,11 @@ def view_anchor_crop(
 
 @app.get("/view-pdf")
 def view_pdf(filename: str = Query(...)):
-    """Serve the raw PDF file for inline browser viewing."""
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found.")
-    return StreamingResponse(open(file_path, "rb"), media_type="application/pdf")
+    """Guarded endpoint: raw binary PDF downloads are disabled for publisher copyright isolation."""
+    raise HTTPException(
+        status_code=403,
+        detail="Direct raw PDF binary download is disabled for publisher copyright and sandbox protection. Use /view-pdf-page for rendered page views."
+    )
 
 @app.get("/", response_class=HTMLResponse)
 def index_page():
