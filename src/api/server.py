@@ -1859,7 +1859,7 @@ def index_page():
                     </div>
                 </div>
 
-                <!-- Master 4-Mode Navigation Switcher: F.A.C.T. (Find -> Analyze -> Contextualize -> Library) -->
+                <!-- Master 3-Mode Navigation Switcher: F.A.C.T. (Find -> Analyze -> Contextualize) -->
                 <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold gap-1 shrink-0">
                     <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
                         <span>🔍</span> <span>Find</span>
@@ -1870,10 +1870,6 @@ def index_page():
                     <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
                         <span>📝</span> <span>Contextualize</span>
                         <span id="summarizerBatchBadge" class="hidden ml-1 px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[10px] font-bold">0</span>
-                    </button>
-                    <button id="masterTabLibrary" onclick="switchMasterMode('library')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
-                        <span>📚</span> <span>Library</span>
-                        <span id="userLibraryBadge" class="hidden ml-1 px-1.5 py-0.2 bg-emerald-600 text-white rounded-full text-[10px] font-bold">0</span>
                     </button>
                 </div>
 
@@ -1897,6 +1893,12 @@ def index_page():
                         <button onclick="startUrlResolution()" id="resolveBtn" class="btn-primary-accent text-white font-semibold text-xs px-4 py-1.5 rounded transition shadow-xs shrink-0">Fetch & Analyze</button>
                     </div>
                 </div>
+
+                <!-- Library Storage Access (Icon Button with Tooltip & Live Badge) -->
+                <button id="masterTabLibrary" onclick="toggleLibraryMode()" class="relative p-2 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 shadow-2xs transition cursor-pointer shrink-0 flex items-center justify-center" title="Library — Saved Appraisals" aria-label="Library">
+                    <span class="text-base leading-none">📚</span>
+                    <span id="userLibraryBadge" class="hidden absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-emerald-600 text-white text-[10px] font-bold leading-none shadow-xs">0</span>
+                </button>
 
                 <!-- Right: Study Type Badge with Rich Tooltip (Hidden until appraisal loaded) -->
                 <div class="flex items-center gap-3 shrink-0">
@@ -4079,7 +4081,18 @@ def index_page():
                 lastSummarizerMarkdown: ''
             };
 
+            function toggleLibraryMode() {
+                if (window.ResearchAppState && window.ResearchAppState.currentMasterMode === "library") {
+                    switchMasterMode(window.ResearchAppState.previousMasterMode || "appraisal");
+                } else {
+                    switchMasterMode("library");
+                }
+            }
+
             function switchMasterMode(mode) {
+                if (window.ResearchAppState && window.ResearchAppState.currentMasterMode !== "library") {
+                    window.ResearchAppState.previousMasterMode = window.ResearchAppState.currentMasterMode;
+                }
                 window.ResearchAppState.currentMasterMode = mode;
                 const finderCont = document.getElementById('finderContainer');
                 const summarizerCont = document.getElementById('summarizerContainer');
@@ -4095,7 +4108,7 @@ def index_page():
                 if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
                 if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
                 if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
-                if (tabLibraryBtn) tabLibraryBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
+                if (tabLibraryBtn) tabLibraryBtn.className = "relative p-2 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 shadow-2xs transition cursor-pointer shrink-0 flex items-center justify-center";
 
                 // Toggle visibility between sibling DOM containers
                 if (finderCont) finderCont.classList.add('hidden');
@@ -4112,7 +4125,7 @@ def index_page():
                     syncSummarizerInputFromBatch();
                 } else if (mode === 'library') {
                     if (libraryCont) libraryCont.classList.remove('hidden');
-                    if (tabLibraryBtn) tabLibraryBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    if (tabLibraryBtn) tabLibraryBtn.className = "relative p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-2 border-emerald-500 shadow-2xs font-bold transition cursor-pointer shrink-0 flex items-center justify-center ring-2 ring-emerald-500/20";
                     refreshUserLibraryUI();
                 } else {
                     // Mode 'appraisal'
