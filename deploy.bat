@@ -2,7 +2,7 @@
 setlocal
 
 echo ========================================================
-echo         F.A.C.T. v1.0 Production Server Deployment
+echo         F.A.C.T. v2.0 Production Server Deployment
 echo ========================================================
 echo Target Server: myown-deploy (72.15.24.46:58221)
 echo Working Dir:   /var/www/fact
@@ -27,7 +27,7 @@ ssh -t %SERVER% "%REMOTE_COMMAND%"
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo ========================================================
-    echo  SUCCESS: F.A.C.T. v1.0 deployed and live!
+    echo  SUCCESS: F.A.C.T. v2.0 deployed and live!
     echo  Access URL: https://fact.wonkproject.com
     echo ========================================================
 ) else (

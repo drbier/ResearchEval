@@ -39,7 +39,7 @@ from src.telemetry.tracker import log_usage, get_aggregated_usage, get_recent_us
 app = FastAPI(
     title="F.A.C.T. - Find · Analyze · Contextualize · Talk",
     description="Deterministic Clinical Research Analyzer with Inline Coordinate Grounding",
-    version="1.0.0"
+    version="2.0.0"
 )
 
 # Enable CORS for local frontends
@@ -1487,7 +1487,7 @@ def index_page():
                     <div class="flex flex-col items-center text-center">
                         <div class="flex items-center gap-1.5">
                             <h1 class="text-xl font-bold fact-brand-title tracking-tight leading-none text-center">F.A.C.T.</h1>
-                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800 tracking-tight leading-none">v1.1</span>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold font-mono bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border border-sky-200 dark:border-sky-800 tracking-tight leading-none">v2.0</span>
                         </div>
                         <p class="text-slate-500 dark:text-slate-400 text-[11px] font-medium mt-1 text-center whitespace-nowrap">Find<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Analyze<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Contextualize<span class="text-slate-400 dark:text-slate-600 font-bold px-1">·</span>Talk</p>
                     </div>
@@ -2059,7 +2059,7 @@ def index_page():
 
                     <!-- Modal Footer -->
                     <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between">
-                        <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">F.A.C.T. v1.1.0</span>
+                        <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">F.A.C.T. v2.0.0</span>
                         <button id="settingsDoneBtn" onclick="closeSettingsModal()" class="btn-primary-accent px-4 py-2 rounded-lg text-white font-semibold text-xs shadow-xs transition cursor-pointer">
                             Done
                         </button>
