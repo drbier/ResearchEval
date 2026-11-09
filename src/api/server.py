@@ -1894,10 +1894,9 @@ def index_page():
                     </div>
                 </div>
 
-                <!-- Library Storage Access (Icon Button with Tooltip & Live Badge) -->
+                <!-- Library Storage Access (Icon Button with Tooltip) -->
                 <button id="masterTabLibrary" onclick="toggleLibraryMode()" class="relative p-2 rounded-lg bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 shadow-2xs transition cursor-pointer shrink-0 flex items-center justify-center" title="Library — Saved Appraisals" aria-label="Library">
                     <span class="text-base leading-none">📚</span>
-                    <span id="userLibraryBadge" class="hidden absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-emerald-600 text-white text-[10px] font-bold leading-none shadow-xs">0</span>
                 </button>
 
                 <!-- Right: Study Type Badge with Rich Tooltip (Hidden until appraisal loaded) -->
@@ -6705,41 +6704,9 @@ ${scopedHtml}
             // User Library State Cache
             let cachedUserLibraryItems = [];
 
-            // Update User Library Counter Badge in Header
-            async function updateUserLibraryBadge() {
-                try {
-                    const badge = document.getElementById('userLibraryBadge');
-                    if (!badge) return;
-                    if (!currentUser || !currentUser.uid) {
-                        badge.classList.add('hidden');
-                        badge.innerText = '0';
-                        return;
-                    }
-                    if (fbDb) {
-                        const snap = await fbDb.collection('users').doc(currentUser.uid).collection('appraisals').get();
-                        const count = snap.size;
-                        if (count > 0) {
-                            badge.innerText = count;
-                            badge.classList.remove('hidden');
-                        } else {
-                            badge.classList.add('hidden');
-                        }
-                    } else {
-                        const res = await fetch('/user-appraisals?user_uid=' + encodeURIComponent(currentUser.uid));
-                        if (res.ok) {
-                            const data = await res.json();
-                            const count = (data && data.items) ? data.items.length : 0;
-                            if (count > 0) {
-                                badge.innerText = count;
-                                badge.classList.remove('hidden');
-                            } else {
-                                badge.classList.add('hidden');
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.warn('[LibraryBadge] Count error:', err);
-                }
+            // Library badge removed to eliminate distraction
+            function updateUserLibraryBadge() {
+                // No-op
             }
 
             // Refresh & Render User Library Feed
