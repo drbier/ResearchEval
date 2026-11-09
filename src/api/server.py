@@ -7,6 +7,9 @@ import time
 import json
 import urllib.parse
 import re
+import hashlib
+import gzip
+import tempfile
 from typing import Optional, Dict, List, Any
 from pydantic import BaseModel
 
@@ -29,7 +32,7 @@ from PIL import Image
 
 from src.ingestion.indexer import parse_and_index_pdf, IndexedDocument
 from src.ingestion.fetcher import PaperFetcher
-from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL
+from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL, MODEL_HIERARCHY
 from src.appraisal.qa import PaperQAEngine
 from src.appraisal.commentary import CommentaryAndQCEngine
 from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_DESIGNATION
@@ -54,7 +57,15 @@ app.add_middleware(
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_DIR = os.getenv("RESEARCH_EVAL_DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+ANCHORS_DIR = os.path.join(DATA_DIR, "anchors")
+QUARANTINE_DIR = os.path.join(DATA_DIR, "quarantine")
+APPRAISALS_CACHE_DIR = os.path.join(DATA_DIR, "appraisals_cache")
+
+# Initialize required storage directories with exist_ok=True
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(ANCHORS_DIR, exist_ok=True)
+os.makedirs(QUARANTINE_DIR, exist_ok=True)
+os.makedirs(APPRAISALS_CACHE_DIR, exist_ok=True)
 
 STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
 PUBLIC_DIR = os.path.join(PROJECT_ROOT, "Public") if os.path.exists(os.path.join(PROJECT_ROOT, "Public")) else os.path.join(PROJECT_ROOT, "public")
@@ -163,6 +174,110 @@ fetcher = PaperFetcher(UPLOAD_DIR)
 
 # In-memory session cache of the most recently indexed document
 CACHED_INDEX: Dict[str, IndexedDocument] = {}
+
+# =============================================================================
+# Hybrid Appraisal Storage & Atomic File Operations (Tier B Global & Tier A Quarantine)
+# =============================================================================
+
+def atomic_write_file(target_path: str, data: bytes) -> None:
+    """Safely write data to target_path using an atomic tempfile write and rename to avoid race conditions."""
+    dir_name = os.path.dirname(os.path.abspath(target_path))
+    os.makedirs(dir_name, exist_ok=True)
+    temp_fd, temp_path = tempfile.mkstemp(dir=dir_name, prefix=".tmp_fact_")
+    try:
+        with os.fdopen(temp_fd, "wb") as f:
+            f.write(data)
+        os.replace(temp_path, target_path)
+    except Exception:
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+        raise
+
+def get_file_hash(fpath: str) -> str:
+    """Calculate SHA256 of a local file."""
+    if not os.path.exists(fpath):
+        return "empty"
+    h = hashlib.sha256()
+    with open(fpath, "rb") as f:
+        while chunk := f.read(65536):
+            h.update(chunk)
+    return h.hexdigest()[:16]
+
+def get_composite_global_cache_key(canonical_id: str, model_name: str) -> str:
+    """
+    Tier B Global Cache Key Composite:
+    SHA256(CanonicalPaperID + ModelIdentifierHash + RulesDBVersionHash + SchemaVersionHash)
+    """
+    clean_id = canonical_id.strip().lower()
+    model_hash = hashlib.sha256(model_name.strip().encode("utf-8")).hexdigest()[:12]
+    
+    rulesdb_path = os.path.join(DATA_DIR, "rulesdb.json")
+    schemadb_path = os.path.join(DATA_DIR, "schemadb.json")
+    rules_hash = get_file_hash(rulesdb_path)
+    schema_hash = get_file_hash(schemadb_path)
+    
+    composite_str = f"{clean_id}|{model_hash}|{rules_hash}|{schema_hash}|v3_storage"
+    return hashlib.sha256(composite_str.encode("utf-8")).hexdigest()
+
+def save_anchors_compressed(anchor_index: Dict[str, Any], is_public_oa: bool, user_uid: str = "anonymous", pdf_hash: str = "") -> str:
+    """
+    Compress anchor_index with GZIP and store atomically.
+    - Public Open Access: stored in data/anchors/{hash}.json.gz
+    - Manually uploaded PDF: stored strictly in data/quarantine/{user_uid}/{pdf_hash}/anchors.json.gz (Copyright Isolation)
+    """
+    raw_json = json.dumps(anchor_index, ensure_ascii=False).encode("utf-8")
+    compressed = gzip.compress(raw_json)
+    anchor_hash = hashlib.sha256(raw_json).hexdigest()[:20]
+    
+    if is_public_oa:
+        target_path = os.path.join(ANCHORS_DIR, f"{anchor_hash}.json.gz")
+    else:
+        clean_uid = user_uid.strip() or "anonymous"
+        clean_pdf_hash = pdf_hash.strip() or anchor_hash[:12]
+        target_path = os.path.join(QUARANTINE_DIR, clean_uid, clean_pdf_hash, "anchors.json.gz")
+        
+    atomic_write_file(target_path, compressed)
+    return anchor_hash
+
+def load_anchors_compressed(anchor_hash: str, is_public_oa: bool = True, user_uid: str = "anonymous", pdf_hash: str = "") -> Optional[Dict[str, Any]]:
+    """Retrieve and decompress anchor index."""
+    if is_public_oa:
+        target_path = os.path.join(ANCHORS_DIR, f"{anchor_hash}.json.gz")
+    else:
+        clean_uid = user_uid.strip() or "anonymous"
+        clean_pdf_hash = pdf_hash.strip()
+        target_path = os.path.join(QUARANTINE_DIR, clean_uid, clean_pdf_hash, "anchors.json.gz")
+        
+    if not os.path.exists(target_path):
+        return None
+    try:
+        with open(target_path, "rb") as f:
+            decompressed = gzip.decompress(f.read())
+        return json.loads(decompressed.decode("utf-8"))
+    except Exception as e:
+        print(f"[AnchorStorage] Error loading anchors from {target_path}: {e}")
+        return None
+
+def get_tier_b_cached_appraisal(cache_key: str) -> Optional[Dict[str, Any]]:
+    """Inspect local Tier B Global filesystem cache for appraisal artifact."""
+    target_path = os.path.join(APPRAISALS_CACHE_DIR, f"{cache_key}.json")
+    if not os.path.exists(target_path):
+        return None
+    try:
+        with open(target_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[TierBCache] Read error for {cache_key}: {e}")
+        return None
+
+def save_tier_b_cached_appraisal(cache_key: str, appraisal_payload: Dict[str, Any]) -> None:
+    """Atomically commit Tier B Global appraisal artifact."""
+    target_path = os.path.join(APPRAISALS_CACHE_DIR, f"{cache_key}.json")
+    data_bytes = json.dumps(appraisal_payload, ensure_ascii=False, indent=2).encode("utf-8")
+    atomic_write_file(target_path, data_bytes)
 
 finder = PaperFinder()
 summarizer = PaperSummarizer()
@@ -306,17 +421,39 @@ def resolve_paper_url(url: str = Form(...)):
 @app.post("/appraise-fetched")
 def analyze_fetched_paper(
     filename: str = Form(...),
+    canonical_id: Optional[str] = Form(None),
     model_override: Optional[str] = Form(None),
     api_key: Optional[str] = Form(None),
     user_uid: Optional[str] = Form("anonymous"),
     user_email: Optional[str] = Form("unauthenticated")
 ):
-    """Run full appraisal pipeline on an already-resolved paper or abstract."""
+    """Run full appraisal pipeline on an already-resolved paper or abstract with Tier B Global Cache resolution."""
     file_path = os.path.join(UPLOAD_DIR, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Resolved file not found on server.")
         
     try:
+        active_model = model_override or PRIMARY_MODEL
+        # Determine canonical identifier for Tier B Global Cache
+        # For fetched papers (PMC/PubMed/DOI), the canonical ID is extracted from filename or canonical_id param
+        paper_id = canonical_id or filename.replace(".pdf", "").replace(".xml", "")
+        is_public_oa = True  # Fetched via public NCBI / Europe PMC / open-access resolver
+        
+        cache_key = get_composite_global_cache_key(paper_id, active_model)
+        
+        # Check Tier B Global Cache Hit
+        cached_hit = get_tier_b_cached_appraisal(cache_key)
+        if cached_hit:
+            anchor_hash = cached_hit.get("anchor_hash", "")
+            cached_anchors = load_anchors_compressed(anchor_hash, is_public_oa=True) if anchor_hash else {}
+            if cached_anchors:
+                cached_hit["anchor_index"] = cached_anchors
+                cached_hit["from_global_cache"] = True
+                cached_hit["global_cache_key"] = cache_key
+                print(f"[TierBCache] HIT for {paper_id} ({cache_key[:12]}). Serving without model inference.")
+                return cached_hit
+
+        # Cache Miss: Parse and synthesize
         indexed = parse_and_index_pdf(file_path)
         CACHED_INDEX[filename] = indexed
         
@@ -340,7 +477,7 @@ def analyze_fetched_paper(
         result["total_anchors_indexed"] = len(indexed.all_anchors)
         result["sections_detected"] = list(indexed.sections.keys())
         result["document_header"] = indexed.doc_header
-        result["anchor_index"] = anchor_data
+        
         try:
             _d = pymupdf.open(file_path)
             result["total_pages"] = len(_d)
@@ -348,12 +485,27 @@ def analyze_fetched_paper(
         except Exception:
             result["total_pages"] = max((m["page"] for m in anchor_data.values()), default=1)
         
+        # Save compressed anchors (Tier B Public Open-Access)
+        stored_anchor_hash = save_anchors_compressed(anchor_data, is_public_oa=True)
+        result["anchor_hash"] = stored_anchor_hash
+        result["global_cache_key"] = cache_key
+        result["is_public_oa"] = True
+        
+        # Store in Tier B Global Cache (excluding inlined anchor_index to keep JSON light)
+        cache_copy = dict(result)
+        cache_copy["anchor_hash"] = stored_anchor_hash
+        save_tier_b_cached_appraisal(cache_key, cache_copy)
+        
+        # Attach anchor_index to current response for instant client hydration
+        result["anchor_index"] = anchor_data
+        result["from_global_cache"] = False
+        
         try:
             log_usage(
                 uid=user_uid or "anonymous",
                 email=user_email or "unauthenticated",
                 feature="appraisal",
-                model=model_override or PRIMARY_MODEL,
+                model=active_model,
                 prompt_tokens=4500,
                 candidates_tokens=3200
             )
@@ -560,12 +712,18 @@ async def analyze_paper(
     
     file_path = os.path.join(UPLOAD_DIR, file.filename)
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        active_model = model_override or PRIMARY_MODEL
+        clean_uid = (user_uid or "anonymous").strip()
+        
+        file_bytes = await file.read()
+        pdf_hash = hashlib.sha256(file_bytes).hexdigest()[:20]
+        
+        # Save file to disk
+        atomic_write_file(file_path, file_bytes)
             
         indexed = parse_and_index_pdf(file_path)
         
-        # Cache for interactive anchor viewing
+        # Cache for interactive anchor viewing in memory
         CACHED_INDEX[file.filename] = indexed
         
         eval_engine = SynthesisEngine(DATA_DIR, api_key=api_key) if api_key else engine
@@ -589,7 +747,7 @@ async def analyze_paper(
         result["total_anchors_indexed"] = len(indexed.all_anchors)
         result["sections_detected"] = list(indexed.sections.keys())
         result["document_header"] = indexed.doc_header
-        result["anchor_index"] = anchor_data
+        
         try:
             _d = pymupdf.open(file_path)
             result["total_pages"] = len(_d)
@@ -597,12 +755,28 @@ async def analyze_paper(
         except Exception:
             result["total_pages"] = max((m["page"] for m in anchor_data.values()), default=1)
         
+        # COPYRIGHT ISOLATION ENFORCEMENT:
+        # Manually uploaded PDFs are explicitly excluded from Tier B Global Caching.
+        # Stored strictly in user quarantine: data/quarantine/{user_uid}/{pdf_hash}/
+        stored_anchor_hash = save_anchors_compressed(
+            anchor_index=anchor_data,
+            is_public_oa=False,
+            user_uid=clean_uid,
+            pdf_hash=pdf_hash
+        )
+        
+        result["anchor_hash"] = stored_anchor_hash
+        result["pdf_hash"] = pdf_hash
+        result["is_public_oa"] = False
+        result["from_global_cache"] = False
+        result["anchor_index"] = anchor_data
+        
         try:
             log_usage(
                 uid=user_uid or "anonymous",
                 email=user_email or "unauthenticated",
                 feature="appraisal",
-                model=model_override or PRIMARY_MODEL,
+                model=active_model,
                 prompt_tokens=4500,
                 candidates_tokens=3200
             )
@@ -612,6 +786,198 @@ async def analyze_paper(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# =============================================================================
+# Tier A & Tier B Storage Endpoints: Save, Retrieve, User Library
+# =============================================================================
+
+class SaveAppraisalRequest(BaseModel):
+    user_uid: str
+    paper_id: str
+    title: str
+    filename: str
+    appraisal_markdown: str
+    triage: Optional[Dict[str, Any]] = None
+    rule_evaluations: Optional[List[Dict[str, Any]]] = None
+    active_rules_detail: Optional[List[Dict[str, Any]]] = None
+    thought_output: Optional[str] = ""
+    commentary: Optional[str] = ""
+    therapeutic_lens: Optional[str] = "integrative"
+    qc_audit: Optional[Dict[str, Any]] = None
+    is_public_oa: Optional[bool] = True
+    anchor_hash: Optional[str] = ""
+    pdf_hash: Optional[str] = ""
+    global_cache_key: Optional[str] = ""
+
+@app.post("/save-appraisal")
+async def save_appraisal_endpoint(req: SaveAppraisalRequest):
+    """
+    Save appraisal record.
+    - Tier B: If public open-access, commits/updates the global appraisal cache.
+    - Tier A: If user is authenticated, saves user-scoped document to local storage and prepares Firestore sync.
+    """
+    clean_uid = req.user_uid.strip() if req.user_uid else "anonymous"
+    clean_paper_id = re.sub(r'[^\w\.-]', '_', req.paper_id.strip())
+    
+    tier_b_key = req.global_cache_key
+    if not tier_b_key and req.is_public_oa:
+        tier_b_key = get_composite_global_cache_key(req.paper_id, PRIMARY_MODEL)
+
+    appraisal_payload = {
+        "paper_id": req.paper_id,
+        "title": req.title,
+        "filename": req.filename,
+        "final_markdown": req.appraisal_markdown,
+        "triage": req.triage or {},
+        "rule_evaluations": req.rule_evaluations or [],
+        "active_rules_detail": req.active_rules_detail or [],
+        "thought_output": req.thought_output or "",
+        "anchor_hash": req.anchor_hash or "",
+        "is_public_oa": bool(req.is_public_oa),
+        "pdf_hash": req.pdf_hash or "",
+        "updated_at": time.time()
+    }
+
+    # Tier B Global Cache write (Public OA only)
+    if req.is_public_oa and tier_b_key:
+        save_tier_b_cached_appraisal(tier_b_key, appraisal_payload)
+
+    # Tier A Local User Record write
+    user_dir = os.path.join(DATA_DIR, "user_libraries", clean_uid)
+    os.makedirs(user_dir, exist_ok=True)
+    user_record_path = os.path.join(user_dir, f"{clean_paper_id}.json")
+    
+    user_record = {
+        "paper_id": req.paper_id,
+        "title": req.title,
+        "filename": req.filename,
+        "therapeutic_lens": req.therapeutic_lens,
+        "commentary": req.commentary,
+        "qc_audit": req.qc_audit,
+        "global_cache_key": tier_b_key if req.is_public_oa else "",
+        "anchor_hash": req.anchor_hash,
+        "pdf_hash": req.pdf_hash,
+        "is_public_oa": bool(req.is_public_oa),
+        "appraisal_markdown": req.appraisal_markdown,
+        "triage": req.triage or {},
+        "updated_at": time.time()
+    }
+    atomic_write_file(user_record_path, json.dumps(user_record, ensure_ascii=False, indent=2).encode("utf-8"))
+
+    return {
+        "status": "success",
+        "paper_id": req.paper_id,
+        "global_cache_key": tier_b_key if req.is_public_oa else None,
+        "anchor_hash": req.anchor_hash,
+        "message": "Appraisal successfully saved to library and cache."
+    }
+
+@app.get("/user-appraisals")
+async def get_user_appraisals_endpoint(user_uid: str = Query(...)):
+    """Retrieve list of saved appraisals for a specific user's library."""
+    clean_uid = user_uid.strip()
+    if not clean_uid:
+        return {"appraisals": []}
+        
+    user_dir = os.path.join(DATA_DIR, "user_libraries", clean_uid)
+    if not os.path.exists(user_dir):
+        return {"appraisals": []}
+        
+    appraisals = []
+    for fname in os.listdir(user_dir):
+        if fname.endswith(".json"):
+            fpath = os.path.join(user_dir, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    rec = json.load(f)
+                    appraisals.append({
+                        "paper_id": rec.get("paper_id"),
+                        "title": rec.get("title") or "Untitled Clinical Paper",
+                        "filename": rec.get("filename"),
+                        "framework_name": rec.get("triage", {}).get("framework_name") or "Clinical Study",
+                        "updated_at": rec.get("updated_at", 0),
+                        "has_commentary": bool(rec.get("commentary")),
+                        "is_public_oa": rec.get("is_public_oa", True),
+                        "anchor_hash": rec.get("anchor_hash", "")
+                    })
+            except Exception as e:
+                print(f"[UserLibrary] Read error for {fname}: {e}")
+                
+    # Sort descending by updated_at
+    appraisals.sort(key=lambda x: x.get("updated_at", 0), reverse=True)
+    return {"appraisals": appraisals}
+
+@app.get("/appraisal-by-id/{paper_id}")
+async def get_appraisal_by_id_endpoint(
+    paper_id: str,
+    user_uid: Optional[str] = Query("anonymous"),
+    global_cache_key: Optional[str] = Query(None)
+):
+    """
+    Retrieve full saved appraisal data and hydrate anchor index without LLM re-inference.
+    Checks user library record first, then falls back to Tier B global cache.
+    """
+    clean_uid = (user_uid or "anonymous").strip()
+    clean_paper_id = re.sub(r'[^\w\.-]', '_', paper_id.strip())
+    
+    # 1. Check Tier A user library
+    user_record_path = os.path.join(DATA_DIR, "user_libraries", clean_uid, f"{clean_paper_id}.json")
+    if os.path.exists(user_record_path):
+        try:
+            with open(user_record_path, "r", encoding="utf-8") as f:
+                rec = json.load(f)
+                
+            is_public_oa = rec.get("is_public_oa", True)
+            anchor_hash = rec.get("anchor_hash", "")
+            pdf_hash = rec.get("pdf_hash", "")
+            
+            # Load and decompress anchor index
+            anchors = load_anchors_compressed(
+                anchor_hash=anchor_hash,
+                is_public_oa=is_public_oa,
+                user_uid=clean_uid,
+                pdf_hash=pdf_hash
+            ) or {}
+            
+            rec["anchor_index"] = anchors
+            rec["status"] = "success"
+            return rec
+        except Exception as e:
+            print(f"[UserLibrary] Error loading user record {paper_id}: {e}")
+
+    # 2. Check Tier B global cache key
+    target_key = global_cache_key or get_composite_global_cache_key(paper_id, PRIMARY_MODEL)
+    cached_global = get_tier_b_cached_appraisal(target_key)
+    if cached_global:
+        anchor_hash = cached_global.get("anchor_hash", "")
+        anchors = load_anchors_compressed(anchor_hash, is_public_oa=True) if anchor_hash else {}
+        cached_global["anchor_index"] = anchors
+        cached_global["status"] = "success"
+        cached_global["from_global_cache"] = True
+        return cached_global
+
+    raise HTTPException(status_code=404, detail="Saved appraisal not found in library or global cache.")
+
+@app.get("/api/paper-anchors/{anchor_hash}")
+async def get_paper_anchors_endpoint(
+    anchor_hash: str,
+    is_public_oa: bool = Query(True),
+    user_uid: Optional[str] = Query("anonymous"),
+    pdf_hash: Optional[str] = Query("")
+):
+    """Endpoint for frontend client-assisted IndexedDB hydration of compressed anchors."""
+    clean_uid = (user_uid or "anonymous").strip()
+    clean_pdf_hash = (pdf_hash or "").strip()
+    
+    anchors = load_anchors_compressed(
+        anchor_hash=anchor_hash,
+        is_public_oa=is_public_oa,
+        user_uid=clean_uid,
+        pdf_hash=clean_pdf_hash
+    )
+    if anchors is None:
+        raise HTTPException(status_code=404, detail="Anchor map not found.")
+    return {"anchor_hash": anchor_hash, "anchor_index": anchors}
 
 def resolve_anchor(indexed: IndexedDocument, anchor_str: str) -> Optional[Any]:
     """
@@ -1493,7 +1859,7 @@ def index_page():
                     </div>
                 </div>
 
-                <!-- Master 3-Mode Navigation Switcher: F.A.C.T. (Find -> Analyze -> Summarize/Check Trials) -->
+                <!-- Master 4-Mode Navigation Switcher: F.A.C.T. (Find -> Analyze -> Contextualize -> Library) -->
                 <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold gap-1 shrink-0">
                     <button id="masterTabFinder" onclick="switchMasterMode('finder')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
                         <span>🔍</span> <span>Find</span>
@@ -1504,6 +1870,10 @@ def index_page():
                     <button id="masterTabSummarizer" onclick="switchMasterMode('summarizer')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
                         <span>📝</span> <span>Contextualize</span>
                         <span id="summarizerBatchBadge" class="hidden ml-1 px-1.5 py-0.2 bg-sky-600 text-white rounded-full text-[10px] font-bold">0</span>
+                    </button>
+                    <button id="masterTabLibrary" onclick="switchMasterMode('library')" class="px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium">
+                        <span>📚</span> <span>Library</span>
+                        <span id="userLibraryBadge" class="hidden ml-1 px-1.5 py-0.2 bg-emerald-600 text-white rounded-full text-[10px] font-bold">0</span>
                     </button>
                 </div>
 
@@ -2259,6 +2629,41 @@ def index_page():
                 </div>
             </div>
 
+            <!-- Sibling Container 3: Clinician Saved Library Mode -->
+            <div id="libraryContainer" class="hidden w-full overflow-y-auto space-y-4" style="height: calc(100vh - 105px);">
+                <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-xs max-w-5xl mx-auto space-y-5 text-slate-800 dark:text-slate-100">
+                    <!-- Header & Directive -->
+                    <div class="border-b border-slate-100 dark:border-slate-800 pb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                <span>📚</span> Clinician Evidence Library
+                            </h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Access your previously appraised clinical papers, editorial commentaries, and truth audits. Zero wait time and zero redundant model calls.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="refreshUserLibraryUI()" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 transition cursor-pointer flex items-center gap-1.5">
+                                <span>🔄</span> Refresh Library
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Library Search / Filter -->
+                    <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <span class="text-slate-400 text-xs">🔍</span>
+                        <input type="text" id="libraryFilterInput" oninput="filterLibraryList()" placeholder="Filter by study title, framework, or identifier..." class="bg-transparent border-none text-xs w-full text-slate-800 dark:text-slate-200 focus:outline-none"/>
+                    </div>
+
+                    <!-- Library Items List -->
+                    <div id="libraryListFeed" class="space-y-3">
+                        <div class="text-center py-10 text-slate-400 dark:text-slate-500 text-xs italic">
+                            Loading your saved appraisals...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Results Section: Split Screen -->
             <div id="resultBox" class="hidden">
                 <!-- Draggable Split Container: Left Appraisal | Resizer | Right Source Inspector -->
@@ -2614,6 +3019,7 @@ def index_page():
                 if (!user) {
                     isApproved = false;
                     isAdmin = false;
+                    updateUserLibraryBadge();
                     if (signInHeaderBtn) signInHeaderBtn.classList.remove('hidden');
                     if (userProfileHeader) userProfileHeader.classList.add('hidden');
                     if (adminUserMgmtBtn) adminUserMgmtBtn.classList.add('hidden');
@@ -3677,20 +4083,24 @@ def index_page():
                 window.ResearchAppState.currentMasterMode = mode;
                 const finderCont = document.getElementById('finderContainer');
                 const summarizerCont = document.getElementById('summarizerContainer');
+                const libraryCont = document.getElementById('libraryContainer');
                 const resultBox = document.getElementById('resultBox');
                 const splitCont = document.getElementById('splitContainer');
                 const tabFinderBtn = document.getElementById('masterTabFinder');
                 const tabSummarizerBtn = document.getElementById('masterTabSummarizer');
                 const tabAppraisalBtn = document.getElementById('masterTabAppraisal');
+                const tabLibraryBtn = document.getElementById('masterTabLibrary');
 
                 // Reset tab styles
                 if (tabFinderBtn) tabFinderBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
                 if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
                 if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
+                if (tabLibraryBtn) tabLibraryBtn.className = "px-3 py-1.5 rounded-md transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-1.5 text-xs font-medium";
 
                 // Toggle visibility between sibling DOM containers
                 if (finderCont) finderCont.classList.add('hidden');
                 if (summarizerCont) summarizerCont.classList.add('hidden');
+                if (libraryCont) libraryCont.classList.add('hidden');
                 if (resultBox) resultBox.classList.add('hidden');
 
                 if (mode === 'finder') {
@@ -3700,6 +4110,10 @@ def index_page():
                     if (summarizerCont) summarizerCont.classList.remove('hidden');
                     if (tabSummarizerBtn) tabSummarizerBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
                     syncSummarizerInputFromBatch();
+                } else if (mode === 'library') {
+                    if (libraryCont) libraryCont.classList.remove('hidden');
+                    if (tabLibraryBtn) tabLibraryBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
+                    refreshUserLibraryUI();
                 } else {
                     // Mode 'appraisal'
                     if (tabAppraisalBtn) tabAppraisalBtn.className = "px-3 py-1.5 rounded-md bg-white dark:bg-slate-900 tab-active-accent shadow-2xs font-bold transition flex items-center gap-1.5 text-xs";
@@ -6196,6 +6610,305 @@ ${scopedHtml}
                 const firstPill = document.querySelector('.anchor-pill');
                 if (firstPill) {
                     firstPill.click();
+                }
+
+                // Auto-save appraisal to Tier A User Library & Tier B Cache in background
+                if (currentUser && data) {
+                    autoSaveAppraisalToLibrary(data, content);
+                }
+            }
+
+            // Auto-Save Appraisal to Library & Global Cache
+            async function autoSaveAppraisalToLibrary(data, markdownContent) {
+                try {
+                    const paperId = data.filename ? data.filename.replace(/\.pdf$|\.xml$/i, '') : 'paper_' + Date.now();
+                    const titleMatch = (markdownContent || '').match(/^#\s+(.+)$/m);
+                    const title = titleMatch ? titleMatch[1].replace(/^\*+|\*+$/g, '').trim() : (data.filename || 'Clinical Analysis');
+                    
+                    const payload = {
+                        user_uid: currentUser.uid,
+                        paper_id: paperId,
+                        title: title,
+                        filename: data.filename || currentFilename || '',
+                        appraisal_markdown: markdownContent || '',
+                        triage: data.triage || {},
+                        rule_evaluations: data.rule_evaluations || [],
+                        active_rules_detail: data.active_rules_detail || [],
+                        thought_output: data.thought_output || '',
+                        therapeutic_lens: (voiceProfileState && voiceProfileState.therapeutic_lens) ? voiceProfileState.therapeutic_lens : 'integrative',
+                        is_public_oa: data.is_public_oa !== false,
+                        anchor_hash: data.anchor_hash || '',
+                        pdf_hash: data.pdf_hash || '',
+                        global_cache_key: data.global_cache_key || ''
+                    };
+
+                    // Send to backend endpoint
+                    fetch('/save-appraisal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    }).catch(e => console.warn('[AutoSave] Backend save notice:', e));
+
+                    // Dual sync pointer to Firestore users/{uid}/appraisals/{paperId}
+                    if (fbDb && currentUser.uid) {
+                        const firestoreRecord = {
+                            paper_id: paperId,
+                            title: title,
+                            filename: data.filename || currentFilename || '',
+                            framework_name: (data.triage && data.triage.framework_name) ? data.triage.framework_name : 'Clinical Study',
+                            anchor_hash: data.anchor_hash || '',
+                            pdf_hash: data.pdf_hash || '',
+                            global_cache_key: data.global_cache_key || '',
+                            is_public_oa: data.is_public_oa !== false,
+                            therapeutic_lens: payload.therapeutic_lens,
+                            updated_at: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        fbDb.collection('users').doc(currentUser.uid).collection('appraisals').doc(paperId).set(firestoreRecord, { merge: true })
+                            .then(() => updateUserLibraryBadge())
+                            .catch(err => console.warn('[Firestore] Library sync note:', err));
+                    }
+                } catch (err) {
+                    console.warn('[Library] Auto-save skipped:', err);
+                }
+            }
+
+            // User Library State Cache
+            let cachedUserLibraryItems = [];
+
+            // Update User Library Counter Badge in Header
+            async function updateUserLibraryBadge() {
+                try {
+                    const badge = document.getElementById('userLibraryBadge');
+                    if (!badge) return;
+                    if (!currentUser || !currentUser.uid) {
+                        badge.classList.add('hidden');
+                        badge.innerText = '0';
+                        return;
+                    }
+                    if (fbDb) {
+                        const snap = await fbDb.collection('users').doc(currentUser.uid).collection('appraisals').get();
+                        const count = snap.size;
+                        if (count > 0) {
+                            badge.innerText = count;
+                            badge.classList.remove('hidden');
+                        } else {
+                            badge.classList.add('hidden');
+                        }
+                    } else {
+                        const res = await fetch('/user-appraisals?user_uid=' + encodeURIComponent(currentUser.uid));
+                        if (res.ok) {
+                            const data = await res.json();
+                            const count = (data && data.items) ? data.items.length : 0;
+                            if (count > 0) {
+                                badge.innerText = count;
+                                badge.classList.remove('hidden');
+                            } else {
+                                badge.classList.add('hidden');
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[LibraryBadge] Count error:', err);
+                }
+            }
+
+            // Refresh & Render User Library Feed
+            async function refreshUserLibraryUI() {
+                const feed = document.getElementById('libraryListFeed');
+                if (!feed) return;
+
+                if (!currentUser) {
+                    feed.innerHTML = [
+                        '<div class="text-center py-12 bg-white dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">',
+                        '  <span class="text-3xl">🔒</span>',
+                        '  <h4 class="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-2">Sign In Required</h4>',
+                        '  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">',
+                        '    Sign in to access your personal library of saved paper analyses, truth audits, and coordinate anchor maps.',
+                        '  </p>',
+                        '  <button onclick="openAuthModal()" class="mt-4 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer">',
+                        '    Sign In / Register',
+                        '  </button>',
+                        '</div>'
+                    ].join('');
+                    return;
+                }
+
+                feed.innerHTML = [
+                    '<div class="flex items-center justify-center py-12 text-slate-400 dark:text-slate-500 text-xs italic gap-2">',
+                    '  <span class="inline-block animate-spin">⏳</span> Fetching your library records...',
+                    '</div>'
+                ].join('');
+
+                try {
+                    let items = [];
+                    // Prefer Firestore client query first for live private library pointers
+                    if (fbDb) {
+                        try {
+                            const snap = await fbDb.collection('users').doc(currentUser.uid).collection('appraisals').orderBy('updated_at', 'desc').get();
+                            snap.forEach(doc => {
+                                const d = doc.data();
+                                items.push({
+                                    paper_id: doc.id,
+                                    title: d.title || doc.id,
+                                    filename: d.filename || '',
+                                    framework_name: d.framework_name || 'Clinical Study',
+                                    anchor_hash: d.anchor_hash || '',
+                                    pdf_hash: d.pdf_hash || '',
+                                    global_cache_key: d.global_cache_key || '',
+                                    is_public_oa: d.is_public_oa !== false,
+                                    therapeutic_lens: d.therapeutic_lens || 'integrative',
+                                    updated_at: d.updated_at ? (d.updated_at.toDate ? d.updated_at.toDate().toISOString() : d.updated_at) : new Date().toISOString()
+                                });
+                            });
+                        } catch (fsErr) {
+                            console.warn('[Library] Firestore direct query failed, falling back to server endpoint:', fsErr);
+                        }
+                    }
+
+                    // Fallback to server endpoint if firestore returned empty or failed
+                    if (items.length === 0) {
+                        const res = await fetch('/user-appraisals?user_uid=' + encodeURIComponent(currentUser.uid));
+                        if (res.ok) {
+                            const payload = await res.json();
+                            items = payload.items || [];
+                        }
+                    }
+
+                    cachedUserLibraryItems = items;
+                    updateUserLibraryBadge();
+                    renderLibraryListCards(items);
+                } catch (err) {
+                    console.error('[Library] Failed to load library:', err);
+                    feed.innerHTML = '<div class="text-center py-8 text-rose-500 dark:text-rose-400 text-xs">Error loading library: ' + escapeHtml(err.message) + '</div>';
+                }
+            }
+
+            // Render Library Cards
+            function renderLibraryListCards(items) {
+                const feed = document.getElementById('libraryListFeed');
+                if (!feed) return;
+
+                if (!items || items.length === 0) {
+                    feed.innerHTML = [
+                        '<div class="text-center py-12 bg-white dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">',
+                        '  <span class="text-3xl">📚</span>',
+                        '  <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-2">No Saved Appraisals Yet</h4>',
+                        '  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">',
+                        '    Appraisals are automatically preserved in your private library as you run precision searches or upload manuscripts.',
+                        '  </p>',
+                        '  <button onclick="switchMasterMode(\'finder\')" class="mt-4 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer">',
+                        '    🔍 Find Literature to Appraise',
+                        '  </button>',
+                        '</div>'
+                    ].join('');
+                    return;
+                }
+
+                feed.innerHTML = items.map(item => {
+                    const dateStr = item.updated_at ? new Date(item.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                    const timeStr = item.updated_at ? new Date(item.updated_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+                    const isOA = item.is_public_oa !== false;
+                    const oaBadge = isOA 
+                        ? '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">Open Access</span>'
+                        : '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">Quarantine PDF</span>';
+
+                    const lensBadge = item.therapeutic_lens 
+                        ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 capitalize">' + escapeHtml(item.therapeutic_lens) + ' Lens</span>' 
+                        : '';
+
+                    return [
+                        '<div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-500 dark:hover:border-emerald-500/60 transition shadow-2xs group flex flex-col md:flex-row md:items-center justify-between gap-3">',
+                        '  <div class="flex-1 min-w-0">',
+                        '    <div class="flex flex-wrap items-center gap-2 mb-1.5">',
+                        '      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">',
+                        '        ' + escapeHtml(item.framework_name || 'Clinical Analysis'),
+                        '      </span>',
+                        '      ' + oaBadge,
+                        '      ' + lensBadge,
+                        '      <span class="text-[11px] text-slate-400 dark:text-slate-500">' + dateStr + ' ' + timeStr + '</span>',
+                        '    </div>',
+                        '    <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate cursor-pointer" onclick="loadAppraisalFromLibrary(\'' + escapeHtml(item.paper_id) + '\', \'' + escapeHtml(item.global_cache_key || '') + '\')" title="' + escapeHtml(item.title || item.paper_id) + '">',
+                        '      ' + escapeHtml(item.title || item.paper_id),
+                        '    </h4>',
+                        '    <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">',
+                        '      ' + escapeHtml(item.filename || item.paper_id),
+                        '    </p>',
+                        '  </div>',
+                        '  <div class="flex items-center gap-2 shrink-0">',
+                        '    <button onclick="loadAppraisalFromLibrary(\'' + escapeHtml(item.paper_id) + '\', \'' + escapeHtml(item.global_cache_key || '') + '\')" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1.5 cursor-pointer">',
+                        '      <span>⚡</span> Open Appraisal',
+                        '    </button>',
+                        '  </div>',
+                        '</div>'
+                    ].join('');
+                }).join('');
+            }
+
+            // Filter Library List by Search Query
+            function filterLibraryList() {
+                const input = document.getElementById('libraryFilterInput');
+                const q = (input ? input.value : '').toLowerCase().trim();
+                if (!q) {
+                    renderLibraryListCards(cachedUserLibraryItems);
+                    return;
+                }
+                const filtered = (cachedUserLibraryItems || []).filter(item => {
+                    const t = (item.title || '').toLowerCase();
+                    const pid = (item.paper_id || '').toLowerCase();
+                    const fn = (item.filename || '').toLowerCase();
+                    const fw = (item.framework_name || '').toLowerCase();
+                    return t.includes(q) || pid.includes(q) || fn.includes(q) || fw.includes(q);
+                });
+                renderLibraryListCards(filtered);
+            }
+
+            // Load Appraisal from Library without LLM Inference
+            async function loadAppraisalFromLibrary(paperId, globalCacheKey) {
+                if (!currentUser) {
+                    openAuthModal();
+                    return;
+                }
+
+                const statusBox = document.getElementById('statusBox');
+                const statusText = document.getElementById('statusText');
+                const spinner = document.getElementById('spinner');
+                const statusIcon = document.getElementById('statusIcon');
+
+                switchMasterMode('appraisal');
+                if (statusBox) statusBox.classList.remove('hidden');
+                if (statusText) statusText.innerText = 'Loading cached appraisal & coordinate anchors (0 token usage)...';
+                if (spinner) spinner.classList.remove('hidden');
+                if (statusIcon) statusIcon.innerText = '📚';
+
+                try {
+                    const params = new URLSearchParams({
+                        user_uid: currentUser.uid,
+                        global_cache_key: globalCacheKey || ''
+                    });
+                    const res = await fetch('/appraisal-by-id/' + encodeURIComponent(paperId) + '?' + params.toString());
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.detail || ('Server returned ' + res.status));
+                    }
+
+                    const data = await res.json();
+                    currentFilename = data.filename || paperId;
+
+                    // Rehydrate anchor index
+                    anchorIndex = data.anchor_index || {};
+
+                    // Render appraisal directly
+                    renderAppraisalResults(data);
+
+                    if (statusBox) statusBox.classList.add('hidden');
+                } catch (err) {
+                    console.error('[Library] Error opening appraisal:', err);
+                    if (statusBox) {
+                        statusText.innerText = 'Failed to load appraisal: ' + err.message;
+                        if (spinner) spinner.classList.add('hidden');
+                        if (statusIcon) statusIcon.innerText = '⚠️';
+                    }
+                    alert('Could not load appraisal: ' + err.message);
                 }
             }
 
