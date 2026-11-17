@@ -4878,7 +4878,7 @@ def index_page():
                     const transcriptText = document.getElementById('popupTranscriptText');
                     const pageInfo = document.getElementById('popupPageInfo');
                     if (transcriptBox && transcriptText && currentMeta.text) {
-                        transcriptText.innerText = currentMeta.text;
+                        transcriptText.innerText = formatManuscriptSnippet(currentMeta.text);
                         if (pageInfo) pageInfo.innerText = currentMeta.page ? `Page ${currentMeta.page}` : '';
                         transcriptBox.classList.remove('hidden');
                     } else if (transcriptBox) {
@@ -7338,6 +7338,27 @@ ${scopedHtml}
                 }
             }
 
+                        // Format manuscript snippet text so only genuine paragraph breaks show while intra-paragraph lines flow naturally
+            function formatManuscriptSnippet(rawText) {
+                if (!rawText) return '';
+                const normalized = String(rawText).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                const paragraphs = normalized.split(/\n\s*\n+/);
+                const cleanedParas = [];
+                for (let i = 0; i < paragraphs.length; i++) {
+                    let p = paragraphs[i];
+                    // Join words hyphenated across a line-break e.g. "random-\nized" -> "randomized"
+                    p = p.replace(/(\w+)-\n(\w+)/g, '$1$2');
+                    // Replace remaining single intra-paragraph line breaks with a single space
+                    p = p.replace(/\s*\n\s*/g, ' ');
+                    // Collapse multiple horizontal whitespace sequences
+                    p = p.replace(/[ \t]+/g, ' ').trim();
+                    if (p.length > 0) {
+                        cleanedParas.push(p);
+                    }
+                }
+                return cleanedParas.join('\n\n');
+            }
+
             function inspectAnchor(encodedAnchor) {
                 if (!encodedAnchor) return;
                 const anchor = decodeURIComponent(encodedAnchor);
@@ -7476,7 +7497,7 @@ ${scopedHtml}
                         pageBadge.classList.remove('hidden');
                     }
                     if (snippetText) {
-                        snippetText.innerText = meta.text || '';
+                        snippetText.innerText = formatManuscriptSnippet(meta.text || '');
                     }
                     if (snippetBox) {
                         snippetBox.classList.remove('hidden');
@@ -7493,7 +7514,7 @@ ${scopedHtml}
                         const cropAnchorId = (meta && meta.anchor_id) ? meta.anchor_id : anchor;
                         if (popupImg) popupImg.src = `/view-anchor-crop?filename=${encodeURIComponent(currentFilename)}&anchor=${encodeURIComponent(cropAnchorId)}`;
                         if (transcriptBox && transcriptText && meta.text) {
-                            transcriptText.innerText = meta.text;
+                            transcriptText.innerText = formatManuscriptSnippet(meta.text);
                             if (pageInfo) pageInfo.innerText = meta.page ? `Page ${meta.page}` : '';
                             transcriptBox.classList.remove('hidden');
                         }
