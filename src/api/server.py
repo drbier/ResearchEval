@@ -187,6 +187,10 @@ def atomic_write_file(target_path: str, data: bytes) -> None:
     try:
         with os.fdopen(temp_fd, "wb") as f:
             f.write(data)
+        try:
+            os.chmod(temp_path, 0o664)
+        except Exception:
+            pass
         os.replace(temp_path, target_path)
     except Exception:
         if os.path.exists(temp_path):
@@ -797,6 +801,7 @@ class SaveAppraisalRequest(BaseModel):
     title: str
     filename: str
     appraisal_markdown: str
+    total_pages: Optional[int] = None
     triage: Optional[Dict[str, Any]] = None
     rule_evaluations: Optional[List[Dict[str, Any]]] = None
     active_rules_detail: Optional[List[Dict[str, Any]]] = None
@@ -828,6 +833,8 @@ async def save_appraisal_endpoint(req: SaveAppraisalRequest):
         "title": req.title,
         "filename": req.filename,
         "final_markdown": req.appraisal_markdown,
+        "appraisal_markdown": req.appraisal_markdown,
+        "total_pages": req.total_pages,
         "triage": req.triage or {},
         "rule_evaluations": req.rule_evaluations or [],
         "active_rules_detail": req.active_rules_detail or [],
@@ -859,6 +866,8 @@ async def save_appraisal_endpoint(req: SaveAppraisalRequest):
         "pdf_hash": req.pdf_hash,
         "is_public_oa": bool(req.is_public_oa),
         "appraisal_markdown": req.appraisal_markdown,
+        "final_markdown": req.appraisal_markdown,
+        "total_pages": req.total_pages,
         "triage": req.triage or {},
         "updated_at": time.time()
     }
@@ -940,6 +949,10 @@ async def get_appraisal_by_id_endpoint(
             ) or {}
             
             rec["anchor_index"] = anchors
+            rec["final_markdown"] = rec.get("final_markdown") or rec.get("appraisal_markdown", "")
+            rec["appraisal_markdown"] = rec["final_markdown"]
+            if not rec.get("total_pages") and anchors:
+                rec["total_pages"] = max((m.get("page", 1) for m in anchors.values() if isinstance(m, dict)), default=1)
             rec["status"] = "success"
             return rec
         except Exception as e:
@@ -952,6 +965,10 @@ async def get_appraisal_by_id_endpoint(
         anchor_hash = cached_global.get("anchor_hash", "")
         anchors = load_anchors_compressed(anchor_hash, is_public_oa=True) if anchor_hash else {}
         cached_global["anchor_index"] = anchors
+        cached_global["final_markdown"] = cached_global.get("final_markdown") or cached_global.get("appraisal_markdown", "")
+        cached_global["appraisal_markdown"] = cached_global["final_markdown"]
+        if not cached_global.get("total_pages") and anchors:
+            cached_global["total_pages"] = max((m.get("page", 1) for m in anchors.values() if isinstance(m, dict)), default=1)
         cached_global["status"] = "success"
         cached_global["from_global_cache"] = True
         return cached_global
@@ -6546,7 +6563,7 @@ ${scopedHtml}
                     }
                 }
 
-                let content = data.final_markdown || data.raw_output || '';
+                let content = data.final_markdown || data.appraisal_markdown || data.raw_output || '';
 
                 // Ensure study title and 'Clinical Bottom Line' have proper bold/header markdown
                 const contentLines = content.trim().split('\n');
@@ -6658,8 +6675,17 @@ ${scopedHtml}
                 document.getElementById('resultBox').classList.remove('hidden');
                 document.getElementById('statusBox').classList.add('hidden');
 
-                if (data.total_pages) {
-                    renderFullDocumentPages(currentFilename, data.total_pages);
+                const totalPages = data.total_pages || (data.anchor_index ? Math.max(...Object.values(data.anchor_index).map(a => a.page || 1), 1) : 0);
+                if (totalPages > 0 && currentFilename) {
+                    renderFullDocumentPages(currentFilename, totalPages);
+                } else if (currentFilename) {
+                    fetch(`/api/pdf-manifest?filename=${encodeURIComponent(currentFilename)}`)
+                        .then(r => r.json())
+                        .then(manifest => {
+                            if (manifest && manifest.total_pages) {
+                                renderFullDocumentPages(manifest.filename, manifest.total_pages, manifest.pages);
+                            }
+                        }).catch(e => console.warn('Manifest load notice:', e));
                 }
 
                 // Smoothly scroll down to the split workspace
@@ -6686,12 +6712,14 @@ ${scopedHtml}
                     const titleMatch = (markdownContent || '').match(/^#\s+(.+)$/m);
                     const title = titleMatch ? titleMatch[1].replace(/^\*+|\*+$/g, '').trim() : (data.filename || 'Clinical Analysis');
                     
+                    const totalPages = data.total_pages || (data.anchor_index ? Math.max(...Object.values(data.anchor_index).map(a => a.page || 1), 1) : 1);
                     const payload = {
                         user_uid: currentUser.uid,
                         paper_id: paperId,
                         title: title,
                         filename: data.filename || currentFilename || '',
                         appraisal_markdown: markdownContent || '',
+                        total_pages: totalPages,
                         triage: data.triage || {},
                         rule_evaluations: data.rule_evaluations || [],
                         active_rules_detail: data.active_rules_detail || [],
