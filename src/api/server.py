@@ -1552,11 +1552,12 @@ def index_page():
                 letter-spacing: -0.01em !important;
             }
             #outputMarkdown h3 {
-                font-size: 1.0rem !important;
+                font-size: 0.95rem !important; /* slightly larger than 0.875rem body text */
                 font-weight: 700 !important;
-                color: #1e293b !important; /* slate-800 */
-                margin-top: 1rem !important;
+                color: #0f172a !important; /* slate-900 bold */
+                margin-top: 1.1rem !important;
                 margin-bottom: 0.35rem !important;
+                letter-spacing: -0.005em !important;
             }
             /* Classic Live Hyperlink Style for DOI & External Links */
             #outputMarkdown a, .doi-link {
@@ -1582,7 +1583,7 @@ def index_page():
                 color: var(--accent-text, #38bdf8) !important;
             }
             html.dark #outputMarkdown h3 {
-                color: #cbd5e1 !important;
+                color: #f1f5f9 !important; /* slate-100 high-contrast bold */
             }
             html.dark #outputMarkdown strong {
                 color: #f1f5f9 !important;
@@ -6559,10 +6560,41 @@ ${scopedHtml}
                         }
                         contentLines[firstNonEmptyIdx] = '# ' + rawTitle;
                     }
+                    const SUBHEAD_KEYWORDS = new Set([
+                        'key metric definitions', 'primary endpoint', 'primary endpoints', 'secondary endpoint',
+                        'secondary endpoints', 'secondary endpoints & biomarkers', 'safety and harms',
+                        'safety & harms', 'harms reporting standards', 'subgroup analyses', 'subgroup analysis',
+                        'exploratory endpoints', 'methodological rationale', 'study design & setting',
+                        'study design and setting', 'inclusion and exclusion criteria', 'baseline characteristics',
+                        'statistical methodology', 'efficacy outcomes', 'adverse events', 'risk of bias'
+                    ]);
+
                     for (let i = 0; i < contentLines.length; i++) {
                         let trimmedLine = contentLines[i].trim();
                         if (/^(?:#*\s*)?\*\*?Clinical Bottom Line\*\*?:?$/i.test(trimmedLine) || trimmedLine.toLowerCase() === 'clinical bottom line') {
                             contentLines[i] = '## Clinical Bottom Line';
+                            continue;
+                        }
+
+                        // Elevate clinical subheadings (e.g. 'Key Metric Definitions:', 'Primary Endpoint:') to ### markdown headers
+                        if (trimmedLine.endsWith(':') && !trimmedLine.startsWith('#')) {
+                            const rawNoColon = trimmedLine.slice(0, -1).trim();
+                            const lowerNoColon = rawNoColon.toLowerCase();
+                            let isSubhead = SUBHEAD_KEYWORDS.has(lowerNoColon);
+
+                            if (!isSubhead && /^[A-Z][A-Za-z\s&/\-_–]{1,45}$/.test(rawNoColon)) {
+                                const words = rawNoColon.split(/\s+/);
+                                if (words.length <= 5) {
+                                    const titleCount = words.filter(w => w[0] === w[0].toUpperCase() || ['and', 'or', 'in', '&', 'of', 'for', 'to', 'the', 'with', 'by'].includes(w.toLowerCase())).length;
+                                    if (titleCount === words.length) {
+                                        isSubhead = true;
+                                    }
+                                }
+                            }
+
+                            if (isSubhead) {
+                                contentLines[i] = '### ' + rawNoColon + ':';
+                            }
                         }
                     }
                     content = contentLines.join('\n');
