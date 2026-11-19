@@ -652,7 +652,7 @@ async def generate_commentary_endpoint(
 async def audit_commentary_endpoint(
     filename: str = Form(...),
     appraisal_markdown: str = Form(...),
-    commentary_text: str = Form(...),
+    commentary_text: Optional[str] = Form(""),
     triage: Optional[str] = Form(None),
     model_override: Optional[str] = Form(None),
     api_key: Optional[str] = Form(None),
@@ -681,7 +681,7 @@ async def audit_commentary_endpoint(
         result = engine_inst.audit_appraisal_and_commentary(
             indexed_doc=indexed,
             appraisal_markdown=appraisal_markdown,
-            commentary_text=commentary_text,
+            commentary_text=commentary_text or "",
             triage_data=triage_data,
             model_override=model_override
         )
