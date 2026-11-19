@@ -62,11 +62,13 @@ class TriageEngine:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def classify_text(self, doc_header: str, abstract_and_methods: str) -> TriageResult:
+    def classify_text(self, doc_header: str, abstract_and_methods: str, framework_override: Optional[str] = None) -> TriageResult:
         """
         Two-stage deterministic triage classifier with precedence ladder:
         Stage 1: Design declaration scoping for exclusion filtering.
         Stage 2: Full-text feature scoring and precedence ladder resolution.
+        Optional `framework_override` forces a specific framework_id while still
+        extracting sub-feature tags and resolving applicable rules.
         """
         full_text = f"{doc_header}\n{abstract_and_methods}".lower()
         
@@ -104,7 +106,8 @@ class TriageEngine:
             "spirit 2013", "rationale and design"
         ])
         has_completed_results = any(k in full_text for k in [
-            "we report the results of", "primary outcome was observed in", "overall survival was significantly"
+            "we report the results of", "primary outcome was observed in", "overall survival was significantly",
+            "p < 0", "p > 0", "p = 0", "p-value", "statistically significant", "evaluated the effects"
         ])
         if is_protocol and not has_completed_results:
             scores["FW_E"] += 25
@@ -159,7 +162,23 @@ class TriageEngine:
                 scores["FW_C"] += 15  # Observational / Real-World Evidence framework handles prospective non-randomized cohorts
 
         # Resolve primary framework using scores and hierarchy rank
-        best_fw_id = max(scores, key=lambda k: (scores[k], -next(f.get("hierarchy_rank", 99) for f in self.triage_matrix if f["framework_id"] == k)))
+        valid_fw_ids = {f["framework_id"] for f in self.triage_matrix}
+        manual_override_applied = False
+        if framework_override and framework_override in valid_fw_ids:
+            best_fw_id = framework_override
+            manual_override_applied = True
+        else:
+            max_score = max(scores.values()) if scores else 0
+            if max_score <= 0:
+                # Never default to FW_E (Trial Protocol) on a 0-score tie
+                if any(k in full_text for k in ["trial", "placebo", "intervention", "control group", "random"]):
+                    best_fw_id = "FW_A"
+                else:
+                    best_fw_id = "FW_C"
+            else:
+                # Only consider FW_E if it actually scored > 0
+                candidate_ids = [k for k in scores if k != "FW_E" or scores[k] > 0]
+                best_fw_id = max(candidate_ids, key=lambda k: (scores[k], -next(f.get("hierarchy_rank", 99) for f in self.triage_matrix if f["framework_id"] == k)))
         best_fw = next(fw for fw in self.triage_matrix if fw["framework_id"] == best_fw_id)
 
         # Step 2: Detect Sub-Feature Tags
@@ -221,11 +240,17 @@ class TriageEngine:
         fw_name_map = {f["framework_id"]: f["name"] for f in self.triage_matrix}
         top_candidates = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:3]
         top_summary = ", ".join([f"{fw_name_map.get(k, k)} (score {v})" for k, v in top_candidates if v > 0])
-        rationale = (
-            f"Classified as {best_fw['name']} with match score {scores[best_fw_id]} "
-            f"(Evaluated candidate designs: {top_summary}). "
-            f"Triggered {len(detected_tags)} study feature tags and {len(applicable_rules)} critical appraisal rules."
-        )
+        if manual_override_applied:
+            rationale = (
+                f"Manually selected {best_fw['name']} by clinician override. "
+                f"Triggered {len(detected_tags)} study feature tags and {len(applicable_rules)} critical appraisal rules."
+            )
+        else:
+            rationale = (
+                f"Classified as {best_fw['name']} with match score {scores[best_fw_id]} "
+                f"(Evaluated candidate designs: {top_summary}). "
+                f"Triggered {len(detected_tags)} study feature tags and {len(applicable_rules)} critical appraisal rules."
+            )
 
         return TriageResult(
             primary_framework_id=best_fw_id,

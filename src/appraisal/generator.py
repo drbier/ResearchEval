@@ -312,7 +312,7 @@ Anchors & Text:
 
         return excised_markdown, evaluations
 
-    def generate_appraisal(self, indexed_doc: IndexedDocument, model_override: Optional[str] = None) -> Dict[str, Any]:
+    def generate_appraisal(self, indexed_doc: IndexedDocument, model_override: Optional[str] = None, framework_override: Optional[str] = None) -> Dict[str, Any]:
         """Execute end-to-end appraisal generation and validation."""
         # Step 1: Triage
         abstract_methods = ""
@@ -321,7 +321,7 @@ Anchors & Text:
                 for a in indexed_doc.sections[sec]:
                     abstract_methods += f"{a.text}\n"
                     
-        triage = self.triage_engine.classify_text(indexed_doc.doc_header, abstract_methods)
+        triage = self.triage_engine.classify_text(indexed_doc.doc_header, abstract_methods, framework_override=framework_override)
         payload = self.assemble_prompt_payload(indexed_doc, triage)
         
         if not self.api_key:

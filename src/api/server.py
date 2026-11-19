@@ -427,6 +427,7 @@ def analyze_fetched_paper(
     filename: str = Form(...),
     canonical_id: Optional[str] = Form(None),
     model_override: Optional[str] = Form(None),
+    framework_override: Optional[str] = Form(None),
     api_key: Optional[str] = Form(None),
     user_uid: Optional[str] = Form("anonymous"),
     user_email: Optional[str] = Form("unauthenticated")
@@ -445,24 +446,25 @@ def analyze_fetched_paper(
         
         cache_key = get_composite_global_cache_key(paper_id, active_model)
         
-        # Check Tier B Global Cache Hit
-        cached_hit = get_tier_b_cached_appraisal(cache_key)
-        if cached_hit:
-            anchor_hash = cached_hit.get("anchor_hash", "")
-            cached_anchors = load_anchors_compressed(anchor_hash, is_public_oa=True) if anchor_hash else {}
-            if cached_anchors:
-                cached_hit["anchor_index"] = cached_anchors
-                cached_hit["from_global_cache"] = True
-                cached_hit["global_cache_key"] = cache_key
-                print(f"[TierBCache] HIT for {paper_id} ({cache_key[:12]}). Serving without model inference.")
-                return cached_hit
+        # Check Tier B Global Cache Hit (skip cache if user explicitly requested a framework_override)
+        if not framework_override:
+            cached_hit = get_tier_b_cached_appraisal(cache_key)
+            if cached_hit:
+                anchor_hash = cached_hit.get("anchor_hash", "")
+                cached_anchors = load_anchors_compressed(anchor_hash, is_public_oa=True) if anchor_hash else {}
+                if cached_anchors:
+                    cached_hit["anchor_index"] = cached_anchors
+                    cached_hit["from_global_cache"] = True
+                    cached_hit["global_cache_key"] = cache_key
+                    print(f"[TierBCache] HIT for {paper_id} ({cache_key[:12]}). Serving without model inference.")
+                    return cached_hit
 
-        # Cache Miss: Parse and synthesize
+        # Cache Miss or Override: Parse and synthesize
         indexed = parse_and_index_pdf(file_path)
         CACHED_INDEX[filename] = indexed
         
         eval_engine = SynthesisEngine(DATA_DIR, api_key=api_key) if api_key else engine
-        result = eval_engine.generate_appraisal(indexed, model_override=model_override)
+        result = eval_engine.generate_appraisal(indexed, model_override=model_override, framework_override=framework_override)
         
         anchor_data = {}
         for aid, meta in indexed.anchor_metadata.items():
@@ -495,10 +497,11 @@ def analyze_fetched_paper(
         result["global_cache_key"] = cache_key
         result["is_public_oa"] = True
         
-        # Store in Tier B Global Cache (excluding inlined anchor_index to keep JSON light)
-        cache_copy = dict(result)
-        cache_copy["anchor_hash"] = stored_anchor_hash
-        save_tier_b_cached_appraisal(cache_key, cache_copy)
+        # Store in Tier B Global Cache only for default (non-overridden) appraisals
+        if not framework_override:
+            cache_copy = dict(result)
+            cache_copy["anchor_hash"] = stored_anchor_hash
+            save_tier_b_cached_appraisal(cache_key, cache_copy)
         
         # Attach anchor_index to current response for instant client hydration
         result["anchor_index"] = anchor_data
@@ -694,6 +697,94 @@ async def audit_commentary_endpoint(
                 model=model_override or PRIMARY_MODEL,
                 prompt_tokens=4500,
                 candidates_tokens=1500
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/reappraise")
+def reappraise_with_framework_endpoint(
+    filename: str = Form(...),
+    framework_override: str = Form(...),
+    is_public_oa: Optional[bool] = Form(True),
+    model_override: Optional[str] = Form(None),
+    api_key: Optional[str] = Form(None),
+    user_uid: Optional[str] = Form("anonymous"),
+    user_email: Optional[str] = Form("unauthenticated")
+):
+    """Re-run appraisal on an already-saved manuscript using a user-selected study design framework, preserving copyright isolation."""
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Source manuscript file not found on server for re-analysis.")
+
+    try:
+        active_model = model_override or PRIMARY_MODEL
+        clean_uid = (user_uid or "anonymous").strip()
+
+        indexed = CACHED_INDEX.get(filename)
+        if not indexed:
+            indexed = parse_and_index_pdf(file_path)
+            CACHED_INDEX[filename] = indexed
+
+        eval_engine = SynthesisEngine(DATA_DIR, api_key=api_key) if api_key else engine
+        result = eval_engine.generate_appraisal(indexed, model_override=model_override, framework_override=framework_override)
+
+        anchor_data = {}
+        for aid, meta in indexed.anchor_metadata.items():
+            anchor_data[aid] = {
+                "anchor_id": aid,
+                "page": meta.page_number,
+                "page_width": meta.page_width,
+                "page_height": meta.page_height,
+                "section": meta.section,
+                "text": meta.text[:250],
+                "bbox": meta.bbox,
+                "has_overflow": bool(meta.overflow_page)
+            }
+
+        result["filename"] = filename
+        result["total_anchors_indexed"] = len(indexed.all_anchors)
+        result["sections_detected"] = list(indexed.sections.keys())
+        result["document_header"] = indexed.doc_header
+
+        try:
+            _d = pymupdf.open(file_path)
+            result["total_pages"] = len(_d)
+            _d.close()
+        except Exception:
+            result["total_pages"] = max((m["page"] for m in anchor_data.values()), default=1)
+
+        if is_public_oa:
+            stored_anchor_hash = save_anchors_compressed(anchor_data, is_public_oa=True)
+            result["pdf_hash"] = ""
+            result["is_public_oa"] = True
+        else:
+            with open(file_path, "rb") as f:
+                pdf_hash = hashlib.sha256(f.read()).hexdigest()[:20]
+            stored_anchor_hash = save_anchors_compressed(
+                anchor_index=anchor_data,
+                is_public_oa=False,
+                user_uid=clean_uid,
+                pdf_hash=pdf_hash
+            )
+            result["pdf_hash"] = pdf_hash
+            result["is_public_oa"] = False
+
+        result["anchor_hash"] = stored_anchor_hash
+        result["anchor_index"] = anchor_data
+        result["from_global_cache"] = False
+
+        try:
+            log_usage(
+                uid=clean_uid,
+                email=user_email or "unauthenticated",
+                feature="appraisal",
+                model=active_model,
+                prompt_tokens=4500,
+                candidates_tokens=3200
             )
         except Exception as te:
             print(f"[Telemetry] Logging warning: {te}")
@@ -1952,12 +2043,32 @@ def index_page():
                         <span id="statusText">Processing...</span>
                     </div>
 
-                    <!-- Study Wonk Framework Badge with Hover Tooltip -->
-                    <div id="studyBadgeWrapper" class="hidden study-badge-container cursor-help">
-                        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-900 dark:text-sky-300 border border-sky-300 dark:border-sky-800 text-xs font-semibold shadow-2xs hover:bg-sky-200 dark:hover:bg-sky-900 transition">
+                    <!-- Study Wonk Framework Selector Pill with Hover Tooltip -->
+                    <div id="studyBadgeWrapper" class="hidden study-badge-container relative">
+                        <button type="button" id="studyBadgeBtn" onclick="toggleStudyFrameworkMenu(event)" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-900 dark:text-sky-300 border border-sky-300 dark:border-sky-800 text-xs font-semibold shadow-2xs hover:bg-sky-200 dark:hover:bg-sky-900 transition cursor-pointer" title="Click to change study design framework and re-analyze">
                             <span class="w-2 h-2 rounded-full bg-sky-600"></span>
                             <span id="studyBadgeText">Biomarker Study</span>
                             <span class="text-sky-500 font-normal ml-0.5 text-[10px]">ℹ</span>
+                            <span class="text-sky-600 dark:text-sky-400 text-[10px] ml-0.5">▾</span>
+                        </button>
+                        <!-- Dropdown Framework Selector Menu -->
+                        <div id="studyFrameworkMenu" class="hidden absolute right-0 top-full mt-1.5 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1.5 text-xs">
+                            <div class="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                <span class="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider text-[10px]">Switch Study Framework</span>
+                                <span class="text-[10px] text-slate-400">Re-analyzes paper</span>
+                            </div>
+                            <div id="studyFrameworkMenuList" class="max-h-72 overflow-y-auto py-1">
+                                <button type="button" onclick="reappraiseWithFramework('FW_A', 'Randomized Controlled Trial (RCT)')" data-fw="FW_A" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Randomized Controlled Trial (RCT)</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_F', 'Non-Inferiority Randomized Controlled Trial')" data-fw="FW_F" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Non-Inferiority Randomized Controlled Trial</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_C', 'Observational Study / Real-World Evidence')" data-fw="FW_C" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Observational Study / Real-World Evidence</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_B', 'Systematic Review & Meta-Analysis')" data-fw="FW_B" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Systematic Review &amp; Meta-Analysis</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_D', 'Diagnostic Accuracy Study')" data-fw="FW_D" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Diagnostic Accuracy Study</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_I', 'Biomarker Study')" data-fw="FW_I" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Biomarker Study</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_E', 'Clinical Trial Protocol & Statistical Analysis Plan')" data-fw="FW_E" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Clinical Trial Protocol &amp; Statistical Analysis Plan</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_G', 'Health Economic Evaluation')" data-fw="FW_G" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Health Economic Evaluation</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_J', 'Survey Research')" data-fw="FW_J" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Survey Research</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                                <button type="button" onclick="reappraiseWithFramework('FW_H', 'Narrative Review')" data-fw="FW_H" class="w-full text-left px-3 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/50 text-slate-700 dark:text-slate-200 flex items-center justify-between gap-2 transition cursor-pointer"><span>Narrative Review</span><span class="fw-check hidden text-sky-600 font-bold">✓</span></button>
+                            </div>
                         </div>
                         <!-- Tooltip Container -->
                         <div class="study-badge-tooltip">
@@ -6613,6 +6724,15 @@ ${scopedHtml}
 
                     badgeText.innerText = fwName;
                     if (tipFw) tipFw.innerText = fwName;
+                    // Update active checkmark in framework selector dropdown
+                    document.querySelectorAll('#studyFrameworkMenuList button[data-fw]').forEach(btn => {
+                        const chk = btn.querySelector('.fw-check');
+                        const isMatch = btn.getAttribute('data-fw') === fwId;
+                        if (chk) chk.classList.toggle('hidden', !isMatch);
+                        btn.classList.toggle('bg-sky-50', isMatch);
+                        btn.classList.toggle('dark:bg-sky-950/40', isMatch);
+                        btn.classList.toggle('font-semibold', isMatch);
+                    });
                     if (tipRules) tipRules.innerText = applicableRules.length + ' Rules Triggered';
                     if (tipDesc) tipDesc.innerText = data.triage.description || 'Deterministic bias auditing rules tailored to this study design.';
 
@@ -7049,6 +7169,69 @@ ${scopedHtml}
                         if (statusIcon) statusIcon.innerText = '⚠️';
                     }
                     alert('Could not load appraisal: ' + err.message);
+                }
+            }
+
+            function toggleStudyFrameworkMenu(e) {
+                if (e) e.stopPropagation();
+                const menu = document.getElementById('studyFrameworkMenu');
+                if (menu) menu.classList.toggle('hidden');
+            }
+
+            document.addEventListener('click', function(e) {
+                const wrapper = document.getElementById('studyBadgeWrapper');
+                const menu = document.getElementById('studyFrameworkMenu');
+                if (menu && wrapper && !wrapper.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+
+            async function reappraiseWithFramework(fwId, fwName) {
+                const menu = document.getElementById('studyFrameworkMenu');
+                if (menu) menu.classList.add('hidden');
+
+                if (!currentFilename) {
+                    alert('No paper is currently loaded to re-analyze.');
+                    return;
+                }
+                const currentFwId = window.ResearchAppState && window.ResearchAppState.lastAppraisalData && window.ResearchAppState.lastAppraisalData.triage
+                    ? window.ResearchAppState.lastAppraisalData.triage.primary_framework_id
+                    : null;
+                if (currentFwId === fwId) return;
+
+                const statusBox = document.getElementById('statusBox');
+                const statusText = document.getElementById('statusText');
+                const spinner = document.getElementById('spinner');
+
+                if (statusBox) statusBox.classList.remove('hidden');
+                if (spinner) spinner.classList.remove('hidden');
+                if (statusText) statusText.innerText = `Re-analyzing under ${fwName}...`;
+
+                try {
+                    const lastData = (window.ResearchAppState && window.ResearchAppState.lastAppraisalData) || {};
+                    const isPublicOa = lastData.is_public_oa !== false;
+
+                    const formData = new FormData();
+                    formData.append('filename', currentFilename);
+                    formData.append('framework_override', fwId);
+                    formData.append('is_public_oa', isPublicOa ? 'true' : 'false');
+                    if (currentUser) {
+                        formData.append('user_uid', currentUser.uid || 'anonymous');
+                        formData.append('user_email', currentUser.email || 'unauthenticated');
+                    }
+
+                    const res = await fetch('/reappraise', { method: 'POST', body: formData });
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        throw new Error(errData.detail || `Server returned ${res.status}`);
+                    }
+                    const data = await res.json();
+                    renderAppraisalResults(data);
+                } catch (err) {
+                    console.error('[Reappraise] Error:', err);
+                    alert('Failed to re-analyze under selected framework: ' + err.message);
+                } finally {
+                    if (statusBox) statusBox.classList.add('hidden');
                 }
             }
 
