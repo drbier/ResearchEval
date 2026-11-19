@@ -1969,6 +1969,13 @@ def index_page():
                 opacity: 1;
                 transform: translateY(0);
             }
+            .study-badge-container.menu-open .study-badge-tooltip,
+            .study-badge-container.menu-open:hover .study-badge-tooltip {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
         </style>
     </head>
     <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen p-4 transition-colors">
@@ -7174,8 +7181,13 @@ ${scopedHtml}
 
             function toggleStudyFrameworkMenu(e) {
                 if (e) e.stopPropagation();
+                const wrapper = document.getElementById('studyBadgeWrapper');
                 const menu = document.getElementById('studyFrameworkMenu');
-                if (menu) menu.classList.toggle('hidden');
+                if (menu) {
+                    const willOpen = menu.classList.contains('hidden');
+                    menu.classList.toggle('hidden');
+                    if (wrapper) wrapper.classList.toggle('menu-open', willOpen);
+                }
             }
 
             document.addEventListener('click', function(e) {
@@ -7183,12 +7195,15 @@ ${scopedHtml}
                 const menu = document.getElementById('studyFrameworkMenu');
                 if (menu && wrapper && !wrapper.contains(e.target)) {
                     menu.classList.add('hidden');
+                    wrapper.classList.remove('menu-open');
                 }
             });
 
             async function reappraiseWithFramework(fwId, fwName) {
+                const wrapper = document.getElementById('studyBadgeWrapper');
                 const menu = document.getElementById('studyFrameworkMenu');
                 if (menu) menu.classList.add('hidden');
+                if (wrapper) wrapper.classList.remove('menu-open');
 
                 if (!currentFilename) {
                     alert('No paper is currently loaded to re-analyze.');
