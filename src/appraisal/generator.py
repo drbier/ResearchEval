@@ -39,6 +39,95 @@ class SynthesisEngine:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
 
+    def _enrich_doc_header_with_pubmed(self, indexed_doc: IndexedDocument) -> None:
+        """
+        If [Doc_Header] is missing a DOI or PMID (common in publisher-downloaded PDFs),
+        query PubMed E-utilities using the paper title and verify high token overlap
+        before appending verified PMID and DOI links to [Doc_Header].
+        """
+        header = (indexed_doc.doc_header or "").strip()
+        if not header:
+            return
+        has_doi = bool(re.search(r'10\.\d{4,9}/[^\s]+', header))
+        has_pmid = bool(re.search(r'(?:\bPMID\b|pubmed\.ncbi\.nlm\.nih\.gov/\d+)', header, re.IGNORECASE))
+        if has_doi and has_pmid:
+            return
+
+        # Build candidate query from header lines (skipping short/metadata lines) or filename
+        lines = [ln.strip() for ln in header.splitlines() if ln.strip()]
+        skip_pat = re.compile(r'^(?:original\s+paper|review|research\s+article|volume\s+\d+|published|downloaded|received|accepted|copyright|\d+$)', re.IGNORECASE)
+        title_lines = [ln for ln in lines if len(ln) > 15 and not skip_pat.match(ln) and '|' not in ln and 'doi:' not in ln.lower()]
+        query_title = " ".join(title_lines[:2]).strip()
+        if len(query_title) < 20 and getattr(indexed_doc, "filename", ""):
+            fn_clean = re.sub(r'\.(?:pdf|xml)$', '', indexed_doc.filename, flags=re.IGNORECASE).replace('_', ' ').strip()
+            if not re.match(r'^(?:PMC\d+|PubMed_\d+)$', fn_clean, re.IGNORECASE):
+                query_title = fn_clean
+        if len(query_title) < 12:
+            return
+
+        # Keep alphanumeric words for clean PubMed esearch
+        query_words = [w for w in re.findall(r'[A-Za-z0-9]+', query_title) if len(w) > 2][:12]
+        if len(query_words) < 3:
+            return
+
+        try:
+            esearch_resp = requests.get(
+                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                params={"db": "pubmed", "term": " ".join(query_words), "retmax": 5, "retmode": "json"},
+                timeout=3.5,
+            )
+            if not esearch_resp.ok:
+                return
+            idlist = esearch_resp.json().get("esearchresult", {}).get("idlist", [])
+            if not idlist:
+                return
+
+            esum_resp = requests.get(
+                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi",
+                params={"db": "pubmed", "id": ",".join(idlist), "retmode": "json"},
+                timeout=3.5,
+            )
+            if not esum_resp.ok:
+                return
+            summaries = esum_resp.json().get("result", {})
+
+            header_tokens = set(re.findall(r'[a-z0-9]+', header.lower()))
+            best_pmid = None
+            best_doi = None
+            best_overlap = 0.0
+
+            for pmid in idlist:
+                rec = summaries.get(pmid, {})
+                cand_title = str(rec.get("title", "")).strip()
+                cand_tokens = [t for t in re.findall(r'[a-z0-9]+', cand_title.lower()) if len(t) > 2]
+                if len(cand_tokens) < 4:
+                    continue
+                overlap = sum(1 for t in cand_tokens if t in header_tokens) / len(cand_tokens)
+                if overlap >= 0.75 and overlap > best_overlap:
+                    best_overlap = overlap
+                    best_pmid = pmid
+                    best_doi = next((a.get("value") for a in rec.get("articleids", []) if a.get("idtype") == "doi"), None)
+
+            if not best_pmid:
+                return
+
+            additions = []
+            if not has_pmid and best_pmid:
+                additions.append(f"PubMed ID: https://pubmed.ncbi.nlm.nih.gov/{best_pmid}/")
+            if not has_doi and best_doi:
+                additions.append(f"DOI: https://doi.org/{best_doi}")
+
+            if additions:
+                enriched = header + "\n" + "\n".join(additions)
+                indexed_doc.doc_header = enriched
+                if "[Doc_Header]" in indexed_doc.all_anchors:
+                    indexed_doc.all_anchors["[Doc_Header]"] = enriched
+                if "[Doc_Header]" in indexed_doc.anchor_metadata:
+                    indexed_doc.anchor_metadata["[Doc_Header]"].text = enriched
+                print(f"[MetadataEnrich] Verified PubMed match for '{query_title[:40]}...': PMID={best_pmid}, DOI={best_doi}")
+        except Exception as e:
+            print(f"[MetadataEnrich] Skipped PubMed lookup: {e}")
+
     def assemble_prompt_payload(self, indexed_doc: IndexedDocument, triage: TriageResult) -> Dict[str, Any]:
         """Construct the strictly scoped context injection payload."""
         fw_schema = self.schemadb.get(triage.primary_framework_id, {})
@@ -322,6 +411,7 @@ Anchors & Text:
                     abstract_methods += f"{a.text}\n"
                     
         triage = self.triage_engine.classify_text(indexed_doc.doc_header, abstract_methods, framework_override=framework_override)
+        self._enrich_doc_header_with_pubmed(indexed_doc)
         payload = self.assemble_prompt_payload(indexed_doc, triage)
         
         if not self.api_key:
