@@ -111,11 +111,21 @@ class SynthesisEngine:
             if not best_pmid:
                 return
 
+            # Verify DOI actually resolves at doi.org before including it (some PubMed records list unregistered DOIs)
+            verified_doi = None
+            if best_doi and not has_doi:
+                try:
+                    doi_chk = requests.get(f"https://doi.org/api/handles/{best_doi}", timeout=2.5)
+                    if doi_chk.ok and doi_chk.json().get("responseCode") == 1:
+                        verified_doi = best_doi
+                except Exception:
+                    verified_doi = None
+
             additions = []
             if not has_pmid and best_pmid:
                 additions.append(f"PubMed ID: https://pubmed.ncbi.nlm.nih.gov/{best_pmid}/")
-            if not has_doi and best_doi:
-                additions.append(f"DOI: https://doi.org/{best_doi}")
+            if not has_doi and verified_doi:
+                additions.append(f"DOI: https://doi.org/{verified_doi}")
 
             if additions:
                 enriched = header + "\n" + "\n".join(additions)
