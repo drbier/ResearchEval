@@ -604,6 +604,7 @@ async def generate_commentary_endpoint(
     filename: str = Form(...),
     appraisal_markdown: str = Form(...),
     voice_profile: Optional[str] = Form(None),
+    custom_prompt: Optional[str] = Form(""),
     model_override: Optional[str] = Form(None),
     api_key: Optional[str] = Form(None),
     user_uid: Optional[str] = Form("anonymous"),
@@ -632,7 +633,8 @@ async def generate_commentary_endpoint(
             indexed_doc=indexed,
             appraisal_markdown=appraisal_markdown,
             voice_profile=profile_data,
-            model_override=model_override
+            model_override=model_override,
+            custom_prompt=custom_prompt or ""
         )
 
         try:
@@ -3019,6 +3021,18 @@ def index_page():
                                             <span>✨</span> <span id="generateCommentaryBtnText">Generate Commentary</span>
                                         </button>
                                     </div>
+                                </div>
+
+                                <!-- Optional Editorial Angle / Focus Prompt -->
+                                <div class="flex flex-col bg-slate-50 dark:bg-slate-950/70 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
+                                    <div class="flex items-center justify-between">
+                                        <label for="commentaryCustomPrompt" class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                            <span>🎯</span> <span>Editorial Angle / Focus Prompt</span>
+                                            <span class="font-normal text-[11px] text-slate-400 dark:text-slate-500">(Optional — tell your voice what point to emphasize)</span>
+                                        </label>
+                                        <button type="button" onclick="const el=document.getElementById('commentaryCustomPrompt'); if(el){el.value='';}" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer transition" title="Clear editorial prompt">Clear</button>
+                                    </div>
+                                    <textarea id="commentaryCustomPrompt" rows="2" maxlength="1000" onkeydown="if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();generateClinicalCommentary();}" class="w-full text-xs font-sans text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-sky-500 resize-y" placeholder="Optional: Tell your voice what to focus on (e.g., &quot;I am frustrated that people still believe IVC raises ferritin when the opposite is true. We are harming patients.&quot;) — Ctrl+Enter to generate"></textarea>
                                 </div>
 
                                 <!-- Editable Draft Commentary Panel -->
@@ -6872,8 +6886,10 @@ ${scopedHtml}
                     injectMethodologicalScorecard(container, data.rule_evaluations);
                 }
 
-                // Reset Ask conversational interface for new paper
+                // Reset Ask conversational interface & editorial prompt for new paper
                 resetAskChat();
+                const customPromptEl = document.getElementById('commentaryCustomPrompt');
+                if (customPromptEl) customPromptEl.value = '';
 
                 // Populate Thinking & Audit Trail view (Behavior 3)
                 renderThinkingAudit(data);
@@ -8192,52 +8208,6 @@ ${scopedHtml}
                 }
 
                 let currentList = voiceProfileState.exemplars || [];
-                let addedCount = 0;
-
-                for (let block of rawBlocks) {
-                    if (currentList.length >= 10) {
-                        alert(`Reached exemplar library limit of 10 items. Successfully added ${addedCount} exemplar(s).`);
-                        break;
-                    }
-
-                    const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-                    let title = "Writing Exemplar";
-                    let text = block;
-
-                    if (lines.length > 1 && lines[0].length < 80 && !lines[0].endsWith('.')) {
-                        title = lines[0].replace(/^#+\s*/, '');
-                        text = lines.slice(1).join('\n\n').trim();
-                    }
-
-                    const activeCount = currentList.filter(e => e.is_active).length;
-                    const newEx = {
-                        id: 'ex_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-                        title: title.slice(0, 80),
-                        text: text.slice(0, 1500),
-                        is_active: activeCount < 4,
-                        updated_at_ms: Date.now()
-                    };
-
-                    currentList = [newEx, ...currentList];
-                    addedCount++;
-                }
-
-                voiceProfileState.exemplars = currentList;
-                voiceProfileState.local_dirty = true;
-                localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
-
-                input.value = '';
-                toggleBatchExemplarModal();
-                renderVoiceModalUI();
-                updateVoiceUIElements();
-                alert(`Successfully imported ${addedCount} exemplar(s) into your library! Click 'Save Voice Profile' to sync.`);
-            }
-
-            function toggleExemplarActive(id) {
-                const ex = (voiceProfileState.exemplars || []).find(e => e.id === id);
-                if (!ex) return;
-                
-                const currentActive = (voiceProfileState.exemplars || []).filter(e => e.is_active && e.id !== id).length;
                 if (!ex.is_active && currentActive >= 4) {
                     alert("A maximum of 4 active exemplars can be used during commentary generation to preserve attention on manuscript data. Please uncheck another exemplar first.");
                     renderVoiceModalUI();
@@ -8522,6 +8492,10 @@ ${scopedHtml}
                     formData.append('filename', currentFilename);
                     formData.append('appraisal_markdown', appraisalText);
                     formData.append('voice_profile', JSON.stringify(getEffectiveVoiceProfile()));
+                    const customPromptEl = document.getElementById('commentaryCustomPrompt');
+                    if (customPromptEl && customPromptEl.value.trim()) {
+                        formData.append('custom_prompt', customPromptEl.value.trim());
+                    }
                     if (currentUser) {
                         formData.append('user_uid', currentUser.uid || 'anonymous');
                         formData.append('user_email', currentUser.email || 'unauthenticated');

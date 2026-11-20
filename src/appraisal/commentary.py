@@ -75,7 +75,8 @@ class CommentaryAndQCEngine:
         indexed_doc: IndexedDocument,
         appraisal_markdown: str,
         voice_profile: Optional[Dict[str, Any]] = None,
-        model_override: Optional[str] = None
+        model_override: Optional[str] = None,
+        custom_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Stage 1: Generate clinical editorial commentary grounded in the study appraisal
@@ -163,6 +164,16 @@ class CommentaryAndQCEngine:
             "6. FORMAT: Output 2 to 4 punchy, high-impact paragraphs in Markdown suitable for an email, newsletter, or medical discussion board."
         )
 
+        clean_custom_prompt = str(custom_prompt or "").strip()[:1000]
+        custom_angle_block = ""
+        if clean_custom_prompt:
+            custom_angle_block = (
+                "\n### CLINICIAN'S SPECIFIC ANGLE / THESIS FOR THIS PAPER:\n"
+                f"{clean_custom_prompt}\n\n"
+                "DIRECTIVE FOR CLINICIAN ANGLE: Lead with and weave in the clinician's stated thesis, framing, and clinical urgency above in their authentic voice. "
+                "Frame broad clinical concerns or frustration as the clinician's editorial perspective, while ensuring every numerical figure or study-specific outcome claim remains strictly grounded in the Verified Manuscript Excerpts.\n"
+            )
+
         user_prompt = f"""### CLINICIAN PAST WRITING EXEMPLARS (STUDY FOR VOICE, CADENCE & TONE):
 {exemplars_formatted}
 
@@ -175,7 +186,7 @@ class CommentaryAndQCEngine:
 
 ### VERIFIED MANUSCRIPT EXCERPTS:
 {anchors_context_str[:6000]}
-
+{custom_angle_block}
 ============================================================
 ### TASK:
 Draft an editorial commentary in the clinician's authentic voice, applying their philosophy and stylistic cadence to the findings of this study.
