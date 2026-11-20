@@ -6378,10 +6378,7 @@ ${escapeHtml(thought)}
 
                 function renderCommentaryBoxHtml(text) {
                     if (!text) return '';
-                    const commentaryParagraphs = text.split('\n\n').map(p => {
-                        let formattedP = formatInlineFormatting(p.trim());
-                        return `<p style="margin-top:0; margin-bottom:14px; font-size:16px; line-height:1.7; color:#1e293b; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${formattedP}</p>`;
-                    }).join('');
+                    const commentaryHtml = markdownToSemanticHtml(text);
 
                     return `
 <div class="fact-commentary-box" style="background-color:#f8fafc; border-left:4px solid ${themeTheme.header}; border-top:1px solid #e2e8f0; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; padding:18px 22px; margin-bottom:26px; border-radius:0 8px 8px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -6389,7 +6386,7 @@ ${escapeHtml(thought)}
         <span>✍️</span> <span>Commentary</span>
     </div>
     <div>
-        ${commentaryParagraphs}
+        ${commentaryHtml}
     </div>
 </div>
 `;
