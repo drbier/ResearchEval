@@ -8208,6 +8208,49 @@ ${scopedHtml}
                 }
 
                 let currentList = voiceProfileState.exemplars || [];
+                let currentActive = currentList.filter(e => e.is_active).length;
+                const newItems = [];
+
+                rawBlocks.forEach((block, idx) => {
+                    const lines = block.split('\n');
+                    let title = `Imported Exemplar ${currentList.length + idx + 1}`;
+                    let bodyText = block;
+                    if (lines.length > 1) {
+                        const firstLine = lines[0].trim();
+                        if (firstLine.length > 0 && firstLine.length <= 120 && !firstLine.endsWith('.')) {
+                            title = firstLine.replace(/^#+\s*/, '').replace(/^\*\*|\*\*$/g, '').trim();
+                            bodyText = lines.slice(1).join('\n').trim();
+                        }
+                    }
+                    if (bodyText.length > 1500) {
+                        bodyText = bodyText.slice(0, 1500);
+                    }
+                    const shouldActivate = currentActive < 4;
+                    if (shouldActivate) currentActive++;
+                    newItems.push({
+                        id: 'ex_' + Date.now() + '_' + idx,
+                        title: title,
+                        text: bodyText,
+                        is_active: shouldActivate,
+                        updated_at_ms: Date.now()
+                    });
+                });
+
+                voiceProfileState.exemplars = [...newItems, ...currentList];
+                voiceProfileState.local_dirty = true;
+                localStorage.setItem('fact_voice_profile', JSON.stringify(voiceProfileState));
+                input.value = '';
+                toggleBatchExemplarModal();
+                renderVoiceModalUI();
+                updateVoiceUIElements();
+                alert(`Added ${newItems.length} exemplar(s) to your Voice Library! Click "Save Voice Profile" to sync to cloud.`);
+            }
+
+            function toggleExemplarActive(id) {
+                const exemplars = voiceProfileState.exemplars || [];
+                const ex = exemplars.find(e => e.id === id);
+                if (!ex) return;
+                const currentActive = exemplars.filter(e => e.is_active && e.id !== id).length;
                 if (!ex.is_active && currentActive >= 4) {
                     alert("A maximum of 4 active exemplars can be used during commentary generation to preserve attention on manuscript data. Please uncheck another exemplar first.");
                     renderVoiceModalUI();
