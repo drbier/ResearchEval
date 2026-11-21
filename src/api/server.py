@@ -906,6 +906,13 @@ class SaveAppraisalRequest(BaseModel):
     anchor_hash: Optional[str] = ""
     pdf_hash: Optional[str] = ""
     global_cache_key: Optional[str] = ""
+    folder: Optional[str] = None
+    suggested_folder: Optional[str] = None
+
+class UpdateAppraisalFolderRequest(BaseModel):
+    user_uid: str
+    paper_id: str
+    folder: str = ""
 
 @app.post("/save-appraisal")
 async def save_appraisal_endpoint(req: SaveAppraisalRequest):
@@ -946,7 +953,17 @@ async def save_appraisal_endpoint(req: SaveAppraisalRequest):
     user_dir = os.path.join(DATA_DIR, "user_libraries", clean_uid)
     os.makedirs(user_dir, exist_ok=True)
     user_record_path = os.path.join(user_dir, f"{clean_paper_id}.json")
-    
+
+    existing_folder = ""
+    if os.path.exists(user_record_path):
+        try:
+            with open(user_record_path, "r", encoding="utf-8") as ef:
+                existing_folder = json.load(ef).get("folder", "") or ""
+        except Exception:
+            existing_folder = ""
+
+    resolved_folder = req.folder if req.folder is not None else existing_folder
+
     user_record = {
         "paper_id": req.paper_id,
         "title": req.title,
@@ -962,6 +979,8 @@ async def save_appraisal_endpoint(req: SaveAppraisalRequest):
         "final_markdown": req.appraisal_markdown,
         "total_pages": req.total_pages,
         "triage": req.triage or {},
+        "folder": resolved_folder,
+        "suggested_folder": req.suggested_folder or "",
         "updated_at": time.time()
     }
     atomic_write_file(user_record_path, json.dumps(user_record, ensure_ascii=False, indent=2).encode("utf-8"))
@@ -1000,7 +1019,9 @@ async def get_user_appraisals_endpoint(user_uid: str = Query(...)):
                         "updated_at": rec.get("updated_at", 0),
                         "has_commentary": bool(rec.get("commentary")),
                         "is_public_oa": rec.get("is_public_oa", True),
-                        "anchor_hash": rec.get("anchor_hash", "")
+                        "anchor_hash": rec.get("anchor_hash", ""),
+                        "folder": rec.get("folder", ""),
+                        "suggested_folder": rec.get("suggested_folder", "")
                     })
             except Exception as e:
                 print(f"[UserLibrary] Read error for {fname}: {e}")
@@ -1008,6 +1029,65 @@ async def get_user_appraisals_endpoint(user_uid: str = Query(...)):
     # Sort descending by updated_at
     appraisals.sort(key=lambda x: x.get("updated_at", 0), reverse=True)
     return {"appraisals": appraisals}
+
+@app.post("/user-appraisal-folder")
+async def update_user_appraisal_folder_endpoint(req: UpdateAppraisalFolderRequest):
+    """Assign or clear a folder on a user's saved library record."""
+    clean_uid = (req.user_uid or "").strip()
+    if not clean_uid:
+        raise HTTPException(status_code=400, detail="Missing user_uid")
+    clean_paper_id = re.sub(r'[^\w\.-]', '_', req.paper_id.strip())
+    user_record_path = os.path.join(DATA_DIR, "user_libraries", clean_uid, f"{clean_paper_id}.json")
+    if os.path.exists(user_record_path):
+        try:
+            with open(user_record_path, "r", encoding="utf-8") as f:
+                rec = json.load(f)
+            rec["folder"] = (req.folder or "").strip()
+            atomic_write_file(user_record_path, json.dumps(rec, ensure_ascii=False, indent=2).encode("utf-8"))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed updating folder: {e}")
+    return {"status": "success", "paper_id": req.paper_id, "folder": (req.folder or "").strip()}
+
+@app.delete("/user-appraisal/{paper_id}")
+async def delete_user_appraisal_endpoint(paper_id: str, user_uid: str = Query(...)):
+    """Delete a user's Tier A library record (and unreferenced private quarantine anchors, never Tier B global cache)."""
+    clean_uid = (user_uid or "").strip()
+    if not clean_uid:
+        raise HTTPException(status_code=400, detail="Missing user_uid")
+    user_dir = os.path.join(DATA_DIR, "user_libraries", clean_uid)
+    clean_paper_id = re.sub(r'[^\w\.-]', '_', paper_id.strip())
+    user_record_path = os.path.join(user_dir, f"{clean_paper_id}.json")
+
+    deleted_pdf_hash = ""
+    deleted_is_oa = True
+    if os.path.exists(user_record_path):
+        try:
+            with open(user_record_path, "r", encoding="utf-8") as f:
+                rec = json.load(f)
+                deleted_pdf_hash = rec.get("pdf_hash", "")
+                deleted_is_oa = rec.get("is_public_oa", True)
+            os.remove(user_record_path)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed deleting library record: {e}")
+
+    # Clean up quarantined anchors only if private PDF and no remaining user record references pdf_hash
+    if not deleted_is_oa and deleted_pdf_hash and os.path.exists(user_dir):
+        still_referenced = False
+        for fname in os.listdir(user_dir):
+            if fname.endswith(".json"):
+                try:
+                    with open(os.path.join(user_dir, fname), "r", encoding="utf-8") as f:
+                        if json.load(f).get("pdf_hash") == deleted_pdf_hash:
+                            still_referenced = True
+                            break
+                except Exception:
+                    pass
+        if not still_referenced:
+            q_dir = os.path.join(DATA_DIR, "quarantine", clean_uid, deleted_pdf_hash)
+            if os.path.exists(q_dir):
+                shutil.rmtree(q_dir, ignore_errors=True)
+
+    return {"status": "success", "paper_id": paper_id}
 
 @app.get("/appraisal-by-id/{paper_id}")
 async def get_appraisal_by_id_endpoint(
@@ -2832,10 +2912,27 @@ def index_page():
                         </div>
                     </div>
 
-                    <!-- Library Search / Filter -->
-                    <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                        <span class="text-slate-400 text-xs">🔍</span>
-                        <input type="text" id="libraryFilterInput" oninput="filterLibraryList()" placeholder="Filter by study title, framework, or identifier..." class="bg-transparent border-none text-xs w-full text-slate-800 dark:text-slate-200 focus:outline-none"/>
+                    <!-- Library Search / Filter & Sort Bar -->
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg border border-slate-200 dark:border-slate-700 flex-1">
+                            <span class="text-slate-400 text-xs">🔍</span>
+                            <input type="text" id="libraryFilterInput" oninput="applyLibraryFiltersAndSort()" placeholder="Filter by study title, framework, folder, or identifier..." class="bg-transparent border-none text-xs w-full text-slate-800 dark:text-slate-200 focus:outline-none"/>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <label for="librarySortSelect" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Sort:</label>
+                            <select id="librarySortSelect" onchange="applyLibraryFiltersAndSort()" class="text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-700 dark:text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                                <option value="title_asc">Title (A → Z)</option>
+                                <option value="title_desc">Title (Z → A)</option>
+                                <option value="framework">Study Framework</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Library Folders Bar -->
+                    <div id="libraryFolderBar" class="flex flex-wrap items-center gap-1.5 pb-1">
+                        <!-- Rendered dynamically by renderLibraryFolderBar() -->
                     </div>
 
                     <!-- Library Items List -->
@@ -6936,6 +7033,7 @@ ${scopedHtml}
                     const title = titleMatch ? titleMatch[1].replace(/^\*+|\*+$/g, '').trim() : (data.filename || 'Clinical Analysis');
                     
                     const totalPages = data.total_pages || (data.anchor_index ? Math.max(...Object.values(data.anchor_index).map(a => a.page || 1), 1) : 1);
+                    const suggestedFolder = suggestFolderFromTriage(data.triage);
                     const payload = {
                         user_uid: currentUser.uid,
                         paper_id: paperId,
@@ -6951,7 +7049,8 @@ ${scopedHtml}
                         is_public_oa: data.is_public_oa !== false,
                         anchor_hash: data.anchor_hash || '',
                         pdf_hash: data.pdf_hash || '',
-                        global_cache_key: data.global_cache_key || ''
+                        global_cache_key: data.global_cache_key || '',
+                        suggested_folder: suggestedFolder
                     };
 
                     // Send to backend endpoint
@@ -6973,6 +7072,7 @@ ${scopedHtml}
                             global_cache_key: data.global_cache_key || '',
                             is_public_oa: data.is_public_oa !== false,
                             therapeutic_lens: payload.therapeutic_lens,
+                            suggested_folder: suggestedFolder,
                             updated_at: firebase.firestore.FieldValue.serverTimestamp()
                         };
                         fbDb.collection('users').doc(currentUser.uid).collection('appraisals').doc(paperId).set(firestoreRecord, { merge: true })
@@ -6986,6 +7086,190 @@ ${scopedHtml}
 
             // User Library State Cache
             let cachedUserLibraryItems = [];
+            let userLibraryFolders = [];
+            let activeLibraryFolderFilter = '__ALL__'; // '__ALL__' | '__UNFILED__' | '<folderName>'
+
+            function suggestFolderFromTriage(triage) {
+                if (!triage || !Array.isArray(triage.sub_feature_tags)) return '';
+                const tags = triage.sub_feature_tags;
+                if (tags.includes('+TAG_CARDIOLOGY')) return 'CVD';
+                if (tags.includes('+TAG_ONCOLOGY') || tags.includes('+TAG_IMMUNOTHERAPY')) return 'Oncology';
+                if (tags.includes('+TAG_NEPHROLOGY')) return 'Nephrology';
+                if (tags.includes('+TAG_NEUROLOGY')) return 'Neurology';
+                return '';
+            }
+
+            function getLibraryFoldersStorageKey() {
+                return currentUser && currentUser.uid ? ('fact_library_folders_' + currentUser.uid) : 'fact_library_folders_anon';
+            }
+
+            function loadUserLibraryFoldersLocal() {
+                try {
+                    const raw = localStorage.getItem(getLibraryFoldersStorageKey());
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed)) return parsed.filter(Boolean);
+                    }
+                } catch (e) {}
+                return [];
+            }
+
+            function saveUserLibraryFolders(folders) {
+                const unique = Array.from(new Set(folders.map(f => String(f || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+                userLibraryFolders = unique;
+                try {
+                    localStorage.setItem(getLibraryFoldersStorageKey(), JSON.stringify(unique));
+                } catch (e) {}
+                if (fbDb && currentUser && currentUser.uid) {
+                    fbDb.collection('users').doc(currentUser.uid).set({ library_folders: unique }, { merge: true })
+                        .catch(err => console.warn('[Firestore] Folder list sync note:', err));
+                }
+            }
+
+            function syncFoldersFromItemsAndCloud(items, cloudFolders) {
+                const merged = new Set([
+                    ...loadUserLibraryFoldersLocal(),
+                    ...(Array.isArray(cloudFolders) ? cloudFolders : []),
+                    ...(items || []).map(i => (i.folder || '').trim()).filter(Boolean)
+                ]);
+                userLibraryFolders = Array.from(merged).sort((a, b) => a.localeCompare(b));
+                try {
+                    localStorage.setItem(getLibraryFoldersStorageKey(), JSON.stringify(userLibraryFolders));
+                } catch (e) {}
+            }
+
+            function selectLibraryFolder(folderKey) {
+                activeLibraryFolderFilter = folderKey;
+                renderLibraryFolderBar();
+                applyLibraryFiltersAndSort();
+            }
+
+            function promptCreateLibraryFolder() {
+                const name = prompt('Enter a new folder name (e.g. CVD, Oncology, Nephrology):');
+                if (!name) return;
+                const clean = name.trim();
+                if (!clean) return;
+                if (!userLibraryFolders.includes(clean)) {
+                    saveUserLibraryFolders([...userLibraryFolders, clean]);
+                }
+                activeLibraryFolderFilter = clean;
+                renderLibraryFolderBar();
+                applyLibraryFiltersAndSort();
+            }
+
+            async function deleteLibraryFolder(folderName, e) {
+                if (e) e.stopPropagation();
+                const inFolder = (cachedUserLibraryItems || []).filter(i => (i.folder || '') === folderName);
+                const msg = inFolder.length > 0
+                    ? `Remove folder "${folderName}"? Its ${inFolder.length} paper(s) will be moved to Unfiled (not deleted).`
+                    : `Remove empty folder "${folderName}"?`;
+                if (!confirm(msg)) return;
+
+                // Unfile all items in this folder
+                for (const item of inFolder) {
+                    await moveLibraryItemToFolder(item.paper_id, '', true);
+                }
+                saveUserLibraryFolders(userLibraryFolders.filter(f => f !== folderName));
+                if (activeLibraryFolderFilter === folderName) {
+                    activeLibraryFolderFilter = '__ALL__';
+                }
+                renderLibraryFolderBar();
+                applyLibraryFiltersAndSort();
+            }
+
+            function renderLibraryFolderBar() {
+                const bar = document.getElementById('libraryFolderBar');
+                if (!bar) return;
+
+                const items = cachedUserLibraryItems || [];
+                const totalCount = items.length;
+                const unfiledCount = items.filter(i => !(i.folder || '').trim()).length;
+
+                const pillCls = (isActive) => isActive
+                    ? 'px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-2xs transition cursor-pointer flex items-center gap-1.5'
+                    : 'px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition cursor-pointer flex items-center gap-1.5';
+
+                let html = [
+                    `<button type="button" onclick="selectLibraryFolder('__ALL__')" class="${pillCls(activeLibraryFolderFilter === '__ALL__')}"><span>📚</span><span>All Papers</span><span class="opacity-75 text-[10px]">(${totalCount})</span></button>`,
+                    `<button type="button" onclick="selectLibraryFolder('__UNFILED__')" class="${pillCls(activeLibraryFolderFilter === '__UNFILED__')}"><span>📥</span><span>Unfiled</span><span class="opacity-75 text-[10px]">(${unfiledCount})</span></button>`
+                ];
+
+                userLibraryFolders.forEach(folder => {
+                    const count = items.filter(i => (i.folder || '').trim() === folder).length;
+                    const isAct = activeLibraryFolderFilter === folder;
+                    const safeFolder = escapeHtml(folder);
+                    const jsFolder = folder.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    html.push(
+                        `<div class="inline-flex items-center ${pillCls(isAct)}">` +
+                        `  <span onclick="selectLibraryFolder('${jsFolder}')" class="flex items-center gap-1"><span>📁</span><span>${safeFolder}</span><span class="opacity-75 text-[10px]">(${count})</span></span>` +
+                        `  <button type="button" onclick="deleteLibraryFolder('${jsFolder}', event)" class="ml-0.5 opacity-60 hover:opacity-100 text-[10px] leading-none cursor-pointer" title="Remove folder (papers move to Unfiled)">✕</button>` +
+                        `</div>`
+                    );
+                });
+
+                html.push(`<button type="button" onclick="promptCreateLibraryFolder()" class="px-2.5 py-1 rounded-full text-xs font-semibold border border-dashed border-emerald-400 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition cursor-pointer flex items-center gap-1">+ New Folder</button>`);
+                bar.innerHTML = html.join('');
+            }
+
+            async function moveLibraryItemToFolder(paperId, folderName, skipRender = false) {
+                if (!currentUser) return;
+                const cleanFolder = (folderName || '').trim();
+                if (cleanFolder && !userLibraryFolders.includes(cleanFolder)) {
+                    saveUserLibraryFolders([...userLibraryFolders, cleanFolder]);
+                }
+
+                // Optimistically update local cache
+                cachedUserLibraryItems = (cachedUserLibraryItems || []).map(item => {
+                    if (item.paper_id === paperId) {
+                        return { ...item, folder: cleanFolder };
+                    }
+                    return item;
+                });
+
+                if (!skipRender) {
+                    renderLibraryFolderBar();
+                    applyLibraryFiltersAndSort();
+                }
+
+                // Persist to Firestore & backend Tier A JSON
+                if (fbDb && currentUser.uid) {
+                    fbDb.collection('users').doc(currentUser.uid).collection('appraisals').doc(paperId)
+                        .set({ folder: cleanFolder }, { merge: true })
+                        .catch(err => console.warn('[Firestore] Folder update note:', err));
+                }
+
+                fetch('/user-appraisal-folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_uid: currentUser.uid, paper_id: paperId, folder: cleanFolder })
+                }).catch(err => console.warn('[Library] Backend folder update note:', err));
+            }
+
+            async function deleteAppraisalFromLibrary(paperId, title) {
+                if (!currentUser) return;
+                const label = title || paperId;
+                if (!confirm(`Delete "${label}" from your Library?\n\nThis removes the saved appraisal from your personal library.`)) {
+                    return;
+                }
+
+                // Optimistic removal
+                cachedUserLibraryItems = (cachedUserLibraryItems || []).filter(i => i.paper_id !== paperId);
+                renderLibraryFolderBar();
+                applyLibraryFiltersAndSort();
+
+                try {
+                    if (fbDb && currentUser.uid) {
+                        await fbDb.collection('users').doc(currentUser.uid).collection('appraisals').doc(paperId).delete()
+                            .catch(err => console.warn('[Firestore] Delete note:', err));
+                    }
+                    await fetch('/user-appraisal/' + encodeURIComponent(paperId) + '?user_uid=' + encodeURIComponent(currentUser.uid), {
+                        method: 'DELETE'
+                    });
+                } catch (err) {
+                    console.error('[Library] Delete error:', err);
+                    alert('Could not delete appraisal: ' + err.message);
+                }
+            }
 
             // Library badge removed to eliminate distraction
             function updateUserLibraryBadge() {
@@ -7021,9 +7305,14 @@ ${scopedHtml}
 
                 try {
                     let items = [];
+                    let cloudFolders = [];
                     // Prefer Firestore client query first for live private library pointers
                     if (fbDb) {
                         try {
+                            const userDoc = await fbDb.collection('users').doc(currentUser.uid).get();
+                            if (userDoc.exists && Array.isArray(userDoc.data().library_folders)) {
+                                cloudFolders = userDoc.data().library_folders;
+                            }
                             const snap = await fbDb.collection('users').doc(currentUser.uid).collection('appraisals').orderBy('updated_at', 'desc').get();
                             snap.forEach(doc => {
                                 const d = doc.data();
@@ -7037,6 +7326,8 @@ ${scopedHtml}
                                     global_cache_key: d.global_cache_key || '',
                                     is_public_oa: d.is_public_oa !== false,
                                     therapeutic_lens: d.therapeutic_lens || 'integrative',
+                                    folder: d.folder || '',
+                                    suggested_folder: d.suggested_folder || '',
                                     updated_at: d.updated_at ? (d.updated_at.toDate ? d.updated_at.toDate().toISOString() : d.updated_at) : new Date().toISOString()
                                 });
                             });
@@ -7050,13 +7341,15 @@ ${scopedHtml}
                         const res = await fetch('/user-appraisals?user_uid=' + encodeURIComponent(currentUser.uid));
                         if (res.ok) {
                             const payload = await res.json();
-                            items = payload.items || [];
+                            items = payload.appraisals || payload.items || [];
                         }
                     }
 
                     cachedUserLibraryItems = items;
+                    syncFoldersFromItemsAndCloud(items, cloudFolders);
+                    renderLibraryFolderBar();
                     updateUserLibraryBadge();
-                    renderLibraryListCards(items);
+                    applyLibraryFiltersAndSort();
                 } catch (err) {
                     console.error('[Library] Failed to load library:', err);
                     feed.innerHTML = '<div class="text-center py-8 text-rose-500 dark:text-rose-400 text-xs">Error loading library: ' + escapeHtml(err.message) + '</div>';
@@ -7069,7 +7362,14 @@ ${scopedHtml}
                 if (!feed) return;
 
                 if (!items || items.length === 0) {
-                    feed.innerHTML = [
+                    const isFiltered = activeLibraryFolderFilter !== '__ALL__' || Boolean(document.getElementById('libraryFilterInput')?.value.trim());
+                    feed.innerHTML = isFiltered ? [
+                        '<div class="text-center py-10 bg-white dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">',
+                        '  <span class="text-2xl">📂</span>',
+                        '  <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-2">No Matching Papers</h4>',
+                        '  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Try clearing your search filter or switching folders.</p>',
+                        '</div>'
+                    ].join('') : [
                         '<div class="text-center py-12 bg-white dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">',
                         '  <span class="text-3xl">📚</span>',
                         '  <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-2">No Saved Appraisals Yet</h4>',
@@ -7085,8 +7385,9 @@ ${scopedHtml}
                 }
 
                 feed.innerHTML = items.map(item => {
-                    const dateStr = item.updated_at ? new Date(item.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-                    const timeStr = item.updated_at ? new Date(item.updated_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+                    const tsMs = typeof item.updated_at === 'number' ? (item.updated_at < 1e12 ? item.updated_at * 1000 : item.updated_at) : item.updated_at;
+                    const dateStr = tsMs ? new Date(tsMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                    const timeStr = tsMs ? new Date(tsMs).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
                     const isOA = item.is_public_oa !== false;
                     const oaBadge = isOA 
                         ? '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">Open Access</span>'
@@ -7094,6 +7395,21 @@ ${scopedHtml}
 
                     const lensBadge = item.therapeutic_lens 
                         ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 capitalize">' + escapeHtml(item.therapeutic_lens) + ' Lens</span>' 
+                        : '';
+
+                    const currentFolder = (item.folder || '').trim();
+                    const suggestedFolder = (item.suggested_folder || '').trim();
+                    const jsPaperId = (item.paper_id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const jsTitle = (item.title || item.paper_id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const jsCacheKey = (item.global_cache_key || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+                    const folderSelectOptions = [
+                        `<option value="" ${!currentFolder ? 'selected' : ''}>📥 Unfiled</option>`,
+                        ...userLibraryFolders.map(f => `<option value="${escapeHtml(f)}" ${currentFolder === f ? 'selected' : ''}>📁 ${escapeHtml(f)}</option>`)
+                    ].join('');
+
+                    const suggestionChip = (!currentFolder && suggestedFolder)
+                        ? `<button type="button" onclick="moveLibraryItemToFolder('${jsPaperId}', '${suggestedFolder.replace(/'/g, "\\'")}')" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-violet-100 dark:bg-violet-950/60 text-violet-800 dark:text-violet-300 border border-violet-300 dark:border-violet-800 hover:bg-violet-200 dark:hover:bg-violet-900 transition cursor-pointer" title="Auto-suggested specialty folder from study tags — click to file">✨ File to ${escapeHtml(suggestedFolder)}</button>`
                         : '';
 
                     return [
@@ -7105,41 +7421,76 @@ ${scopedHtml}
                         '      </span>',
                         '      ' + oaBadge,
                         '      ' + lensBadge,
+                        '      ' + suggestionChip,
                         '      <span class="text-[11px] text-slate-400 dark:text-slate-500">' + dateStr + ' ' + timeStr + '</span>',
                         '    </div>',
-                        '    <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate cursor-pointer" onclick="loadAppraisalFromLibrary(\'' + escapeHtml(item.paper_id) + '\', \'' + escapeHtml(item.global_cache_key || '') + '\')" title="' + escapeHtml(item.title || item.paper_id) + '">',
+                        '    <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate cursor-pointer" onclick="loadAppraisalFromLibrary(\'' + jsPaperId + '\', \'' + jsCacheKey + '\')" title="' + escapeHtml(item.title || item.paper_id) + '">',
                         '      ' + escapeHtml(item.title || item.paper_id),
                         '    </h4>',
                         '    <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">',
                         '      ' + escapeHtml(item.filename || item.paper_id),
                         '    </p>',
                         '  </div>',
-                        '  <div class="flex items-center gap-2 shrink-0">',
-                        '    <button onclick="loadAppraisalFromLibrary(\'' + escapeHtml(item.paper_id) + '\', \'' + escapeHtml(item.global_cache_key || '') + '\')" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1.5 cursor-pointer">',
+                        '  <div class="flex items-center gap-2 shrink-0 flex-wrap">',
+                        `    <select onchange="moveLibraryItemToFolder('${jsPaperId}', this.value)" class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-700 dark:text-slate-300 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500" title="Move paper to folder">${folderSelectOptions}</select>`,
+                        '    <button onclick="loadAppraisalFromLibrary(\'' + jsPaperId + '\', \'' + jsCacheKey + '\')" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1.5 cursor-pointer">',
                         '      <span>⚡</span> Open Appraisal',
                         '    </button>',
+                        `    <button type="button" onclick="deleteAppraisalFromLibrary('${jsPaperId}', '${jsTitle}')" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-300 transition cursor-pointer" title="Delete from Library">🗑️</button>`,
                         '  </div>',
                         '</div>'
                     ].join('');
                 }).join('');
             }
 
-            // Filter Library List by Search Query
-            function filterLibraryList() {
+            // Filter & Sort Library List
+            function applyLibraryFiltersAndSort() {
                 const input = document.getElementById('libraryFilterInput');
+                const sortSel = document.getElementById('librarySortSelect');
                 const q = (input ? input.value : '').toLowerCase().trim();
-                if (!q) {
-                    renderLibraryListCards(cachedUserLibraryItems);
-                    return;
+                const sortBy = sortSel ? sortSel.value : 'newest';
+
+                let list = [...(cachedUserLibraryItems || [])];
+
+                // Folder filter
+                if (activeLibraryFolderFilter === '__UNFILED__') {
+                    list = list.filter(item => !(item.folder || '').trim());
+                } else if (activeLibraryFolderFilter !== '__ALL__') {
+                    list = list.filter(item => (item.folder || '').trim() === activeLibraryFolderFilter);
                 }
-                const filtered = (cachedUserLibraryItems || []).filter(item => {
-                    const t = (item.title || '').toLowerCase();
-                    const pid = (item.paper_id || '').toLowerCase();
-                    const fn = (item.filename || '').toLowerCase();
-                    const fw = (item.framework_name || '').toLowerCase();
-                    return t.includes(q) || pid.includes(q) || fn.includes(q) || fw.includes(q);
+
+                // Search query filter
+                if (q) {
+                    list = list.filter(item => {
+                        const t = (item.title || '').toLowerCase();
+                        const pid = (item.paper_id || '').toLowerCase();
+                        const fn = (item.filename || '').toLowerCase();
+                        const fw = (item.framework_name || '').toLowerCase();
+                        const fl = (item.folder || '').toLowerCase();
+                        return t.includes(q) || pid.includes(q) || fn.includes(q) || fw.includes(q) || fl.includes(q);
+                    });
+                }
+
+                // Sort
+                const getTs = (item) => {
+                    if (!item.updated_at) return 0;
+                    if (typeof item.updated_at === 'number') return item.updated_at < 1e12 ? item.updated_at * 1000 : item.updated_at;
+                    return new Date(item.updated_at).getTime() || 0;
+                };
+
+                list.sort((a, b) => {
+                    if (sortBy === 'oldest') return getTs(a) - getTs(b);
+                    if (sortBy === 'title_asc') return (a.title || a.paper_id || '').localeCompare(b.title || b.paper_id || '');
+                    if (sortBy === 'title_desc') return (b.title || b.paper_id || '').localeCompare(a.title || a.paper_id || '');
+                    if (sortBy === 'framework') return (a.framework_name || '').localeCompare(b.framework_name || '') || (getTs(b) - getTs(a));
+                    return getTs(b) - getTs(a); // newest
                 });
-                renderLibraryListCards(filtered);
+
+                renderLibraryListCards(list);
+            }
+
+            function filterLibraryList() {
+                applyLibraryFiltersAndSort();
             }
 
             // Load Appraisal from Library without LLM Inference
