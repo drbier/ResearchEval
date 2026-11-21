@@ -1122,10 +1122,10 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
         if clean_u in ('ABSTRACT', 'SUMMARY', '1. INTRODUCTION', 'INTRODUCTION') or is_structured_header_line(l_str):
             break
         header_lines.append(l_str)
-        if len(header_lines) >= 15:
+        if len(header_lines) >= 65:
             break
 
-    doc_header = "\n".join(header_lines)[:1500] if header_lines else page1_text[:500]
+    doc_header = "\n".join(header_lines)[:3500] if header_lines else page1_text[:1500]
     indexed_doc.doc_header = doc_header
     indexed_doc.all_anchors["[Doc_Header]"] = doc_header
     indexed_doc.anchor_metadata["[Doc_Header]"] = CoordinateAnchor(
