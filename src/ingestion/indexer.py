@@ -378,11 +378,16 @@ def is_non_prose_metadata_block(b: Tuple[float, float, float, float], page, text
         return True
 
     # Condition F: Abbreviation Glossary Filter (multiple definition pairs: "KEY: Definition; KEY: ...")
-    abbr_defs = re.findall(r'\b[A-Z0-9]{2,}\s*[:=]\s*[^;]+(?:;|\n|$)', clean_t)
-    if len(abbr_defs) >= 3 or (len(abbr_defs) >= 2 and re.search(r'\b(?:Abbreviations?|Glossary|Acronyms?)\b', clean_t, re.IGNORECASE)):
-        return True
-    if re.search(r'\b[A-Z0-9]{2,}\s*:\s*[A-Z][a-z]+;\s*[A-Z0-9]{2,}\s*:\s*[A-Z]', clean_t):
-        return True
+    # Guard: Never discard full tables, statistical prose (HR =, 95% CI:), or long multi-sentence paragraphs
+    if len(clean_t) < 600 and not re.match(r'^(?:Table|TABLE)\s*\d+', clean_t) and not re.search(r'\b(?:HR|OR|RR)\s*=|95%\s*CI\b', clean_t):
+        abbr_defs = [
+            m for m in re.findall(r'\b([A-Z0-9]{2,})\s*[:=]\s*[^;]+(?:;|\n|$)', clean_t)
+            if m not in {'HR', 'OR', 'RR', 'CI', 'SD', 'SE', 'OS', 'MD', 'IQR', 'PFS', 'DFS', 'IBR', 'CBE'}
+        ]
+        if len(abbr_defs) >= 3 or (len(abbr_defs) >= 2 and re.search(r'\b(?:Abbreviations?|Glossary|Acronyms?)\b', clean_t, re.IGNORECASE)):
+            return True
+        if re.search(r'\b[A-Z0-9]{2,}\s*:\s*[A-Z][a-z]+;\s*[A-Z0-9]{2,}\s*:\s*[A-Z]', clean_t):
+            return True
 
     # Condition A: Dynamic Sidebar Conjunction (GEOMETRY AND CONTENT) on Pages 1-2
     if page_num <= 2:
@@ -606,8 +611,13 @@ def is_footnote_or_table_banner(line_text: str, bbox: Any, height: float, width:
     if not t:
         return False
     
-    # Guard: Substantive numbered subsection headers are body prose, never table footnotes
-    if re.match(r'^\d+\.\d+\.?\s+[A-Z]', t):
+    # Guard: Substantive numbered subsection headers and actual Tables are NEVER table footnotes
+    if re.match(r'^\d+\.\d+\.?\s+[A-Z]', t) or re.match(r'^(?:Table|TABLE)\s*\d+[A-Za-z]?\b', t):
+        return False
+
+    # Guard: Long body prose blocks (> 350 chars) that do not begin with an explicit footnote marker/label are body prose
+    is_explicit_footnote_start = bool(re.match(r'^(?:[\*\†\‡\§\¶\¢\£]|Abbreviations?\s*:|Note\s*:|Footnotes?\s*:|Source\s*:|Legend\s*:)', t, re.IGNORECASE))
+    if len(t) > 350 and not is_explicit_footnote_start:
         return False
 
     # 1. Direct content match for table footnotes / abbreviations
@@ -618,11 +628,11 @@ def is_footnote_or_table_banner(line_text: str, bbox: Any, height: float, width:
     if re.match(r'^(?:[\*\†\‡\§\¶\¢\£\#\+\d\-\u2022]\s*)+(?:p\s*[<>=]|\b(?:HR|OR|RR|CI)\b|Model|Adjusted|Values|Data|Asterisk|N\s*[=:]|Quartile|Cancer\s+mortality)', t, re.IGNORECASE):
         return True
 
-    # 3. Geometric location + localized notation: mid-page or bottom with statistical symbols
+    # 3. Geometric location + localized notation: short footnote/banner (< 260 chars) in lower page with statistical symbols
     y0 = bbox[1]
-    if y0 >= height * 0.35 and (
-        re.search(r'[\*\†\‡\§\¶\¢\£]|p\s*[<>=]|hazard\s+ratios?|confidence\s+intervals?|Quartile\s+ranges?|adjusted\s+for', t, re.IGNORECASE)
-        or re.search(r'\b(?:CI|HR|OR|RR)\b', t)
+    if len(t) < 260 and y0 >= height * 0.35 and (
+        re.search(r'[\*\†\‡\§\¶\¢\£]|Quartile\s+ranges?', t, re.IGNORECASE)
+        or (is_explicit_footnote_start and re.search(r'p\s*[<>=]|hazard\s+ratios?|confidence\s+intervals?|adjusted\s+for|\b(?:CI|HR|OR|RR)\b', t, re.IGNORECASE))
     ):
         return True
         
@@ -1288,6 +1298,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                     bbox=[float(b[0]), float(b[1]), float(b[2]), float(b[3])]
                 )
                 indexed_doc.anchor_metadata[meta_anchor_id] = anchor_meta
+                indexed_doc.all_anchors[meta_anchor_id] = block_text
                 continue
             
             # Stage 2 Table Footnote / Legend Gate:
@@ -1305,6 +1316,7 @@ def parse_and_index_pdf(pdf_path: str) -> IndexedDocument:
                     bbox=[float(b[0]), float(b[1]), float(b[2]), float(b[3])]
                 )
                 indexed_doc.anchor_metadata[meta_anchor_id] = anchor_meta
+                indexed_doc.all_anchors[meta_anchor_id] = block_text
                 continue
 
             first_3_lines = " ".join(lines[:3])
