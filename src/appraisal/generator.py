@@ -24,7 +24,7 @@ MODEL_HIERARCHY = [
 ]
 PRIMARY_MODEL = MODEL_HIERARCHY[0]
 PRO_REASONING_MODEL = "gemini-3.8-flash"
-PROMPT_VERSION = "v4.0-skeptical-hierarchy"
+PROMPT_VERSION = "v4.1-jats-tables"
 
 class SynthesisEngine:
     def __init__(self, data_dir: str, api_key: Optional[str] = None):

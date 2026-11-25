@@ -1034,34 +1034,82 @@ class PaperFetcher:
             
             sections.append(("Abstract", "\n\n".join(filter(None, abstract_sec_texts))))
             
+        def _format_table_wrap(tw: ET.Element) -> str:
+            """Format a JATS <table-wrap> element into readable text rows with caption and footnotes."""
+            lbl_el = tw.find('label')
+            cap_el = tw.find('caption')
+            lbl = self.normalize_for_pdf_rendering(" ".join("".join(lbl_el.itertext()).split())) if lbl_el is not None else ""
+            cap = self.normalize_for_pdf_rendering(" ".join("".join(cap_el.itertext()).split())) if cap_el is not None else ""
+            header_line = f"{lbl} {cap}".strip() if (lbl or cap) else "Table"
+
+            row_lines = [header_line]
+            for tr in tw.findall('.//tr'):
+                cells = [
+                    self.normalize_for_pdf_rendering(" ".join("".join(c.itertext()).split()))
+                    for c in tr if c.tag in ('th', 'td')
+                ]
+                if any(cells):
+                    row_lines.append(" | ".join(cells))
+
+            foot_el = tw.find('table-wrap-foot')
+            if foot_el is not None:
+                foot_txt = self.normalize_for_pdf_rendering(" ".join("".join(foot_el.itertext()).split()))
+                if foot_txt:
+                    row_lines.append(foot_txt)
+            return "\n".join(row_lines)
+
+        seen_tables = set()
+
+        def _collect_sec(sec_el: ET.Element):
+            sec_title_el = sec_el.find('title')
+            sec_title = self.normalize_for_pdf_rendering("".join(sec_title_el.itertext()).strip()) if sec_title_el is not None else ""
+            direct_p = [self.normalize_for_pdf_rendering(" ".join("".join(p.itertext()).split())) for p in sec_el.findall('./p')]
+            direct_p = [p for p in direct_p if p]
+            direct_tables = []
+            for tw in sec_el.findall('./table-wrap'):
+                if id(tw) not in seen_tables:
+                    seen_tables.add(id(tw))
+                    direct_tables.append(_format_table_wrap(tw))
+            child_secs = sec_el.findall('./sec') or sec_el.findall('./section')
+
+            blocks = direct_p + direct_tables
+            if blocks:
+                sections.append((sec_title or "Section", "\n\n".join(blocks)))
+            elif sec_title and child_secs:
+                sections.append((sec_title, ""))
+
+            for child in child_secs:
+                _collect_sec(child)
+
         body = root.find('.//body')
         if body is not None:
             # Check for direct child paragraphs before any sections
-            direct_paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in body.findall('./p')]
+            direct_paras = [self.normalize_for_pdf_rendering(" ".join("".join(p.itertext()).split())) for p in body.findall('./p')]
+            direct_paras = [p for p in direct_paras if p]
             if direct_paras:
-                sections.append(("Introduction", "\n\n".join(filter(None, direct_paras))))
+                sections.append(("Introduction", "\n\n".join(direct_paras)))
 
-            # Check for standard <sec> or <section> blocks
-            sec_nodes = body.findall('.//sec') or body.findall('.//section')
-            if sec_nodes:
-                for sec in sec_nodes:
-                    sec_title_el = sec.find('title')
-                    sec_title = self.normalize_for_pdf_rendering("".join(sec_title_el.itertext()).strip() if sec_title_el is not None else "Section")
-                    p_nodes = sec.findall('./p')
-                    if not p_nodes:
-                        p_nodes = sec.findall('.//p')
-                    paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in p_nodes]
-                    paras = list(filter(None, paras))
-                    if paras:
-                        sections.append((sec_title, "\n\n".join(paras)))
+            top_secs = body.findall('./sec') or body.findall('./section')
+            if top_secs:
+                for sec in top_secs:
+                    _collect_sec(sec)
             elif not direct_paras:
                 # Dialect fallback: if no <sec> or direct <p> tags, gather any descendant <p> in body
-                fallback_paras = [self.normalize_for_pdf_rendering("".join(p.itertext()).strip()) for p in body.findall('.//p')]
-                fallback_paras = list(filter(None, fallback_paras))
+                fallback_paras = [self.normalize_for_pdf_rendering(" ".join("".join(p.itertext()).split())) for p in body.findall('.//p')]
+                fallback_paras = [p for p in fallback_paras if p]
                 if fallback_paras:
                     sections.append(("Main Text", "\n\n".join(fallback_paras)))
 
-        # Render sections across PDF pages
+        # Capture any floating <table-wrap> elements (e.g., in <floats-group> or <back>) not already emitted inline
+        floating_tables = []
+        for tw in root.findall('.//table-wrap'):
+            if id(tw) not in seen_tables:
+                seen_tables.add(id(tw))
+                floating_tables.append(_format_table_wrap(tw))
+        if floating_tables:
+            sections.append(("Results Tables", "\n\n".join(floating_tables)))
+
+        # Render sections across PDF pages with overflow-safe pagination
         current_page = doc.new_page(width=595, height=842)
         y = 45.0
         
@@ -1096,27 +1144,74 @@ class PaperFetcher:
         # Divider line
         current_page.draw_line(pymupdf.Point(50, y), pymupdf.Point(545, y), color=(0.8, 0.8, 0.8), width=0.75)
         y += 18.0
-        
-        for sec_name, content in sections:
-            # Section header
+
+        def _write_block_paginated(text_block: str, fontsize: float = 9.0):
+            nonlocal current_page, y
+            if not text_block:
+                return
             if y > 760:
                 current_page = doc.new_page(width=595, height=842)
                 y = 50.0
-            current_page.insert_text(pymupdf.Point(50, y), sec_name.upper(), fontsize=10, fontname="helv", color=(0.2, 0.4, 0.7))
-            y += 20.0
-            
-            # Paragraphs
-            for para in content.split("\n\n"):
-                p_clean = self.normalize_for_pdf_rendering(para.strip())
-                if not p_clean:
-                    continue
+            rect = pymupdf.Rect(50, y, 545, 800)
+            rc = current_page.insert_textbox(rect, text_block, fontsize=fontsize, fontname="helv")
+            if rc >= 0:
+                used_h = (rect.y1 - rect.y0) - rc
+                y += used_h + 10.0
+                return
+            # Did not fit in remaining space: start a fresh page if we weren't already at top
+            if y > 55.0:
+                current_page = doc.new_page(width=595, height=842)
+                y = 50.0
+                rect = pymupdf.Rect(50, y, 545, 800)
+                rc = current_page.insert_textbox(rect, text_block, fontsize=fontsize, fontname="helv")
+                if rc >= 0:
+                    used_h = (rect.y1 - rect.y0) - rc
+                    y += used_h + 10.0
+                    return
+            # Single block is taller than an entire page (e.g. long table): split by lines or sentences
+            sub_units = text_block.split("\n") if "\n" in text_block else re.split(r'(?<=[.!?])\s+', text_block)
+            buf = []
+            for unit in sub_units:
+                candidate = ("\n" if "\n" in text_block else " ").join(buf + [unit])
+                if len(candidate) > 2200 and buf:
+                    _write_block_paginated(("\n" if "\n" in text_block else " ").join(buf), fontsize=fontsize)
+                    buf = [unit]
+                else:
+                    buf.append(unit)
+            if buf:
+                final_chunk = ("\n" if "\n" in text_block else " ").join(buf)
                 if y > 760:
                     current_page = doc.new_page(width=595, height=842)
                     y = 50.0
                 rect = pymupdf.Rect(50, y, 545, 800)
-                rc = current_page.insert_textbox(rect, p_clean, fontsize=9.5, fontname="helv")
-                line_count = max(1, len(p_clean) // 85 + 1)
-                y += line_count * 13.0 + 12.0
+                rc = current_page.insert_textbox(rect, final_chunk, fontsize=fontsize, fontname="helv")
+                if rc >= 0:
+                    y += ((rect.y1 - rect.y0) - rc) + 10.0
+                else:
+                    current_page = doc.new_page(width=595, height=842)
+                    y = 50.0
+                    rect = pymupdf.Rect(50, y, 545, 800)
+                    rc2 = current_page.insert_textbox(rect, final_chunk[:3000], fontsize=fontsize, fontname="helv")
+                    y += ((rect.y1 - rect.y0) - max(0.0, rc2)) + 10.0
+        
+        for sec_name, content in sections:
+            # Section header
+            if y > 750:
+                current_page = doc.new_page(width=595, height=842)
+                y = 50.0
+            hdr_rect = pymupdf.Rect(50, y, 545, y + 36)
+            hdr_rc = current_page.insert_textbox(hdr_rect, sec_name.upper(), fontsize=10, fontname="helv", color=(0.2, 0.4, 0.7))
+            y += ((hdr_rect.y1 - hdr_rect.y0) - max(0.0, hdr_rc)) + 8.0
+            
+            # Paragraphs / Tables
+            if not content:
+                continue
+            for para in content.split("\n\n"):
+                p_clean = self.normalize_for_pdf_rendering(para.strip())
+                if not p_clean:
+                    continue
+                is_table_block = (" | " in p_clean and "\n" in p_clean)
+                _write_block_paginated(p_clean, fontsize=8.0 if is_table_block else 9.5)
                 
         doc.save(output_path)
         doc.close()
