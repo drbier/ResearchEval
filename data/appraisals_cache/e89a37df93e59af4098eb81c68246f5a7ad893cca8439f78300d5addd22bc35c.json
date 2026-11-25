@@ -1,0 +1,16 @@
+{
+  "paper_id": "test_p1",
+  "title": "Test Paper",
+  "filename": "test.pdf",
+  "final_markdown": "# Test",
+  "appraisal_markdown": "# Test",
+  "total_pages": null,
+  "triage": {},
+  "rule_evaluations": [],
+  "active_rules_detail": [],
+  "thought_output": "",
+  "anchor_hash": "",
+  "is_public_oa": true,
+  "pdf_hash": "",
+  "updated_at": 1795226349.7484722
+}
