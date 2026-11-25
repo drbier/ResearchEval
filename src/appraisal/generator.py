@@ -170,7 +170,7 @@ class SynthesisEngine:
             "Treat the Abstract and Discussion strictly as author framing—place the burden of proof on the intervention, and verify every claim directly against the raw Results text and tables.\n"
             "Remain strictly objective and grounded in exact manuscript coordinates: never invent ungrounded cynicism when a trial is well-conducted, and never apply arbitrary external thresholds not present in the injected rules.\n\n"
             "MANDATORY EXECUTION DIRECTIVES:\n"
-            "1. You MUST follow the exact markdown heading structure provided in the schema. Start with '# Article Title' (using the real title of the study, NEVER enclosing the title in square brackets like '[Title]').\n"
+            "1. You MUST follow the exact markdown heading structure provided in the schema. Start with a level-1 heading containing ONLY the real title of the study (e.g., '# Impact of...'; NEVER write the literal words 'Article Title' and NEVER enclose the title in square brackets like '[Title]').\n"
             "2. Follow immediately with '## Clinical Bottom Line': provide a direct, skeptical interpretive verdict ranked strictly by the 4-Tier Patient-Important Outcome Hierarchy (NOT the authors' Abstract order):\n"
             "   - Tier 1: All-cause mortality / Overall Survival (OS)\n"
             "   - Tier 2: Serious morbidity (distant metastasis, MACE, hospitalization, organ failure, major bleeding)\n"

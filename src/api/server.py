@@ -146,15 +146,37 @@ def get_favicon():
     raise HTTPException(status_code=404, detail="Favicon not found")
     raise HTTPException(status_code=404, detail="Favicon not found")
 
+def _get_saved_library_filenames() -> set:
+    """Return all PDF filenames actively referenced by any user's saved library."""
+    saved = set()
+    lib_root = os.path.join(DATA_DIR, "user_libraries")
+    if not os.path.exists(lib_root):
+        return saved
+    for uid in os.listdir(lib_root):
+        udir = os.path.join(lib_root, uid)
+        if not os.path.isdir(udir):
+            continue
+        for fname in os.listdir(udir):
+            if fname.endswith(".json"):
+                try:
+                    with open(os.path.join(udir, fname), "r", encoding="utf-8") as f:
+                        fn = json.load(f).get("filename")
+                        if fn:
+                            saved.add(fn)
+                except Exception:
+                    pass
+    return saved
+
 def prune_ephemeral_uploads(max_age_hours: int = 24):
-    """Purge temporary PDF and abstract files older than max_age_hours to prevent copyright retention."""
+    """Purge temporary PDF and abstract files older than max_age_hours, preserving files saved in user libraries."""
     if not os.path.exists(UPLOAD_DIR):
         return
+    saved_filenames = _get_saved_library_filenames()
     now = time.time()
     cutoff = now - (max_age_hours * 3600)
     purged = 0
     for fname in os.listdir(UPLOAD_DIR):
-        if fname.startswith("."):
+        if fname.startswith(".") or fname in saved_filenames:
             continue
         fpath = os.path.join(UPLOAD_DIR, fname)
         try:
@@ -1317,6 +1339,20 @@ def view_anchor_image(
 def view_pdf_page(filename: str = Query(...), page: int = Query(1, ge=1)):
     """Render an individual page of a PDF as PNG at 150 DPI for continuous document scrolling."""
     file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        # Auto-refetch open-access PMC / PubMed PDFs if previously pruned
+        pmc_m = re.match(r'^(PMC\d+)\.pdf$', filename, re.IGNORECASE)
+        pmid_m = re.match(r'^PubMed_(\d+)(?:_abstract)?\.pdf$', filename, re.IGNORECASE)
+        refetch_id = pmc_m.group(1) if pmc_m else (pmid_m.group(1) if pmid_m else None)
+        if refetch_id:
+            try:
+                res = fetcher.resolve_url(refetch_id)
+                if res and res.get("filename"):
+                    refetched_path = os.path.join(UPLOAD_DIR, res["filename"])
+                    if os.path.exists(refetched_path):
+                        file_path = refetched_path
+            except Exception as e:
+                print(f"[ViewerRefetch] Failed to auto-refetch {refetch_id}: {e}")
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Source PDF file not found.")
     doc = pymupdf.open(file_path)
@@ -5500,6 +5536,23 @@ def index_page():
                         }
                     };
 
+                    if (p === 1) {
+                        img.onerror = function() {
+                            pagesStack.innerHTML = [
+                                '<div class="p-6 my-6 max-w-md mx-auto text-center bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl space-y-2">',
+                                '  <div class="text-2xl">📄</div>',
+                                '  <h4 class="text-xs font-bold text-amber-900 dark:text-amber-200">Source PDF Pages Unavailable</h4>',
+                                '  <p class="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">',
+                                '    The uploaded PDF was previously pruned from temporary server storage. Clicking any citation pill on the left still displays the saved <strong>Exact Manuscript Text</strong> above.',
+                                '  </p>',
+                                '  <p class="text-[11px] text-slate-500 dark:text-slate-400">',
+                                '    To restore full page images, re-upload the PDF using <strong>Choose File → Analyze</strong>.',
+                                '  </p>',
+                                '</div>'
+                            ].join('');
+                        };
+                    }
+
                     pageWrapper.appendChild(img);
                     pagesStack.appendChild(pageWrapper);
                 }
@@ -6875,7 +6928,18 @@ ${scopedHtml}
                         if (rawTitle.startsWith('[') && rawTitle.endsWith(']')) {
                             rawTitle = rawTitle.slice(1, -1).trim();
                         }
-                        contentLines[firstNonEmptyIdx] = '# ' + rawTitle;
+                        if (/^Article\s+Title\s*:?$/i.test(rawTitle)) {
+                            // Model emitted literal "# Article Title" followed by the actual title on the next non-empty line
+                            contentLines[firstNonEmptyIdx] = '';
+                            let nextIdx = contentLines.findIndex((l, idx) => idx > firstNonEmptyIdx && l.trim().length > 0);
+                            if (nextIdx !== -1) {
+                                let nextTitle = contentLines[nextIdx].trim().replace(/^#+\s*/, '').replace(/^\*\*|\*\*$/g, '').trim();
+                                contentLines[nextIdx] = '# ' + nextTitle;
+                            }
+                        } else {
+                            rawTitle = rawTitle.replace(/^Article\s+Title\s*[:\-–—]\s*/i, '').trim();
+                            contentLines[firstNonEmptyIdx] = '# ' + rawTitle;
+                        }
                     }
                     const SUBHEAD_KEYWORDS = new Set([
                         'key metric definitions', 'primary endpoint', 'primary endpoints', 'secondary endpoint',
