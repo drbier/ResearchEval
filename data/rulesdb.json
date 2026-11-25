@@ -1152,5 +1152,93 @@
     },
     "directional_bias": "Equity Neglect & Stakeholder Misalignment",
     "appraisal_action": "Audit whether an a priori Health Economic Analysis Plan (HEAP) was registered (Item 4). Verify whether distributional cost-effectiveness and equity impacts across patient subgroups were assessed (Item 19). Audit reporting of patient and public involvement (PPIE) in study conceptualization and interpretation (Items 21 & 25). For pre-2022 evaluations, document absence as an evolving reporting limitation rather than an invalidating flaw."
+  },
+  {
+    "rule_id": "R_HARD_OUTCOME_PRIORITY",
+    "target_domain": "Outcome Hierarchy: Hard Clinical Endpoints vs Surrogate/Intermediate Wins",
+    "framework_ids": [
+      "FW_A",
+      "FW_B",
+      "FW_C",
+      "FW_F"
+    ],
+    "provenance": "derived",
+    "source_file": "Reference_papers/3.Oncology Endpoints & Trial Design/Approaches to Assessment of Overall Survival in Oncology Clinical Trials.pdf",
+    "source_item": "Section on Surrogate Endpoints and Overall Survival",
+    "source_page": 5,
+    "key_terms": [
+      "overall survival",
+      "endpoint",
+      "surrogate"
+    ],
+    "trigger": {
+      "frameworks": [
+        "FW_A",
+        "FW_B",
+        "FW_C",
+        "FW_F"
+      ]
+    },
+    "directional_bias": "Outcome Framing Bias (promoting lower-tier surrogate or local-recurrence wins while minimizing null or absent mortality/morbidity benefit)",
+    "appraisal_action": "Identify the highest-tier patient-important outcome reported (Tier 1: all-cause mortality/OS; Tier 2: serious morbidity/MACE/metastasis/hospitalization; Tier 3: validated PROs/invasive local events; Tier 4: biomarkers/non-invasive surrogates). Explicitly verify whether Tier 1/2 outcomes were null, negative, or omitted while lower-tier outcomes were emphasized as positive."
+  },
+  {
+    "rule_id": "R_ADJUSTMENT_ATTENUATION",
+    "target_domain": "Confounding Signal: Univariate vs Multivariable Effect Attenuation",
+    "framework_ids": [
+      "FW_A",
+      "FW_B",
+      "FW_C",
+      "FW_F"
+    ],
+    "provenance": "derived",
+    "source_file": "Reference_papers/1.Foundational/Core 10/Strengthening the Reporting of Observational Studies in Epidemiology (STROBE) Explanation and Elaboration.pdf",
+    "source_item": "Item 16a (Unadjusted vs Confounder-Adjusted Estimates)",
+    "source_page": 14,
+    "key_terms": [
+      "confounding",
+      "multivariable",
+      "adjustment",
+      "unadjusted"
+    ],
+    "trigger": {
+      "frameworks": [
+        "FW_A",
+        "FW_B",
+        "FW_C",
+        "FW_F"
+      ]
+    },
+    "directional_bias": "Confounding & Selection Bias (crude/univariate benefits driven by baseline imbalances disappearing once adjusted for prognostic covariates)",
+    "appraisal_action": "Compare unadjusted/univariate estimates against multivariable-adjusted models across all major endpoints (especially OS and primary outcomes). Mark FAIL if a statistically significant univariate benefit disappears or reverses after multivariable adjustment (particularly if downplayed in the Abstract/Conclusion). Mark NOT_AVAILABLE if no multivariable comparison was performed."
+  },
+  {
+    "rule_id": "R_ABSTRACT_SPIN",
+    "target_domain": "Reporting Integrity: Abstract Spin vs Primary Results",
+    "framework_ids": [
+      "FW_A",
+      "FW_B",
+      "FW_C",
+      "FW_F"
+    ],
+    "provenance": "derived",
+    "source_file": "Reference_papers/1.Foundational/Core 10/Revised Cochrane risk-of-bias tool for randomized trials (RoB 2).pdf",
+    "source_item": "Domain 5, Section 8 (Selective Reporting & Framing)",
+    "source_page": 53,
+    "key_terms": [
+      "selection of the reported result",
+      "protocol",
+      "outcome"
+    ],
+    "trigger": {
+      "frameworks": [
+        "FW_A",
+        "FW_B",
+        "FW_C",
+        "FW_F"
+      ]
+    },
+    "directional_bias": "Interpretive Spin (overstating efficacy in Abstract/Conclusions beyond what statistically valid primary or adjusted hard-endpoint results support)",
+    "appraisal_action": "Cross-check the Abstract and Conclusion claims directly against the Results text and tables. Flag spin such as claiming benefit from non-significant 'trends', highlighting secondary/subgroup wins when the primary or hard clinical outcome is null, or omitting null adjusted survival results from the Abstract."
   }
 ]

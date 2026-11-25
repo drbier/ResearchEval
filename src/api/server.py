@@ -32,7 +32,7 @@ from PIL import Image
 
 from src.ingestion.indexer import parse_and_index_pdf, IndexedDocument
 from src.ingestion.fetcher import PaperFetcher
-from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL, MODEL_HIERARCHY
+from src.appraisal.generator import SynthesisEngine, PRIMARY_MODEL, PRO_REASONING_MODEL, MODEL_HIERARCHY, PROMPT_VERSION
 from src.appraisal.qa import PaperQAEngine
 from src.appraisal.commentary import CommentaryAndQCEngine
 from src.finder.searcher import PaperFinder, MODEL_DESIGNATION as FINDER_MODEL_DESIGNATION
@@ -220,10 +220,12 @@ def get_composite_global_cache_key(canonical_id: str, model_name: str) -> str:
     
     rulesdb_path = os.path.join(DATA_DIR, "rulesdb.json")
     schemadb_path = os.path.join(DATA_DIR, "schemadb.json")
+    triagedb_path = os.path.join(DATA_DIR, "triagedb.json")
     rules_hash = get_file_hash(rulesdb_path)
     schema_hash = get_file_hash(schemadb_path)
+    triage_hash = get_file_hash(triagedb_path)
     
-    composite_str = f"{clean_id}|{model_hash}|{rules_hash}|{schema_hash}|v3_storage"
+    composite_str = f"{clean_id}|{model_hash}|{rules_hash}|{schema_hash}|{triage_hash}|{PROMPT_VERSION}|v3_storage"
     return hashlib.sha256(composite_str.encode("utf-8")).hexdigest()
 
 def save_anchors_compressed(anchor_index: Dict[str, Any], is_public_oa: bool, user_uid: str = "anonymous", pdf_hash: str = "") -> str:

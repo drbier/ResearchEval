@@ -161,6 +161,28 @@ class TriageEngine:
             else:
                 scores["FW_C"] += 15  # Observational / Real-World Evidence framework handles prospective non-randomized cohorts
 
+        # 9. Non-Randomized Ancillary / Pooled Exposure Override (FW_C):
+        # Prevents parent-trial RCT/Phase terminology or "pooled analysis" from misrouting
+        # observational exposure comparisons to FW_A or FW_B.
+        is_explicit_sr_meta = any(k in design_scope_text for k in ["systematic review", "meta-analysis", "prisma"])
+        has_ancillary_or_pooled = any(k in full_text for k in [
+            "combined analysis", "pooled analysis", "ancillary", "secondary analysis",
+            "post-hoc analysis", "observation arm", "non-rt arm", "single-arm"
+        ])
+        has_non_random_exposure = bool(re.search(
+            r'\b(?:non-?randomi[sz]ed|not\s+random(?:ly\s+(?:assigned|allocated)|i[sz]ed))\b',
+            full_text
+        ))
+        has_elective_discretion = any(k in full_text for k in [
+            "physician discretion", "patient discretion", "physician or patient discretion",
+            "at the discretion of", "elective adjuvant", "self-selected", "clinician discretion"
+        ])
+        if not is_explicit_sr_meta and (
+            (has_ancillary_or_pooled and (has_non_random_exposure or has_elective_discretion))
+            or (has_non_random_exposure and "combined analysis" in design_scope_text)
+        ):
+            scores["FW_C"] = max(scores.get("FW_A", 0), scores.get("FW_B", 0), scores.get("FW_C", 0)) + 10
+
         # Resolve primary framework using scores and hierarchy rank
         valid_fw_ids = {f["framework_id"] for f in self.triage_matrix}
         manual_override_applied = False
@@ -202,7 +224,8 @@ class TriageEngine:
             "+TAG_CARDIOLOGY": ["cardiovascular", "mace", "heart failure", "myocardial infarction", "ejection fraction", "lvef", "kccq", "nyha", "stemi", "revascularization"],
             "+TAG_NEPHROLOGY": ["egfr", "kidney disease", "renal", "proteinuria", "creatinine", "esrd", "dialysis", "nephropathy"],
             "+TAG_NEUROLOGY": ["edss", "multiple sclerosis", "stroke", "nihss", "disability progression", "relapse rate", "parkinson", "alzheimer"],
-            "+TAG_SURROGATE_ENDPOINT": ["surrogate endpoint", "surrogate", "progression-free", "pfs", "dfs", "event-free", "hba1c", "ldl-c", "blood pressure", "biomarker endpoint"]
+            "+TAG_SURROGATE_ENDPOINT": ["surrogate endpoint", "surrogate", "progression-free", "pfs", "dfs", "event-free", "hba1c", "ldl-c", "blood pressure", "biomarker endpoint"],
+            "+TAG_PHARMACOLOGIC": ["placebo", "tablet", "capsule", "infusion", "intravenous", "twice daily", "once daily", "oral", "pharmacotherapy", "medication", "supplementation", "tamoxifen", "statin", "inhibitor", "monoclonal antibody", "chemotherapy", "dose"]
         }
         
         for tag, keywords in tag_heuristics.items():

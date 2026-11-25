@@ -14,7 +14,7 @@
     ],
     "mandatory_elements": [
       "Exact Article Title as root heading",
-      "Clinical Bottom Line: Direct interpretive takeaway synthesizing therapeutic efficacy, safety profile, and methodological validity caveats",
+      "Clinical Bottom Line: Direct skeptical verdict opening with the highest-tier reported endpoint (Tier 1 mortality/OS > Tier 2 serious morbidity > Tier 3 PROs/invasive local events > Tier 4 surrogates), explicitly stating if Tier 1/2 outcomes were null or unmeasured, flagging any univariate-to-multivariable attenuation, and summarizing safety and validity caveats",
       "Results in Context: Primary outcome with point estimates, HR/RR, 95% CIs, p-values; absolute risk reduction (ARR) and NNT; primary and disease-specific secondary/surrogate endpoints with validated clinical criteria (e.g. RECIST/iRECIST in oncology, MACE in cardiology, eGFR slope in nephrology, EDSS in neurology, HbA1c in diabetology); patient-reported outcomes (PROs) with anchor-based MID thresholds; key adverse events drawing from CONSORT Harms 2022",
       "Assertive Critical Appraisal: RoB 2 overall judgment (Low / Some concerns / High) across all 5 domains; subgroup credibility audit; composite endpoint deconstruction; CONSORT reporting quality (allocation concealment, flow diagram)",
       "Research Objective: Explicit trial hypothesis, primary and secondary research questions",
@@ -44,7 +44,7 @@
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Clinical Bottom Line: Direct interpretive summary integrating pooled effect estimates with evidence certainty",
+      "Clinical Bottom Line: Direct skeptical summary opening with the highest-tier pooled patient-important outcome (mortality/morbidity before surrogates), integrating effect estimates with evidence certainty and flagging any spin or adjustment attenuation",
       "Results in Context: Summary of pooled results with exact effect sizes (OR/RR/HR) and 95% CIs; brief definition of statistical terms used; participant and included study counts",
       "Assertive Critical Appraisal: GRADE certainty ratings (High/Moderate/Low/Very Low) per critical outcome with downgrade reasons; Higgins I^2 heterogeneity magnitude and Cochran Q; publication bias assessment (funnel plot / Egger test); special consideration if overall pooled result is significant but individual studies are not; PRISMA reporting quality audit (flow diagram, search strategy)",
       "Research Objective: PICO question (Population, Intervention, Comparator, Outcomes)",
@@ -73,7 +73,7 @@
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Clinical Bottom Line: Interpretive summary of observed associations, explicitly emphasizing that observational studies cannot prove causation due to residual confounding and bias",
+      "Clinical Bottom Line: Skeptical verdict opening with the highest-tier reported endpoint (explicitly stating if Tier 1 OS/mortality was null after multivariable adjustment), flagging any univariate-to-multivariable attenuation, and emphasizing that observational exposure cannot prove causation due to residual confounding and selection bias",
       "Results in Context: Main unadjusted and confounder-adjusted estimates (Odds Ratios, Relative Risks, Hazard Ratios) with 95% CIs for all key exposures/biomarkers; definitions of statistical metrics used; participant counts across follow-up stages",
       "Assertive Critical Appraisal: STROBE bias critique (residual lifestyle confounding, reverse causality, survival selection, immortal time bias); STROBE confounding adjustment evaluation; RECORD assessment for routine health data / registry linkage (data provenance, ICD diagnostic coding, attrition); generalizability / clinical applicability",
       "Research Objective: Specific observational objectives, exposure-outcome hypotheses",
@@ -160,7 +160,7 @@
       "## Bibliographic Data"
     ],
     "mandatory_elements": [
-      "Clinical Bottom Line: Direct verdict on whether non-inferiority was conclusively demonstrated, secondary superiority claims, and safety trade-offs",
+      "Clinical Bottom Line: Direct skeptical verdict opening with the highest-tier reported endpoint (mortality/morbidity before surrogates), stating whether non-inferiority was conclusively demonstrated across ITT and PP sets, flagging any adjustment attenuation, and weighing safety trade-offs",
       "Results in Context: Point estimates and two-sided 95% (or 90%) confidence intervals compared against the pre-specified delta margin for both ITT and Per-Protocol (PP) populations; ARR, NNT, and harm metrics; disease-specific secondary and surrogate endpoints with validated clinical criteria (e.g. MACE, mortality, functional scores)",
       "Assertive Critical Appraisal: Dual ITT and Per-Protocol analysis concordance audit (challenging non-inferiority if PP fails or is omitted); strategic trial objective audit (replacement trial promising safety/convenience trade-offs vs pure alternative option trial); statistical and clinical justification of Delta margin (preserving >= 50% active control historical efficacy); assay sensitivity and constancy assumption evaluation; biocreep risk; RoB 2 appraisal",
       "Research Objective: Non-inferiority hypothesis and active comparator rationale",
