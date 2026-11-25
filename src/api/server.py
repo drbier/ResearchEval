@@ -7249,7 +7249,8 @@ ${scopedHtml}
 
             async function deleteAppraisalFromLibrary(paperId, title) {
                 if (!currentUser) return;
-                const label = title || paperId;
+                const foundItem = (cachedUserLibraryItems || []).find(i => i.paper_id === paperId);
+                const label = title || (foundItem && foundItem.title) || paperId;
                 if (!confirm(`Delete "${label}" from your Library?\n\nThis removes the saved appraisal from your personal library.`)) {
                     return;
                 }
@@ -7401,9 +7402,9 @@ ${scopedHtml}
 
                     const currentFolder = (item.folder || '').trim();
                     const suggestedFolder = (item.suggested_folder || '').trim();
-                    const jsPaperId = (item.paper_id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                    const jsTitle = (item.title || item.paper_id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                    const jsCacheKey = (item.global_cache_key || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const encPaperId = encodeURIComponent(item.paper_id || '');
+                    const encCacheKey = encodeURIComponent(item.global_cache_key || '');
+                    const encSuggestedFolder = encodeURIComponent(suggestedFolder);
 
                     const folderSelectOptions = [
                         `<option value="" ${!currentFolder ? 'selected' : ''}>📥 Unfiled</option>`,
@@ -7411,7 +7412,7 @@ ${scopedHtml}
                     ].join('');
 
                     const suggestionChip = (!currentFolder && suggestedFolder)
-                        ? `<button type="button" onclick="moveLibraryItemToFolder('${jsPaperId}', '${suggestedFolder.replace(/'/g, "\\'")}')" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-violet-100 dark:bg-violet-950/60 text-violet-800 dark:text-violet-300 border border-violet-300 dark:border-violet-800 hover:bg-violet-200 dark:hover:bg-violet-900 transition cursor-pointer" title="Auto-suggested specialty folder from study tags — click to file">✨ File to ${escapeHtml(suggestedFolder)}</button>`
+                        ? `<button type="button" onclick="moveLibraryItemToFolder(decodeURIComponent('${encPaperId}'), decodeURIComponent('${encSuggestedFolder}'))" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-violet-100 dark:bg-violet-950/60 text-violet-800 dark:text-violet-300 border border-violet-300 dark:border-violet-800 hover:bg-violet-200 dark:hover:bg-violet-900 transition cursor-pointer" title="Auto-suggested specialty folder from study tags — click to file">✨ File to ${escapeHtml(suggestedFolder)}</button>`
                         : '';
 
                     return [
@@ -7426,7 +7427,7 @@ ${scopedHtml}
                         '      ' + suggestionChip,
                         '      <span class="text-[11px] text-slate-400 dark:text-slate-500">' + dateStr + ' ' + timeStr + '</span>',
                         '    </div>',
-                        '    <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate cursor-pointer" onclick="loadAppraisalFromLibrary(\'' + jsPaperId + '\', \'' + jsCacheKey + '\')" title="' + escapeHtml(item.title || item.paper_id) + '">',
+                        `    <h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition truncate cursor-pointer" onclick="loadAppraisalFromLibrary(decodeURIComponent('${encPaperId}'), decodeURIComponent('${encCacheKey}'))" title="${escapeHtml(item.title || item.paper_id)}">`,
                         '      ' + escapeHtml(item.title || item.paper_id),
                         '    </h4>',
                         '    <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">',
@@ -7434,11 +7435,11 @@ ${scopedHtml}
                         '    </p>',
                         '  </div>',
                         '  <div class="flex items-center gap-2 shrink-0 flex-wrap">',
-                        `    <select onchange="moveLibraryItemToFolder('${jsPaperId}', this.value)" class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-700 dark:text-slate-300 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500" title="Move paper to folder">${folderSelectOptions}</select>`,
-                        '    <button onclick="loadAppraisalFromLibrary(\'' + jsPaperId + '\', \'' + jsCacheKey + '\')" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1.5 cursor-pointer">',
+                        `    <select onchange="moveLibraryItemToFolder(decodeURIComponent('${encPaperId}'), this.value)" class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-slate-700 dark:text-slate-300 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500" title="Move paper to folder">${folderSelectOptions}</select>`,
+                        `    <button onclick="loadAppraisalFromLibrary(decodeURIComponent('${encPaperId}'), decodeURIComponent('${encCacheKey}'))" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-2xs flex items-center gap-1.5 cursor-pointer">`,
                         '      <span>⚡</span> Open Appraisal',
                         '    </button>',
-                        `    <button type="button" onclick="deleteAppraisalFromLibrary('${jsPaperId}', '${jsTitle}')" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-300 transition cursor-pointer" title="Delete from Library">🗑️</button>`,
+                        `    <button type="button" onclick="deleteAppraisalFromLibrary(decodeURIComponent('${encPaperId}'))" class="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 hover:border-rose-300 transition cursor-pointer" title="Delete from Library">🗑️</button>`,
                         '  </div>',
                         '</div>'
                     ].join('');
