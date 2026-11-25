@@ -847,8 +847,17 @@ class PaperFetcher:
                 "pmid": ""
             }
 
-            # Extract main article or body text
+            # Extract main article or body text, preserving HTML tables as pipe-delimited rows
             article_body = soup.find('article') or soup.find('main') or soup.body
+            if article_body:
+                for tbl in article_body.find_all('table'):
+                    rows = []
+                    for tr in tbl.find_all('tr'):
+                        cells = [" ".join(c.get_text(" ", strip=True).split()) for c in tr.find_all(['th', 'td'])]
+                        if any(cells):
+                            rows.append(" | ".join(cells))
+                    if rows:
+                        tbl.replace_with(soup.new_string("\n\n" + "\n".join(rows) + "\n\n"))
             all_text = article_body.get_text(separator="\n\n") if article_body else ""
             words = all_text.split()
             
@@ -1109,25 +1118,25 @@ class PaperFetcher:
         if floating_tables:
             sections.append(("Results Tables", "\n\n".join(floating_tables)))
 
-        # Render sections across PDF pages with overflow-safe pagination
-        current_page = doc.new_page(width=595, height=842)
-        y = 45.0
+        # Render sections across PDF pages with guaranteed-fit recursive pagination
+        state = {"page": doc.new_page(width=595, height=842), "y": 45.0}
+        current_page = state["page"]
         
         # 1. Header Box / Title
         t_lines = max(1, len(title) // 65 + 1)
         t_h = t_lines * 16.0 + 8.0
-        current_page.insert_textbox(pymupdf.Rect(50, y, 545, y + t_h), title, fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
-        y += t_h + 4.0
+        current_page.insert_textbox(pymupdf.Rect(50, state["y"], 545, state["y"] + t_h), title, fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
+        state["y"] += t_h + 4.0
         
         # 2. Authors
         a_lines = max(1, len(f"Authors: {authors_str}") // 80 + 1)
         a_h = a_lines * 13.0 + 8.0
-        current_page.insert_textbox(pymupdf.Rect(50, y, 545, y + a_h), f"Authors: {authors_str}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
-        y += a_h + 4.0
+        current_page.insert_textbox(pymupdf.Rect(50, state["y"], 545, state["y"] + a_h), f"Authors: {authors_str}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
+        state["y"] += a_h + 4.0
         
         # 3. Journal & Year
-        current_page.insert_text(pymupdf.Point(50, y), f"Journal: {journal} | Year: {year}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))
-        y += 16.0
+        current_page.insert_text(pymupdf.Point(50, state["y"]), f"Journal: {journal} | Year: {year}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))
+        state["y"] += 16.0
         
         # 4. DOI, PMID, PMC
         id_parts = []
@@ -1138,70 +1147,21 @@ class PaperFetcher:
         if pmcid:
             id_parts.append(f"PMC: {pmcid}")
         id_line = " | ".join(id_parts) if id_parts else "Source: PubMed Central"
-        current_page.insert_text(pymupdf.Point(50, y), id_line, fontsize=8.0, fontname="helv", color=(0.35, 0.35, 0.35))
-        y += 22.0
+        current_page.insert_text(pymupdf.Point(50, state["y"]), id_line, fontsize=8.0, fontname="helv", color=(0.35, 0.35, 0.35))
+        state["y"] += 22.0
         
         # Divider line
-        current_page.draw_line(pymupdf.Point(50, y), pymupdf.Point(545, y), color=(0.8, 0.8, 0.8), width=0.75)
-        y += 18.0
-
-        def _write_block_paginated(text_block: str, fontsize: float = 9.0):
-            nonlocal current_page, y
-            if not text_block:
-                return
-            if y > 760:
-                current_page = doc.new_page(width=595, height=842)
-                y = 50.0
-            rect = pymupdf.Rect(50, y, 545, 800)
-            rc = current_page.insert_textbox(rect, text_block, fontsize=fontsize, fontname="helv")
-            if rc >= 0:
-                used_h = (rect.y1 - rect.y0) - rc
-                y += used_h + 10.0
-                return
-            # Did not fit in remaining space: start a fresh page if we weren't already at top
-            if y > 55.0:
-                current_page = doc.new_page(width=595, height=842)
-                y = 50.0
-                rect = pymupdf.Rect(50, y, 545, 800)
-                rc = current_page.insert_textbox(rect, text_block, fontsize=fontsize, fontname="helv")
-                if rc >= 0:
-                    used_h = (rect.y1 - rect.y0) - rc
-                    y += used_h + 10.0
-                    return
-            # Single block is taller than an entire page (e.g. long table): split by lines or sentences
-            sub_units = text_block.split("\n") if "\n" in text_block else re.split(r'(?<=[.!?])\s+', text_block)
-            buf = []
-            for unit in sub_units:
-                candidate = ("\n" if "\n" in text_block else " ").join(buf + [unit])
-                if len(candidate) > 2200 and buf:
-                    _write_block_paginated(("\n" if "\n" in text_block else " ").join(buf), fontsize=fontsize)
-                    buf = [unit]
-                else:
-                    buf.append(unit)
-            if buf:
-                final_chunk = ("\n" if "\n" in text_block else " ").join(buf)
-                if y > 760:
-                    current_page = doc.new_page(width=595, height=842)
-                    y = 50.0
-                rect = pymupdf.Rect(50, y, 545, 800)
-                rc = current_page.insert_textbox(rect, final_chunk, fontsize=fontsize, fontname="helv")
-                if rc >= 0:
-                    y += ((rect.y1 - rect.y0) - rc) + 10.0
-                else:
-                    current_page = doc.new_page(width=595, height=842)
-                    y = 50.0
-                    rect = pymupdf.Rect(50, y, 545, 800)
-                    rc2 = current_page.insert_textbox(rect, final_chunk[:3000], fontsize=fontsize, fontname="helv")
-                    y += ((rect.y1 - rect.y0) - max(0.0, rc2)) + 10.0
+        current_page.draw_line(pymupdf.Point(50, state["y"]), pymupdf.Point(545, state["y"]), color=(0.8, 0.8, 0.8), width=0.75)
+        state["y"] += 18.0
         
         for sec_name, content in sections:
             # Section header
-            if y > 750:
-                current_page = doc.new_page(width=595, height=842)
-                y = 50.0
-            hdr_rect = pymupdf.Rect(50, y, 545, y + 36)
-            hdr_rc = current_page.insert_textbox(hdr_rect, sec_name.upper(), fontsize=10, fontname="helv", color=(0.2, 0.4, 0.7))
-            y += ((hdr_rect.y1 - hdr_rect.y0) - max(0.0, hdr_rc)) + 8.0
+            if state["y"] > 750:
+                state["page"] = doc.new_page(width=595, height=842)
+                state["y"] = 50.0
+            hdr_rect = pymupdf.Rect(50, state["y"], 545, state["y"] + 36)
+            hdr_rc = state["page"].insert_textbox(hdr_rect, sec_name.upper(), fontsize=10, fontname="helv", color=(0.2, 0.4, 0.7))
+            state["y"] += ((hdr_rect.y1 - hdr_rect.y0) - max(0.0, hdr_rc)) + 8.0
             
             # Paragraphs / Tables
             if not content:
@@ -1211,10 +1171,90 @@ class PaperFetcher:
                 if not p_clean:
                     continue
                 is_table_block = (" | " in p_clean and "\n" in p_clean)
-                _write_block_paginated(p_clean, fontsize=8.0 if is_table_block else 9.5)
+                self._write_block_paginated(doc, state, p_clean, fontsize=8.0 if is_table_block else 9.5)
                 
         doc.save(output_path)
         doc.close()
+
+    def _write_block_paginated(
+        self,
+        doc: pymupdf.Document,
+        state: Dict[str, Any],
+        text_block: str,
+        fontsize: float = 9.5,
+        color: tuple = (0, 0, 0),
+        table_cont_prefix: str = ""
+    ) -> None:
+        """
+        Render text_block into doc using PyMuPDF insert_textbox with guaranteed fit.
+        If a block exceeds a full page (e.g. a 100-row table with short rows), recursively
+        halves by line/sentence/word until every chunk renders with rc >= 0 (zero dropped rows).
+        """
+        if not text_block or not text_block.strip():
+            return
+
+        if state["y"] > 760:
+            state["page"] = doc.new_page(width=595, height=842)
+            state["y"] = 50.0
+
+        rect = pymupdf.Rect(50, state["y"], 545, 800)
+        rc = state["page"].insert_textbox(rect, text_block, fontsize=fontsize, fontname="helv", color=color)
+        if rc >= 0:
+            state["y"] += ((rect.y1 - rect.y0) - rc) + 10.0
+            return
+
+        # Did not fit in remaining space on current page: retry at top of a fresh page
+        if state["y"] > 55.0:
+            state["page"] = doc.new_page(width=595, height=842)
+            state["y"] = 50.0
+            rect = pymupdf.Rect(50, state["y"], 545, 800)
+            rc = state["page"].insert_textbox(rect, text_block, fontsize=fontsize, fontname="helv", color=color)
+            if rc >= 0:
+                state["y"] += ((rect.y1 - rect.y0) - rc) + 10.0
+                return
+
+        # Block is taller than an entire A4 page: split in half cleanly and recurse
+        if "\n" in text_block:
+            lines = text_block.split("\n")
+            if len(lines) > 1:
+                # Preserve Table N (continued) label across split table pages so indexer merges them
+                cont_prefix = table_cont_prefix
+                if not cont_prefix:
+                    m_tbl = re.match(r'^((?:Table|TABLE)\s*(?:\d+[A-Za-z]?|[IVXLCDM]+))\b', lines[0].strip())
+                    if m_tbl:
+                        cont_prefix = f"{m_tbl.group(1)} (continued)"
+                mid = len(lines) // 2
+                first_half = "\n".join(lines[:mid])
+                second_half = "\n".join(lines[mid:])
+                if cont_prefix and not second_half.lstrip().startswith(cont_prefix):
+                    second_half = f"{cont_prefix}\n{second_half}"
+                self._write_block_paginated(doc, state, first_half, fontsize=fontsize, color=color, table_cont_prefix=cont_prefix)
+                self._write_block_paginated(doc, state, second_half, fontsize=fontsize, color=color, table_cont_prefix=cont_prefix)
+                return
+
+        sentences = re.split(r'(?<=[.!?])\s+', text_block)
+        if len(sentences) > 1:
+            mid = len(sentences) // 2
+            self._write_block_paginated(doc, state, " ".join(sentences[:mid]), fontsize=fontsize, color=color)
+            self._write_block_paginated(doc, state, " ".join(sentences[mid:]), fontsize=fontsize, color=color)
+            return
+
+        words = text_block.split()
+        if len(words) > 1:
+            mid = len(words) // 2
+            self._write_block_paginated(doc, state, " ".join(words[:mid]), fontsize=fontsize, color=color)
+            self._write_block_paginated(doc, state, " ".join(words[mid:]), fontsize=fontsize, color=color)
+            return
+
+        if len(text_block) > 120:
+            mid = len(text_block) // 2
+            self._write_block_paginated(doc, state, text_block[:mid], fontsize=fontsize, color=color)
+            self._write_block_paginated(doc, state, text_block[mid:], fontsize=fontsize, color=color)
+            return
+
+        # Ultimate fallback for a tiny unbreakable token
+        state["page"].insert_text(pymupdf.Point(50, state["y"] + fontsize), text_block, fontsize=fontsize, fontname="helv", color=color)
+        state["y"] += fontsize + 10.0
 
     def _create_abstract_pdf(self, output_path: str, title: str, abstract_text: str, metadata: Any = None):
         """Generate a clean single-page PDF containing the abstract and complete bibliographic metadata."""
@@ -1287,38 +1327,33 @@ class PaperFetcher:
         doc = pymupdf.open()
         paragraphs = [self.normalize_for_pdf_rendering(p.strip()) for p in full_text.split("\n\n") if len(p.strip()) > 30]
         
-        page = doc.new_page(width=595, height=842)
-        y = 45.0
-        page.insert_textbox(pymupdf.Rect(50, y, 545, y + 42), title, fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
-        y += 46.0
+        state = {"page": doc.new_page(width=595, height=842), "y": 45.0}
+        page = state["page"]
+        page.insert_textbox(pymupdf.Rect(50, state["y"], 545, state["y"] + 42), title, fontsize=12, fontname="helv", color=(0.1, 0.2, 0.4))
+        state["y"] += 46.0
         
         authors = self.normalize_for_pdf_rendering(str(metadata.get("authors", "")))
         if authors:
-            page.insert_textbox(pymupdf.Rect(50, y, 545, y + 30), f"Authors: {authors}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
-            y += 32.0
+            page.insert_textbox(pymupdf.Rect(50, state["y"], 545, state["y"] + 30), f"Authors: {authors}", fontsize=8.5, fontname="helv", color=(0.2, 0.2, 0.2))
+            state["y"] += 32.0
             
         journal = self.normalize_for_pdf_rendering(str(metadata.get("journal", "")))
         year = metadata.get("year", "")
         if journal or year:
-            page.insert_text(pymupdf.Point(50, y), f"Journal: {journal or 'Web Publication'} | Year: {year or 'N/A'}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))
-            y += 18.0
+            page.insert_text(pymupdf.Point(50, state["y"]), f"Journal: {journal or 'Web Publication'} | Year: {year or 'N/A'}", fontsize=8.5, fontname="helv", color=(0.25, 0.25, 0.25))
+            state["y"] += 18.0
             
         doi = metadata.get("doi", "")
         if doi:
-            page.insert_text(pymupdf.Point(50, y), f"DOI: {doi}", fontsize=8.0, fontname="helv", color=(0.35, 0.35, 0.35))
-            y += 20.0
+            page.insert_text(pymupdf.Point(50, state["y"]), f"DOI: {doi}", fontsize=8.0, fontname="helv", color=(0.35, 0.35, 0.35))
+            state["y"] += 20.0
             
-        page.draw_line(pymupdf.Point(50, y), pymupdf.Point(545, y), color=(0.8, 0.8, 0.8), width=0.75)
-        y += 18.0
+        page.draw_line(pymupdf.Point(50, state["y"]), pymupdf.Point(545, state["y"]), color=(0.8, 0.8, 0.8), width=0.75)
+        state["y"] += 18.0
         
         for p in paragraphs:
-            if y > 760:
-                page = doc.new_page(width=595, height=842)
-                y = 50.0
-            rect = pymupdf.Rect(50, y, 545, 800)
-            page.insert_textbox(rect, p, fontsize=9.5, fontname="helv")
-            lines = max(1, len(p) // 85 + 1)
-            y += lines * 13.0 + 10.0
+            is_table_block = (" | " in p and "\n" in p)
+            self._write_block_paginated(doc, state, p, fontsize=8.0 if is_table_block else 9.5)
             
         doc.save(output_path)
         doc.close()
