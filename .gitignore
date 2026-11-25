@@ -44,3 +44,5 @@ Reference_papers/
 .DS_Store
 Thumbs.db
 
+
+data/appraisals_cache/*.json
