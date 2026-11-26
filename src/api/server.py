@@ -324,6 +324,8 @@ class FinderSearchRequest(BaseModel):
 class SummarizerGenerateRequest(BaseModel):
     urls: List[str]
     max_batch_size: Optional[int] = 10
+    voice_profile: Optional[Dict[str, Any]] = None
+    custom_prompt: Optional[str] = None
     user_uid: Optional[str] = "anonymous"
     user_email: Optional[str] = "unauthenticated"
 
@@ -357,7 +359,12 @@ def api_finder_search(req: FinderSearchRequest):
 def api_summarizer_generate(req: SummarizerGenerateRequest):
     """Execute sequential structured multi-paper lay science communicator briefing."""
     try:
-        res = summarizer.summarize_batch(raw_inputs=req.urls, max_batch_size=req.max_batch_size or 10)
+        res = summarizer.summarize_batch(
+            raw_inputs=req.urls,
+            max_batch_size=req.max_batch_size or 10,
+            voice_profile=req.voice_profile,
+            custom_prompt=req.custom_prompt
+        )
         try:
             log_usage(
                 uid=req.user_uid or "anonymous",
@@ -2897,10 +2904,38 @@ def index_page():
                         <textarea 
                             id="summarizerUrlsInput" 
                             rows="5" 
-                            placeholder="https://pubmed.ncbi.nlm.nih.gov/23843810/&#10;https://pubmed.ncbi.nlm.nih.gov/30302302/&#10;29188837"
+                            placeholder="https://pubmed.ncbi.nlm.nih.gov/23843810/&#10;https://pmc.ncbi.nlm.nih.gov/articles/PMC11871543/&#10;29188837"
                             class="w-full text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-slate-800 dark:text-slate-100 focus:bg-white focus:dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 transition shadow-2xs leading-relaxed"
                             oninput="updateSummarizerBatchCount()"
                         ></textarea>
+
+                        <!-- Voice & Editorial Focus Controls (Option A: Factual Summaries + Voiced Synthesis) -->
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1">
+                            <div class="md:col-span-4 space-y-1">
+                                <label for="summarizerVoicePresetSelect" class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <span>🎙️</span> <span>Synthesis Voice</span>
+                                </label>
+                                <select id="summarizerVoicePresetSelect" onchange="if (this.value !== 'neutral') setActiveVoicePreset(this.value)" class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-slate-800 dark:text-slate-200 font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer">
+                                    <option value="calibrated">My Calibrated Voice</option>
+                                    <option value="neutral">Neutral Science Communicator</option>
+                                    <option value="methodological">Methodological / Biostatistical</option>
+                                    <option value="conventional">Conventional Allopathic</option>
+                                    <option value="integrative">Generic Integrative</option>
+                                </select>
+                            </div>
+                            <div class="md:col-span-8 space-y-1">
+                                <label for="summarizerCustomPrompt" class="text-[11px] font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                                    <span>🎯</span> <span>Editorial Focus / Angle <span class="font-normal text-slate-400">(optional)</span></span>
+                                </label>
+                                <textarea
+                                    id="summarizerCustomPrompt"
+                                    rows="2"
+                                    placeholder="Optional: e.g., Emphasize overall survival vs. local recurrence, highlight harms/QoL trade-offs, or focus on a specific clinical question..."
+                                    class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-slate-800 dark:text-slate-100 focus:bg-white focus:dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 transition leading-snug resize-y"
+                                ></textarea>
+                            </div>
+                        </div>
+
                         <div class="flex items-center justify-between pt-1">
                             <span id="summarizerBatchCounter" class="text-[11px] text-slate-400">Batch size: 0 / 10 papers</span>
                             <button 
@@ -5014,12 +5049,22 @@ def index_page():
                 }
 
                 try {
+                    const sumVoiceSel = document.getElementById('summarizerVoicePresetSelect');
+                    const sumVoiceKey = sumVoiceSel ? sumVoiceSel.value : 'calibrated';
+                    const sumVoiceProfile = (sumVoiceKey === 'neutral')
+                        ? null
+                        : (typeof getEffectiveVoiceProfile === 'function' ? getEffectiveVoiceProfile() : null);
+                    const sumCustomPromptEl = document.getElementById('summarizerCustomPrompt');
+                    const sumCustomPrompt = sumCustomPromptEl ? sumCustomPromptEl.value.trim() : '';
+
                     const resp = await fetch('/api/summarizer/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             urls: lines,
                             max_batch_size: 10,
+                            voice_profile: sumVoiceProfile,
+                            custom_prompt: sumCustomPrompt || null,
                             user_uid: currentUser ? currentUser.uid : 'anonymous',
                             user_email: currentUser ? currentUser.email : 'unauthenticated'
                         })
@@ -8748,6 +8793,10 @@ ${scopedHtml}
                 const settingsSelect = document.getElementById('settingsVoicePresetSelect');
                 if (settingsSelect && settingsSelect.value !== activeVoicePresetKey) {
                     settingsSelect.value = activeVoicePresetKey;
+                }
+                const summarizerSelect = document.getElementById('summarizerVoicePresetSelect');
+                if (summarizerSelect && summarizerSelect.value !== 'neutral' && summarizerSelect.value !== activeVoicePresetKey) {
+                    summarizerSelect.value = activeVoicePresetKey;
                 }
                 const presetNotice = document.getElementById('settingsVoicePresetNotice');
                 if (presetNotice) {

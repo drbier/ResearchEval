@@ -543,15 +543,16 @@ class PaperSummarizer:
             "structured_abstract": None
         }
 
-    def summarize_single_study(self, study_data: Dict[str, Any]) -> str:
+    def summarize_single_study(
+        self,
+        study_data: Dict[str, Any],
+        voice_profile: Optional[Dict[str, Any]] = None,
+        custom_prompt: Optional[str] = None
+    ) -> str:
         """
-        Summarize an individual study sequentially conforming strictly to the layout:
-        Title:
-        {Exact Title extracted from page}
-        Summary:
-        {Summary of benefits using ONLY the text found at URL}
-        Source:
-        {Exact Input URL}
+        Summarize an individual study sequentially with strict factual grounding.
+        Applies prohibited terms and custom focus lightly as a relevance lens while keeping
+        individual study summaries crisp, neutral, and strictly grounded in the abstract.
         """
         input_url = study_data.get("input_url", "")
         status = study_data.get("status")
@@ -567,21 +568,34 @@ class PaperSummarizer:
                 f"**Source:** {input_url}"
             )
 
+        profile = voice_profile or {}
+        prohibited_terms = str(profile.get("prohibited_terms", "")).strip()[:300]
+        clean_focus = str(custom_prompt or "").strip()[:600]
+
+        extra_rules = []
+        if prohibited_terms:
+            extra_rules.append(f"4. Prohibited Phrasing: Avoid {prohibited_terms}.")
+        if clean_focus:
+            extra_rules.append(
+                f"5. Clinical Relevance Lens: Pay particular attention to any outcomes, null findings, or harms in the abstract relevant to: {clean_focus}"
+            )
+        extra_block = ("\n" + "\n".join(extra_rules)) if extra_rules else ""
+
         system_prompt = (
-            "You are a science communicator renowned for your ability to explain complex medical and scientific topics to lay people.\n"
-            "Your mission is to create a clear, accessible summary from the study abstract provided.\n"
+            "You are a rigorous clinical science communicator explaining medical research clearly without hype.\n"
+            "Your mission is to create a clear, factual, accessible summary from the study abstract provided.\n"
             "STRICT PROTOCOLS:\n"
-            "1. Grounding: Summarize the clinical findings and benefits using ONLY the explicit text in the abstract.\n"
+            "1. Grounding: Summarize the clinical findings—explicitly including null or non-significant results on hard outcomes (e.g., overall survival, mortality), harms/adverse events, and benefits—using ONLY the explicit text in the abstract.\n"
             "   DO NOT bring in outside claims, speculation, or unverified mechanisms.\n"
-            "2. Layperson Clarity: Explain statistical findings in plain, intuitive language without dumbing down the science.\n"
-            "3. Format: Output ONLY the concise summary text (1-3 paragraphs) describing the benefits and findings.\n"
-            "   Do not output titles, source labels, or meta-introductions here."
+            "2. Clarity: Explain statistical findings (HR, RR, OR, CI, NNT, p-values) in plain, intuitive language without dumbing down the science.\n"
+            "3. Format: Output ONLY the concise summary text (1-3 paragraphs). Do not output titles, source labels, or meta-introductions here."
+            f"{extra_block}"
         )
 
         user_prompt = (
             f"STUDY TITLE: {title}\n\n"
             f"STRUCTURED ABSTRACT:\n{abstract}\n\n"
-            "Write the lay-accessible summary of benefits and findings strictly grounded in this text."
+            "Write the grounded summary of findings, limitations/harms, and benefits strictly from this abstract."
         )
 
         summary_text, _ = self._invoke_gemini(user_prompt, system_prompt)
@@ -596,18 +610,22 @@ class PaperSummarizer:
     def generate_overarching_synthesis(
         self,
         valid_studies: List[Dict[str, Any]],
-        individual_summaries: List[str]
+        individual_summaries: List[str],
+        voice_profile: Optional[Dict[str, Any]] = None,
+        custom_prompt: Optional[str] = None
     ) -> Dict[str, str]:
         """
-        Generate Section 1 (Topic Intro), Section 2 (Categorization Header),
-        Section 4 (Conclusion), and Section 5 (Final Analysis).
+        Generate Section 1 (Topic Intro), Briefing Title (Categorization),
+        Section 3 (Conclusion), and Section 4 (Final Analysis).
+        When voice_profile is supplied (Option A), applies full voice calibration,
+        therapeutic lens, exemplars, and optional editorial focus to the synthesis.
         """
         if not valid_studies:
             return {
                 "topic_intro": "No study content could be accessed from the provided links.",
                 "categorization_header": "## General Health Topics",
                 "conclusion": "No clinical conclusions could be drawn due to inaccessible study content.",
-                "final_analysis": "Please check the provided URLs to ensure they link to public PubMed records or open abstracts."
+                "final_analysis": "Please check the provided URLs to ensure they link to public PubMed/PMC records or open abstracts."
             }
 
         abstracts_context = []
@@ -615,19 +633,87 @@ class PaperSummarizer:
             abstracts_context.append(f"TITLE: {s.get('title')}\nABSTRACT: {s.get('structured_abstract')}")
         context_blob = "\n\n---\n\n".join(abstracts_context)
 
+        voice_directives = ""
+        exemplars_section = ""
+        if voice_profile and isinstance(voice_profile, dict):
+            philosophy = str(voice_profile.get("philosophy", "")).strip()[:500]
+            preferred_terms = str(voice_profile.get("preferred_terms", "")).strip()[:300]
+            prohibited_terms = str(voice_profile.get("prohibited_terms", "")).strip()[:300]
+            lens = str(voice_profile.get("therapeutic_lens", "integrative")).strip().lower()
+
+            if lens in ("integrative", "naturopathic", "functional"):
+                lens_text = (
+                    "THERAPEUTIC ORIENTATION: Integrative / Naturopathic / Functional Medicine — "
+                    "prioritize whole-person physiology, hard patient-important outcomes (survival, QoL) over surrogates, "
+                    "and avoid reflexively mandating conventional pharmaceutical regimens unless justified by hard outcomes."
+                )
+            elif lens in ("conventional", "allopathic"):
+                lens_text = (
+                    "THERAPEUTIC ORIENTATION: Conventional Allopathic / Evidence-Based Practice — "
+                    "contextualize findings within guideline-directed medical therapy and standard clinical risk-benefit frameworks."
+                )
+            elif lens in ("methodological", "biostatistical"):
+                lens_text = (
+                    "THERAPEUTIC ORIENTATION: Pure Methodological & Biostatistical Focus — "
+                    "maintain a neutral therapeutic stance focused strictly on study design validity, confounding, endpoint hierarchy, and statistical precision."
+                )
+            else:
+                lens_text = ""
+
+            voice_lines = [
+                "\nCLINICIAN VOICE & EDITORIAL CALIBRATION (apply strongly to Conclusion and Final Analysis, and cleanly to Topic Intro):"
+            ]
+            if lens_text:
+                voice_lines.append(f"- {lens_text}")
+            if philosophy:
+                voice_lines.append(f"- CLINICAL PHILOSOPHY: {philosophy}")
+            if preferred_terms:
+                voice_lines.append(f"- PREFERRED CONCEPTS / PHRASING: {preferred_terms}")
+            if prohibited_terms:
+                voice_lines.append(f"- PROHIBITED PHRASING: {prohibited_terms}")
+            voice_directives = "\n".join(voice_lines) + "\n"
+
+            raw_exemplars = voice_profile.get("exemplars", [])
+            if isinstance(raw_exemplars, list):
+                active_ex = [
+                    e for e in raw_exemplars
+                    if isinstance(e, dict) and e.get("is_active", True) and str(e.get("text", "")).strip()
+                ]
+                active_ex.sort(key=lambda x: x.get("updated_at_ms", 0), reverse=True)
+                ex_blocks = []
+                for idx, ex in enumerate(active_ex[:3], 1):
+                    txt = str(ex.get("text", "")).strip()[:1200]
+                    if txt:
+                        ex_blocks.append(f'<exemplar index="{idx}">\n{txt}\n</exemplar>')
+                if ex_blocks:
+                    exemplars_section = (
+                        "\n\nCLINICIAN WRITING EXEMPLARS (mirror cadence, tone, and rhetorical directness in Conclusion & Final Analysis):\n"
+                        + "\n\n".join(ex_blocks)
+                    )
+
+        clean_focus = str(custom_prompt or "").strip()[:1000]
+        focus_section = ""
+        if clean_focus:
+            focus_section = (
+                f"\n\nCLINICIAN'S SPECIFIC EDITORIAL FOCUS / ANGLE:\n{clean_focus}\n"
+                "Weave this focus directly into the Topic Intro, Conclusion, and Final Analysis while keeping all factual claims grounded in the provided abstracts."
+            )
+
         system_prompt = (
-            "You are a world-class science communicator.\n"
+            "You are a world-class clinical science communicator and methodologist.\n"
             "Synthesize the overarching sections for a multi-study briefing based strictly on the provided study abstracts.\n"
+            "Prioritize hard patient-important outcomes (overall survival, serious morbidity, quality of life) over surrogates, and explicitly note when benefits are limited to local or surrogate endpoints or accompanied by harms.\n"
+            f"{voice_directives}"
             "Respond strictly in JSON matching this schema:\n"
             "{\n"
-            '  "topic_intro": "1-2 sentence explanation of the general topic or compound (e.g., if studies are about Curcumin, explain what Curcumin is)",\n'
-            '  "categorization_header": "## Compound Name (if multiple compounds or single compound) or ## Health Topic (e.g., ## Curcumin or ## Cardiovascular Health)",\n'
-            '  "conclusion": "Brief overarching summary highlighting the benefits seen across all studies for each component",\n'
-            '  "final_analysis": "Overarching summary of all the components combined with practical clinical context"\n'
+            '  "topic_intro": "1-3 sentence explanation of the general topic or compound and the core clinical tension",\n'
+            '  "categorization_header": "## Compound Name or Clinical Topic Title (e.g., ## Tamoxifen in DCIS or ## Curcumin in Inflammation)",\n'
+            '  "conclusion": "Concise overarching synthesis weighing benefits, null hard outcomes, and harms across the studies",\n'
+            '  "final_analysis": "Practical clinical bottom line and real-world decision-making context synthesizing all studies together"\n'
             "}"
         )
 
-        user_prompt = f"STUDY ABSTRACTS:\n{context_blob}"
+        user_prompt = f"STUDY ABSTRACTS:\n{context_blob}{exemplars_section}{focus_section}"
 
         raw_json, _ = self._invoke_gemini(user_prompt, system_prompt, json_mode=True)
         try:
@@ -643,7 +729,13 @@ class PaperSummarizer:
             "final_analysis": res.get("final_analysis", "").strip()
         }
 
-    def summarize_batch(self, raw_inputs: List[str], max_batch_size: int = 10) -> Dict[str, Any]:
+    def summarize_batch(
+        self,
+        raw_inputs: List[str],
+        max_batch_size: int = 10,
+        voice_profile: Optional[Dict[str, Any]] = None,
+        custom_prompt: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Execute end-to-end sequential multi-paper summarization.
         Guarantees:
@@ -686,16 +778,25 @@ class PaperSummarizer:
             if study_data.get("status") == "success" and study_data.get("structured_abstract"):
                 valid_studies.append(study_data)
 
-        # Step 2: Sequential Study Summaries (Strict Layout)
+        # Step 2: Sequential Study Summaries (Strict Grounding + Relevance Lens)
         print(f"[Summarizer:Batch] Generating {len(ingested_studies)} individual study summaries...")
         individual_blocks = []
         for study in ingested_studies:
-            block = self.summarize_single_study(study)
+            block = self.summarize_single_study(
+                study,
+                voice_profile=voice_profile,
+                custom_prompt=custom_prompt
+            )
             individual_blocks.append(block)
 
         # Step 3: Overarching Synthesis (Topic Intro, Categorization, Conclusion, Final Analysis)
         print(f"[Summarizer:Batch] Synthesizing overarching sections across {len(valid_studies)} accessible studies...")
-        overarching = self.generate_overarching_synthesis(valid_studies, individual_blocks)
+        overarching = self.generate_overarching_synthesis(
+            valid_studies,
+            individual_blocks,
+            voice_profile=voice_profile,
+            custom_prompt=custom_prompt
+        )
 
         # Step 4: Assemble Rich Markdown Document Layout (matching Analyze typography)
         doc_parts = []
