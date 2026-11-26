@@ -161,7 +161,7 @@ class CommentaryAndQCEngine:
             f"3. PREFERRED CONCEPTS / PHRASING: {preferred_terms if preferred_terms else 'Use clear, assertive clinical language with rigorous focus on absolute risk reductions.'}\n"
             f"4. PROHIBITED PHRASING: {prohibited_terms if prohibited_terms else 'Never say \"more research is needed\". Avoid generic conversational AI filler.'}\n"
             "5. CITATION INTEGRITY: When citing findings, you may include verified coordinate anchors like [Results, Table 2] or [Methods, Para 3]. Do NOT invent coordinate anchors.\n"
-            "6. FORMAT: Output 2 to 4 punchy, high-impact paragraphs in Markdown suitable for an email, newsletter, or medical discussion board."
+            "6. FORMAT: Output 2 to 4 punchy, high-impact paragraphs in Markdown suitable for an email, newsletter, or medical discussion board. Format any section subheadings as bold Markdown (`### Subheading` or `**Subheading:**`)."
         )
 
         clean_custom_prompt = str(custom_prompt or "").strip()[:1000]

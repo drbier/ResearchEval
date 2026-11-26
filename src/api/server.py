@@ -6776,10 +6776,26 @@ ${escapeHtml(thought)}
                             htmlOut.push(`<h3 style="font-size:19px; font-weight:700; color:${themeTheme.header}; margin-top:26px; margin-bottom:12px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h2)}</h3>`);
                             continue;
                         }
-                        if (line.startsWith('### ')) {
+                        if (line.startsWith('### ') || line.startsWith('#### ')) {
                             if (inList) { htmlOut.push('</ul>'); inList = false; }
-                            const h3 = line.replace(/^###\s+/, '').replace(/\*\*/g, '');
-                            htmlOut.push(`<h4 style="font-size:16px; font-weight:700; color:#1e293b; margin-top:18px; margin-bottom:10px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h3)}</h4>`);
+                            const h3 = line.replace(/^#{3,4}\s+/, '').replace(/\*\*/g, '');
+                            htmlOut.push(`<h4 style="font-size:16px; font-weight:700; color:#0f172a; margin-top:18px; margin-bottom:10px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h3)}</h4>`);
+                            continue;
+                        }
+                        // Elevate standalone short colon-terminated subheadings (e.g. "The surrogate win versus the survival flatline:") to bold h4
+                        const strippedSub = line.replace(/^\*\*|\*\*$/g, '').trim();
+                        if (
+                            strippedSub.endsWith(':') &&
+                            strippedSub.length >= 4 &&
+                            strippedSub.length <= 95 &&
+                            /^[A-Z]/.test(strippedSub) &&
+                            !strippedSub.includes('http') &&
+                            !strippedSub.includes('###FACT_PILL_START###') &&
+                            !/[.?!]\s/.test(strippedSub) &&
+                            strippedSub.split(/\s+/).length <= 12
+                        ) {
+                            if (inList) { htmlOut.push('</ul>'); inList = false; }
+                            htmlOut.push(`<h4 style="font-size:16px; font-weight:700; color:#0f172a; margin-top:18px; margin-bottom:8px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(strippedSub)}</h4>`);
                             continue;
                         }
                         if (/^[-*•]\s+/.test(line)) {
@@ -7269,14 +7285,10 @@ ${scopedHtml}
                             const lowerNoColon = rawNoColon.toLowerCase();
                             let isSubhead = SUBHEAD_KEYWORDS.has(lowerNoColon);
 
-                            if (!isSubhead && /^[A-Z][A-Za-z0-9\s&/\-_–()]{1,75}$/.test(rawNoColon)) {
+                            if (!isSubhead && /^[A-Z][A-Za-z0-9\s&/\-_–()]{1,90}$/.test(rawNoColon) && !rawNoColon.includes('http') && !/[.?!]\s/.test(rawNoColon)) {
                                 const words = rawNoColon.split(/\s+/);
-                                if (words.length <= 9) {
-                                    const minorWords = new Set(['and', 'or', 'in', '&', 'of', 'for', 'to', 'the', 'with', 'by', 'on', 'at', 'from', 'vs', 'vs.']);
-                                    const titleCount = words.filter(w => /^[A-Z(]/.test(w) || minorWords.has(w.toLowerCase())).length;
-                                    if (titleCount === words.length) {
-                                        isSubhead = true;
-                                    }
+                                if (words.length <= 12) {
+                                    isSubhead = true;
                                 }
                             }
 
