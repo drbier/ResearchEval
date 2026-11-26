@@ -2918,9 +2918,63 @@ def index_page():
                                     <span id="summarizerMetaBadge" class="text-[11px] bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded font-mono"></span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="copySummarizerMarkdown()" id="copySummaryBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition shadow-2xs cursor-pointer">
-                                        <span>📋</span> <span id="copySummaryBtnText">Copy to Clipboard</span>
-                                    </button>
+                                    <!-- Consolidated Export & Copy Dropdown (mirrors Analyze tab) -->
+                                    <div class="relative inline-block text-left" id="summarizerExportDropdownWrapper">
+                                        <button type="button" onclick="toggleSummarizerExportMenu(event)" id="summarizerExportMenuBtn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition shadow-2xs cursor-pointer">
+                                            <span>📤</span>
+                                            <span id="summarizerExportMenuBtnText">Export / Copy</span>
+                                            <svg class="w-3.5 h-3.5 ml-0.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </button>
+
+                                        <div id="summarizerExportMenuDropdown" class="hidden absolute right-0 mt-1.5 w-72 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 text-xs py-2 divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in zoom-in-95 duration-100">
+                                            <!-- WordPress Formats -->
+                                            <div class="p-1.5 space-y-0.5">
+                                                <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                                                    <span>🌐</span> <span>WordPress Formats</span>
+                                                </div>
+                                                <button type="button" onclick="handleSummarizerExportAction('wp_visual')" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-800 dark:text-slate-200 flex items-start gap-2.5 transition cursor-pointer">
+                                                    <span class="text-base leading-none">✨</span>
+                                                    <div class="flex-1">
+                                                        <div class="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                                                            <span>Copy for WordPress (Visual)</span>
+                                                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 font-bold">Recommended</span>
+                                                        </div>
+                                                        <div class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">Paste directly into Gutenberg, Word, or Docs with formatted headings &amp; links.</div>
+                                                    </div>
+                                                </button>
+                                                <button type="button" onclick="handleSummarizerExportAction('wp_html')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-start gap-2.5 transition cursor-pointer">
+                                                    <span class="text-base leading-none">🏷️</span>
+                                                    <div class="flex-1">
+                                                        <div class="font-bold text-slate-900 dark:text-slate-100">Copy WordPress HTML Code</div>
+                                                        <div class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">Formatted HTML for WordPress Custom HTML block.</div>
+                                                    </div>
+                                                </button>
+                                                <button type="button" onclick="handleSummarizerExportAction('wp_download')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2.5 transition cursor-pointer">
+                                                    <span class="text-base leading-none">⬇️</span>
+                                                    <span class="font-medium">Download WordPress HTML (.html)</span>
+                                                </button>
+                                            </div>
+
+                                            <!-- Markdown & Plain Text -->
+                                            <div class="p-1.5 space-y-0.5">
+                                                <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                                    <span>📋</span> <span>Markdown &amp; Text</span>
+                                                </div>
+                                                <button type="button" onclick="handleSummarizerExportAction('copy_markdown')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center gap-2.5 transition cursor-pointer">
+                                                    <span class="text-base leading-none">📋</span>
+                                                    <span class="font-semibold text-slate-900 dark:text-slate-100">Copy Clean Markdown</span>
+                                                </button>
+                                                <button type="button" onclick="handleSummarizerExportAction('copy_text')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2.5 transition cursor-pointer">
+                                                    <span class="text-base leading-none">📄</span>
+                                                    <span class="font-medium">Copy Plain Text</span>
+                                                </button>
+                                                <button type="button" onclick="handleSummarizerExportAction('download_markdown')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center gap-2.5 transition cursor-pointer">
+                                                    <span class="text-base leading-none">⬇️</span>
+                                                    <span class="font-medium">Download Markdown (.md)</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <!-- Rendered Markdown Content -->
@@ -5013,22 +5067,233 @@ def index_page():
                 }
             }
 
-            function copySummarizerMarkdown() {
-                const text = window.ResearchAppState.lastSummarizerMarkdown;
-                if (!text) {
-                    alert('No generated briefing to copy.');
+            function toggleSummarizerExportMenu(e) {
+                if (e) e.stopPropagation();
+                const dd = document.getElementById('summarizerExportMenuDropdown');
+                if (dd) dd.classList.toggle('hidden');
+            }
+
+            function closeSummarizerExportMenu() {
+                const dd = document.getElementById('summarizerExportMenuDropdown');
+                if (dd) dd.classList.add('hidden');
+            }
+
+            document.addEventListener('click', function(e) {
+                const wrapper = document.getElementById('summarizerExportDropdownWrapper');
+                if (wrapper && !wrapper.contains(e.target)) {
+                    closeSummarizerExportMenu();
+                }
+            });
+
+            function formatSummarizerForWordPress(asFullHtmlDocument = false) {
+                const rawMd = (window.ResearchAppState && window.ResearchAppState.lastSummarizerMarkdown) || '';
+                if (!rawMd.trim()) return '';
+
+                const activeColor = (typeof currentHighlightColor !== 'undefined' && currentHighlightColor)
+                    ? currentHighlightColor
+                    : (localStorage.getItem('fact_highlight_color') || 'blue');
+
+                const exportThemeMap = {
+                    emerald: { header: '#047857', pillText: '#065f46', pillBg: '#ecfdf5', pillBorder: '#6ee7b7' },
+                    amber:   { header: '#b45309', pillText: '#92400e', pillBg: '#fffbeb', pillBorder: '#fcd34d' },
+                    teal:    { header: '#0f766e', pillText: '#115e59', pillBg: '#f0fdfa', pillBorder: '#5eead4' },
+                    indigo:  { header: '#4338ca', pillText: '#3730a3', pillBg: '#eef2ff', pillBorder: '#a5b4fc' },
+                    violet:  { header: '#6d28d9', pillText: '#5b21b6', pillBg: '#f5f3ff', pillBorder: '#c4b5fd' },
+                    rose:    { header: '#be123c', pillText: '#9f1239', pillBg: '#fff1f2', pillBorder: '#fda4af' },
+                    slate:   { header: '#334155', pillText: '#1e293b', pillBg: '#f8fafc', pillBorder: '#cbd5e1' },
+                    blue:    { header: '#0369a1', pillText: '#0369a1', pillBg: '#f0f9ff', pillBorder: '#7dd3fc' }
+                };
+                const themeTheme = exportThemeMap[activeColor] || exportThemeMap.blue;
+                const linkStyle = `color:${themeTheme.header}; text-decoration:underline; font-weight:600; word-break:break-word;`;
+
+                function formatInline(str) {
+                    // Escape HTML entities first, then apply markdown inline rules
+                    let s = escapeHtml(str);
+                    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, function(match, linkText, url) {
+                        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${linkText}</a>`;
+                    });
+                    s = s.replace(/(?<!href=")(https?:\/\/[^\s<>"'\)]+)/gi, function(match, url) {
+                        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">${url}</a>`;
+                    });
+                    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#0f172a; font-weight:700;">$1</strong>');
+                    s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+                    return s;
+                }
+
+                const lines = rawMd.split('\n');
+                const htmlOut = [];
+                let listType = null; // 'ul' | 'ol' | null
+                const closeList = () => {
+                    if (listType) {
+                        htmlOut.push(`</${listType}>`);
+                        listType = null;
+                    }
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) {
+                        closeList();
+                        continue;
+                    }
+                    if (/^---+$|^\*\*\*+$/.test(line)) {
+                        closeList();
+                        htmlOut.push('<hr style="border:none; border-top:1px solid #e2e8f0; margin:22px 0;" />');
+                        continue;
+                    }
+                    if (line.startsWith('# ')) {
+                        closeList();
+                        const title = line.replace(/^#\s+/, '').replace(/\*\*/g, '');
+                        htmlOut.push(`<h2 style="font-size:24px; font-weight:800; color:#0f172a; margin-top:0; margin-bottom:16px; line-height:1.3; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(title)}</h2>`);
+                        continue;
+                    }
+                    if (line.startsWith('## ')) {
+                        closeList();
+                        const h2 = line.replace(/^##\s+/, '').replace(/\*\*/g, '');
+                        htmlOut.push(`<h3 style="font-size:19px; font-weight:700; color:${themeTheme.header}; margin-top:26px; margin-bottom:12px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h2)}</h3>`);
+                        continue;
+                    }
+                    if (line.startsWith('### ')) {
+                        closeList();
+                        const h3 = line.replace(/^###\s+/, '').replace(/\*\*/g, '');
+                        htmlOut.push(`<h4 style="font-size:16px; font-weight:700; color:#1e293b; margin-top:18px; margin-bottom:10px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(h3)}</h4>`);
+                        continue;
+                    }
+                    if (/^[-*•]\s+/.test(line)) {
+                        if (listType !== 'ul') {
+                            closeList();
+                            htmlOut.push('<ul style="margin:8px 0 16px 20px; padding:0; font-size:16px; line-height:1.7; color:#334155; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">');
+                            listType = 'ul';
+                        }
+                        const itemContent = formatInline(line.replace(/^[-*•]\s+/, ''));
+                        htmlOut.push(`<li style="margin-bottom:8px;">${itemContent}</li>`);
+                        continue;
+                    }
+                    if (/^\d+\.\s+/.test(line)) {
+                        // Treat standalone short numbered section headers (e.g. "1. Topic Intro") as h3
+                        const numBody = line.replace(/^\d+\.\s+/, '').replace(/\*\*/g, '').trim();
+                        if (numBody.length <= 65 && !/[.?!]$/.test(numBody) && !line.includes('http')) {
+                            closeList();
+                            htmlOut.push(`<h3 style="font-size:19px; font-weight:700; color:${themeTheme.header}; margin-top:26px; margin-bottom:12px; line-height:1.4; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escapeHtml(line.replace(/\*\*/g, ''))}</h3>`);
+                            continue;
+                        }
+                        if (listType !== 'ol') {
+                            closeList();
+                            htmlOut.push('<ol style="margin:8px 0 16px 22px; padding:0; font-size:16px; line-height:1.7; color:#334155; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">');
+                            listType = 'ol';
+                        }
+                        const itemContent = formatInline(line.replace(/^\d+\.\s+/, ''));
+                        htmlOut.push(`<li style="margin-bottom:8px;">${itemContent}</li>`);
+                        continue;
+                    }
+                    closeList();
+                    htmlOut.push(`<p style="font-size:16px; line-height:1.7; color:#334155; margin-top:0; margin-bottom:16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${formatInline(line)}</p>`);
+                }
+                closeList();
+
+                const bodyHtml = htmlOut.join('\n');
+                if (!bodyHtml.trim()) return '';
+
+                const embeddedStyle = `
+<style>
+.fact-clinical-review { max-width:820px; margin:0 auto; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased; color:#334155; line-height:1.7; font-size:16px; }
+.fact-clinical-review h2 { font-size:24px !important; font-weight:800 !important; color:#0f172a !important; margin-top:0 !important; margin-bottom:16px !important; line-height:1.3 !important; border:none !important; }
+.fact-clinical-review h3 { font-size:19px !important; font-weight:700 !important; color:${themeTheme.header} !important; margin-top:26px !important; margin-bottom:12px !important; line-height:1.4 !important; border:none !important; }
+.fact-clinical-review h4 { font-size:16px !important; font-weight:700 !important; color:#1e293b !important; margin-top:18px !important; margin-bottom:10px !important; line-height:1.4 !important; }
+.fact-clinical-review p { font-size:16px !important; line-height:1.7 !important; color:#334155 !important; margin-top:0 !important; margin-bottom:16px !important; }
+.fact-clinical-review ul, .fact-clinical-review ol { margin:8px 0 16px 20px !important; padding:0 !important; font-size:16px !important; line-height:1.7 !important; color:#334155 !important; }
+.fact-clinical-review li { margin-bottom:8px !important; }
+.fact-clinical-review strong { color:#0f172a !important; font-weight:700 !important; }
+.fact-clinical-review a { color:${themeTheme.header} !important; text-decoration:underline !important; font-weight:600 !important; word-break:break-word !important; }
+</style>`;
+
+                const scopedHtml = `<!-- wp:html -->\n${embeddedStyle}\n<div class="fact-clinical-review">\n${bodyHtml}\n</div>\n<!-- /wp:html -->`;
+
+                if (asFullHtmlDocument) {
+                    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthesized Science Briefing</title>
+<style>
+body { background: #ffffff; color: #334155; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; margin: 0; }
+</style>
+</head>
+<body>
+${scopedHtml}
+</body>
+</html>`;
+                }
+                return scopedHtml;
+            }
+
+            async function handleSummarizerExportAction(action) {
+                closeSummarizerExportMenu();
+                const rawMd = (window.ResearchAppState && window.ResearchAppState.lastSummarizerMarkdown) || '';
+                if (!rawMd.trim()) {
+                    alert('No generated briefing available to export.');
                     return;
                 }
-                navigator.clipboard.writeText(text).then(() => {
-                    const btnText = document.getElementById('copySummaryBtnText');
+
+                const btnText = document.getElementById('summarizerExportMenuBtnText');
+                function showToast(msg) {
                     if (btnText) {
-                        const original = btnText.innerText;
-                        btnText.innerText = 'Copied to Clipboard!';
-                        setTimeout(() => { btnText.innerText = original; }, 2000);
+                        btnText.innerText = msg;
+                        setTimeout(() => { btnText.innerText = 'Export / Copy'; }, 2200);
                     }
-                }).catch(err => {
-                    alert('Could not copy to clipboard: ' + err);
-                });
+                }
+
+                const topicInput = document.getElementById('summarizerTopicInput');
+                let baseName = (topicInput && topicInput.value.trim()) ? topicInput.value.trim() : 'science_briefing';
+                baseName = baseName.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_').slice(0, 60) || 'science_briefing';
+
+                if (action === 'wp_visual') {
+                    try {
+                        const htmlContent = formatSummarizerForWordPress(false);
+                        const plainText = rawMd.replace(/^#+\s+/gm, '').replace(/\*\*([^*]+)\*\*/g, '$1');
+                        if (navigator.clipboard && window.ClipboardItem) {
+                            const item = new ClipboardItem({
+                                'text/html': new Blob([htmlContent], { type: 'text/html' }),
+                                'text/plain': new Blob([plainText], { type: 'text/plain' })
+                            });
+                            await navigator.clipboard.write([item]);
+                            showToast('✓ Copied for WordPress!');
+                        } else {
+                            await navigator.clipboard.writeText(htmlContent);
+                            showToast('✓ HTML Copied!');
+                        }
+                    } catch (err) {
+                        console.warn('ClipboardItem write error, falling back:', err);
+                        await navigator.clipboard.writeText(formatSummarizerForWordPress(false));
+                        showToast('✓ HTML Copied!');
+                    }
+                } else if (action === 'wp_html') {
+                    await navigator.clipboard.writeText(formatSummarizerForWordPress(false));
+                    showToast('✓ HTML Code Copied!');
+                } else if (action === 'wp_download') {
+                    const fullHtml = formatSummarizerForWordPress(true);
+                    downloadBlob(new Blob([fullHtml], { type: 'text/html;charset=utf-8;' }), `${baseName}_briefing_wordpress.html`);
+                    showToast('✓ HTML Downloaded!');
+                } else if (action === 'copy_markdown') {
+                    await navigator.clipboard.writeText(rawMd);
+                    showToast('✓ Markdown Copied!');
+                } else if (action === 'copy_text') {
+                    const plain = rawMd
+                        .replace(/^#+\s+/gm, '')
+                        .replace(/\*\*([^*]+)\*\*/g, '$1')
+                        .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '$1')
+                        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, '$1 ($2)');
+                    await navigator.clipboard.writeText(plain);
+                    showToast('✓ Plain Text Copied!');
+                } else if (action === 'download_markdown') {
+                    downloadBlob(new Blob([rawMd], { type: 'text/markdown;charset=utf-8;' }), `${baseName}_briefing.md`);
+                    showToast('✓ .md Downloaded!');
+                }
+            }
+
+            function copySummarizerMarkdown() {
+                handleSummarizerExportAction('copy_markdown');
             }
 
             // Cross-Tab Trigger: Deep link to Appraisal Workbench from Finder or Summarizer
