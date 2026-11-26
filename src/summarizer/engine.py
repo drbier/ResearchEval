@@ -93,9 +93,11 @@ class PaperSummarizer:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.ncbi_efetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+        self.ncbi_elink_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi"
         self.europe_pmc_search_url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
         self.s2_paper_url = "https://api.semanticscholar.org/graph/v1/paper"
         self.model_designation = MODEL_DESIGNATION
+        self._fulltext_cache: Dict[str, str] = {}
 
     def _invoke_gemini(
         self,
@@ -103,7 +105,9 @@ class PaperSummarizer:
         system_instruction: str,
         json_mode: bool = False,
         preferred_model: Optional[str] = None,
-        thinking_level: Optional[str] = None
+        thinking_level: Optional[str] = None,
+        temperature: float = 0.2,
+        max_output_tokens: int = 8192
     ) -> Tuple[str, str]:
         """Invoke Gemini with automated GA fallback ladder, rate-limit backoff, and dynamic thinkingConfig."""
         if not self.api_key:
@@ -123,8 +127,8 @@ class PaperSummarizer:
                 "contents": [{"parts": [{"text": prompt}]}],
                 "systemInstruction": {"parts": [{"text": system_instruction}]},
                 "generationConfig": {
-                    "temperature": 0.2,
-                    "maxOutputTokens": 8192
+                    "temperature": temperature,
+                    "maxOutputTokens": max_output_tokens
                 }
             }
             if effective_thinking:
@@ -837,5 +841,256 @@ class PaperSummarizer:
             "formatted_markdown": full_markdown,
             "model_designation": MODEL_DESIGNATION,
             "model_endpoint": PRIMARY_MODEL
+        }
+
+    def _fetch_pmc_fulltext_for_verification(
+        self,
+        pmcid: Optional[str] = None,
+        pmid: Optional[str] = None,
+        max_chars: int = 38000
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Best-effort auto-fetch of PMC JATS XML full text (body + tables) for audit verification.
+        Returns (fulltext_str, resolved_pmcid) or (None, None) if unavailable.
+        """
+        pmcid_digits = None
+        if pmcid:
+            m = re.search(r"(\d+)", str(pmcid))
+            if m:
+                pmcid_digits = m.group(1)
+
+        # If only PMID is known, check NCBI elink for a linked open-access PMC record
+        if not pmcid_digits and pmid:
+            try:
+                time.sleep(0.25)
+                r_link = resilient_request(
+                    self.ncbi_elink_url,
+                    params={"dbfrom": "pubmed", "db": "pmc", "id": str(pmid), "retmode": "json"},
+                    timeout=10
+                )
+                if r_link.status_code == 200:
+                    linksets = r_link.json().get("linksets", [])
+                    for ls in linksets:
+                        for db in ls.get("linksetdbs", []):
+                            if db.get("dbto") == "pmc" and db.get("links"):
+                                pmcid_digits = str(db["links"][0])
+                                break
+                        if pmcid_digits:
+                            break
+            except Exception as e:
+                print(f"[Summarizer:Verify] elink lookup failed for PMID {pmid}: {e}")
+
+        if not pmcid_digits:
+            return None, None
+
+        resolved_pmcid = f"PMC{pmcid_digits}"
+        if pmcid_digits in self._fulltext_cache:
+            return self._fulltext_cache[pmcid_digits], resolved_pmcid
+
+        try:
+            time.sleep(0.25)
+            resp = resilient_request(
+                self.ncbi_efetch_url,
+                params={"db": "pmc", "id": pmcid_digits, "retmode": "xml"},
+                timeout=15
+            )
+            if resp.status_code != 200 or len(resp.content) < 500:
+                return None, None
+
+            root = ET.fromstring(resp.content)
+            body = root.find(".//body")
+            if body is None:
+                return None, None
+
+            parts: List[str] = []
+            seen_tables = set()
+
+            def _fmt_table(tw: ET.Element) -> str:
+                lbl_el = tw.find("label")
+                cap_el = tw.find("caption")
+                lbl = " ".join("".join(lbl_el.itertext()).split()) if lbl_el is not None else ""
+                cap = " ".join("".join(cap_el.itertext()).split()) if cap_el is not None else ""
+                lines = [f"{lbl} {cap}".strip() or "Table"]
+                for tr in tw.findall(".//tr"):
+                    cells = [" ".join("".join(c.itertext()).split()) for c in tr if c.tag in ("th", "td")]
+                    if any(cells):
+                        lines.append(" | ".join(cells))
+                foot_el = tw.find("table-wrap-foot")
+                if foot_el is not None:
+                    ft = " ".join("".join(foot_el.itertext()).split())
+                    if ft:
+                        lines.append(ft)
+                return "\n".join(lines)
+
+            def _walk_sec(sec: ET.Element):
+                t_el = sec.find("title")
+                if t_el is not None:
+                    t_txt = " ".join("".join(t_el.itertext()).split())
+                    if t_txt:
+                        parts.append(f"\n[{t_txt}]")
+                for p in sec.findall("./p"):
+                    pt = " ".join("".join(p.itertext()).split())
+                    if pt:
+                        parts.append(pt)
+                for tw in sec.findall("./table-wrap"):
+                    if id(tw) not in seen_tables:
+                        seen_tables.add(id(tw))
+                        parts.append(_fmt_table(tw))
+                for child in sec.findall("./sec"):
+                    _walk_sec(child)
+
+            for p in body.findall("./p"):
+                pt = " ".join("".join(p.itertext()).split())
+                if pt:
+                    parts.append(pt)
+            for sec in body.findall("./sec"):
+                _walk_sec(sec)
+            for tw in root.findall(".//table-wrap"):
+                if id(tw) not in seen_tables:
+                    seen_tables.add(id(tw))
+                    parts.append(_fmt_table(tw))
+
+            fulltext = "\n".join(parts).strip()
+            if len(fulltext) > max_chars:
+                fulltext = fulltext[:max_chars] + "\n...[truncated]"
+            if fulltext:
+                self._fulltext_cache[pmcid_digits] = fulltext
+                return fulltext, resolved_pmcid
+        except Exception as e:
+            print(f"[Summarizer:Verify] Full-text PMC fetch failed for {resolved_pmcid}: {e}")
+
+        return None, None
+
+    def discuss_and_verify(
+        self,
+        current_markdown: str,
+        critique: str,
+        ingested_studies: List[Dict[str, Any]],
+        voice_profile: Optional[Dict[str, Any]] = None,
+        custom_prompt: Optional[str] = None,
+        history: Optional[List[Dict[str, str]]] = None,
+        autofetch_fulltext: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Evidence-bound adjudication pass for Contextualize:
+        Checks user feedback / external audit claims against ingested abstracts and (when available)
+        auto-fetched PMC full text + tables. Refutes unsupported critiques or proposes a clean
+        updated Synthesized Briefing Document for user review before applying.
+        """
+        clean_critique = (critique or "").strip()
+        if not clean_critique:
+            return {"status": "error", "message": "Feedback or audit critique cannot be empty."}
+
+        source_blocks: List[str] = []
+        fulltext_sources: List[str] = []
+        abstract_only_sources: List[str] = []
+
+        for idx, s in enumerate(ingested_studies or [], 1):
+            title = s.get("title") or f"Study {idx}"
+            url = s.get("input_url") or ""
+            pmid = s.get("pmid")
+            pmcid = s.get("pmcid")
+            abstract = s.get("structured_abstract") or ""
+
+            ft_text = None
+            resolved_pmcid = pmcid
+            if autofetch_fulltext and (pmcid or pmid):
+                ft_text, resolved_pmcid = self._fetch_pmc_fulltext_for_verification(pmcid=pmcid, pmid=pmid)
+
+            if ft_text:
+                fulltext_sources.append(f"{resolved_pmcid}: {title[:70]}")
+                source_blocks.append(
+                    f"=== STUDY {idx} (FULL TEXT VERIFIED via {resolved_pmcid}) ===\n"
+                    f"TITLE: {title}\nURL: {url}\n"
+                    f"ABSTRACT:\n{abstract}\n\n"
+                    f"FULL TEXT & TABLES:\n{ft_text}"
+                )
+            else:
+                abstract_only_sources.append(title[:70])
+                source_blocks.append(
+                    f"=== STUDY {idx} (ABSTRACT ONLY — full text not publicly available via PMC) ===\n"
+                    f"TITLE: {title}\nURL: {url}\n"
+                    f"ABSTRACT:\n{abstract or 'Unavailable'}"
+                )
+
+        sources_blob = "\n\n".join(source_blocks) if source_blocks else "No source studies provided."
+
+        history_blob = ""
+        if history:
+            turns = []
+            for h in history[-4:]:
+                role = "Clinician" if h.get("role") in ("user", "human") else "Adjudicator"
+                turns.append(f"{role}: {str(h.get('content', '')).strip()}")
+            if turns:
+                history_blob = "\n\nPRIOR DISCUSSION:\n" + "\n".join(turns)
+
+        voice_note = ""
+        if voice_profile and isinstance(voice_profile, dict):
+            phil = str(voice_profile.get("philosophy", "")).strip()[:300]
+            prohib = str(voice_profile.get("prohibited_terms", "")).strip()[:200]
+            if phil or prohib:
+                voice_note = f"\nPRESERVE CLINICIAN VOICE: Philosophy='{phil}'. Avoid='{prohib}'."
+        if custom_prompt:
+            voice_note += f"\nEDITORIAL FOCUS: {str(custom_prompt).strip()[:400]}"
+
+        system_prompt = (
+            "You are a deterministic, evidence-bound clinical adjudicator reviewing feedback or an external audit on a Synthesized Briefing Document.\n"
+            "STRICT RULES:\n"
+            "1. Check EVERY point in the clinician's feedback/audit directly against the provided SOURCE STUDIES (full text & tables where available, otherwise abstracts).\n"
+            "2. Do NOT capitulate blindly to user/audit critiques! If the current briefing is accurate and the critique is wrong, mark that point 'REFUTED' and quote the exact source evidence.\n"
+            "3. If a critique cites full-text/table details for a study marked 'ABSTRACT ONLY' and those details cannot be verified in the abstract, mark that point 'UNVERIFIABLE' and state clearly that only the abstract is available (do NOT fabricate numbers).\n"
+            "4. If a critique identifies a genuine error, omission, or nuance confirmed by the source text, mark it 'CONFIRMED' or 'PARTIAL', quote the exact source proof, and incorporate the correction cleanly into 'updated_markdown'.\n"
+            "5. If any point is CONFIRMED or PARTIAL, set 'has_updates': true and output the COMPLETE revised briefing in 'updated_markdown' preserving the exact Markdown heading hierarchy (# Title, ## 1. Topic Intro, ## 2. Study Summaries, ### Study Title, **Summary:**, **Source:**, ## 3. Conclusion, ## 4. Final Analysis), all URLs, and the existing tone/voice. If all points are REFUTED or UNVERIFIABLE, set 'has_updates': false and 'updated_markdown': \"\".\n"
+            f"{voice_note}\n"
+            "Respond strictly as valid JSON matching this exact schema:\n"
+            "{\n"
+            '  "overall_verdict": "UPDATES_RECOMMENDED" | "REFUTED_NO_CHANGE" | "PARTIAL_UPDATES",\n'
+            '  "summary_response": "2-4 sentence direct, objective response summarizing what was confirmed vs refuted",\n'
+            '  "point_by_point": [\n'
+            "    {\n"
+            '      "claim": "Concise summary of the critique point",\n'
+            '      "status": "CONFIRMED" | "REFUTED" | "PARTIAL" | "UNVERIFIABLE",\n'
+            '      "evidence": "Exact numbers/quotes from the source study supporting the verdict",\n'
+            '      "resolution": "Specific change applied in updated_markdown, or why the current text stands"\n'
+            "    }\n"
+            "  ],\n"
+            '  "has_updates": true,\n'
+            '  "updated_markdown": "Full revised markdown briefing if has_updates is true, else empty string"\n'
+            "}"
+        )
+
+        user_prompt = (
+            f"### CURRENT SYNTHESIZED BRIEFING DOCUMENT:\n{current_markdown}\n\n"
+            f"### SOURCE STUDIES FOR VERIFICATION:\n{sources_blob}"
+            f"{history_blob}\n\n"
+            f"### CLINICIAN FEEDBACK / EXTERNAL AUDIT TO ADJUDICATE:\n{clean_critique}"
+        )
+
+        raw_json, used_model = self._invoke_gemini(
+            prompt=user_prompt,
+            system_instruction=system_prompt,
+            json_mode=True,
+            thinking_level="low",
+            temperature=0.0,
+            max_output_tokens=12288
+        )
+
+        try:
+            parsed = json.loads(raw_json)
+        except Exception:
+            cleaned = re.sub(r"^```(?:json)?|```$", "", raw_json.strip(), flags=re.MULTILINE).strip()
+            parsed = json.loads(cleaned)
+
+        return {
+            "status": "success",
+            "overall_verdict": parsed.get("overall_verdict", "PARTIAL_UPDATES"),
+            "summary_response": parsed.get("summary_response", ""),
+            "point_by_point": parsed.get("point_by_point", []),
+            "has_updates": bool(parsed.get("has_updates")) and bool((parsed.get("updated_markdown") or "").strip()),
+            "updated_markdown": (parsed.get("updated_markdown") or "").strip(),
+            "fulltext_verified_count": len(fulltext_sources),
+            "fulltext_verified_studies": fulltext_sources,
+            "abstract_only_count": len(abstract_only_sources),
+            "model_endpoint": used_model
         }
 

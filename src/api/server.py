@@ -380,6 +380,47 @@ def api_summarizer_generate(req: SummarizerGenerateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class SummarizerDiscussRequest(BaseModel):
+    current_markdown: str
+    critique: str
+    ingested_studies: List[Dict[str, Any]] = []
+    voice_profile: Optional[Dict[str, Any]] = None
+    custom_prompt: Optional[str] = None
+    history: Optional[List[Dict[str, str]]] = None
+    autofetch_fulltext: Optional[bool] = True
+    user_uid: Optional[str] = "anonymous"
+    user_email: Optional[str] = "unauthenticated"
+
+
+@app.post("/api/summarizer/discuss")
+def api_summarizer_discuss(req: SummarizerDiscussRequest):
+    """Adjudicate user critique or external audit on Contextualize briefing with PMC full-text auto-fetch."""
+    try:
+        res = summarizer.discuss_and_verify(
+            current_markdown=req.current_markdown,
+            critique=req.critique,
+            ingested_studies=req.ingested_studies,
+            voice_profile=req.voice_profile,
+            custom_prompt=req.custom_prompt,
+            history=req.history,
+            autofetch_fulltext=bool(req.autofetch_fulltext if req.autofetch_fulltext is not None else True)
+        )
+        try:
+            log_usage(
+                uid=req.user_uid or "anonymous",
+                email=req.user_email or "unauthenticated",
+                feature="contextualizer_discuss",
+                model=res.get("model_endpoint") or SUMMARIZER_MODEL_DESIGNATION,
+                prompt_tokens=3200,
+                candidates_tokens=1600
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class TelemetryLogRequest(BaseModel):
     user_uid: Optional[str] = "anonymous"
     user_email: Optional[str] = "unauthenticated"
@@ -604,6 +645,54 @@ async def ask_paper(
         except Exception as te:
             print(f"[Telemetry] Logging warning: {te}")
             
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class AppraisalDiscussRequest(BaseModel):
+    filename: str
+    current_markdown: str
+    critique: str
+    target: Optional[str] = "analysis"  # "analysis" | "commentary"
+    history: Optional[List[Dict[str, str]]] = None
+    model_override: Optional[str] = None
+    user_uid: Optional[str] = "anonymous"
+    user_email: Optional[str] = "unauthenticated"
+
+
+@app.post("/api/appraisal/discuss")
+async def api_appraisal_discuss(req: AppraisalDiscussRequest):
+    """Adjudicate user critique or external audit on Clinical Analysis or Commentary against indexed manuscript."""
+    file_path = os.path.join(UPLOAD_DIR, req.filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Requested manuscript PDF was not found on server for verification.")
+
+    try:
+        indexed = CACHED_INDEX.get(req.filename)
+        if not indexed:
+            indexed = parse_and_index_pdf(file_path)
+            CACHED_INDEX[req.filename] = indexed
+
+        result = qa_engine.discuss_and_verify_appraisal(
+            indexed_doc=indexed,
+            current_markdown=req.current_markdown,
+            critique=req.critique,
+            target=req.target or "analysis",
+            conversation_history=req.history,
+            model_override=req.model_override
+        )
+        try:
+            log_usage(
+                uid=req.user_uid or "anonymous",
+                email=req.user_email or "unauthenticated",
+                feature="appraisal_discuss",
+                model=result.get("selected_model") or PRIMARY_MODEL,
+                prompt_tokens=3800,
+                candidates_tokens=1800
+            )
+        except Exception as te:
+            print(f"[Telemetry] Logging warning: {te}")
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -3022,6 +3111,45 @@ def index_page():
                             </div>
                             <!-- Rendered Markdown Content (matches Analyze #outputMarkdown styling) -->
                             <div id="summarizerRenderedContent" class="prose max-w-none text-sm leading-relaxed text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800"></div>
+
+                            <!-- Review-First Discuss / Challenge & Update Panel -->
+                            <div id="summarizerDiscussPanel" class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3">
+                                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                            <span>⚖️</span> <span>Discuss / Challenge &amp; Update Briefing</span>
+                                        </h3>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                            Paste an external audit or critique. FACT verifies each point against the abstracts &amp; auto-fetched PMC full text, refutes unsupported claims, and lets you review before applying updates.
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button" id="summarizerUndoUpdateBtn" onclick="undoSummarizerUpdate()" class="hidden px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-semibold transition cursor-pointer">
+                                            ↩️ Undo Update
+                                        </button>
+                                        <button type="button" onclick="resetSummarizerDiscuss()" class="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-medium transition cursor-pointer">
+                                            Clear
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="summarizerDiscussFeed" class="hidden space-y-3"></div>
+
+                                <div class="space-y-2">
+                                    <textarea
+                                        id="summarizerDiscussInput"
+                                        rows="3"
+                                        placeholder="Paste an external audit or ask FACT to check a specific claim, statistic, or omission..."
+                                        class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-100 focus:bg-white focus:dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 transition leading-relaxed resize-y"
+                                    ></textarea>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span id="summarizerDiscussStatus" class="text-[11px] text-slate-400">Deterministic verification (temp=0.0) · Auto-fetches PMC full text when available</span>
+                                        <button type="button" id="summarizerDiscussBtn" onclick="submitSummarizerDiscuss()" class="btn-primary-accent text-white font-semibold text-xs px-4 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
+                                            <span>⚖️</span> <span id="summarizerDiscussBtnText">Verify &amp; Respond</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3105,6 +3233,9 @@ def index_page():
                             </div>
                             <div class="flex items-center gap-2">
                                 <span id="leftPaneHint" class="text-xs text-slate-400 italic hidden lg:inline">Click any pill to inspect</span>
+                                <button type="button" onclick="toggleAppraisalDiscussPanel()" id="appraisalDiscussToggleBtn" class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white dark:bg-slate-850 border border-slate-300 dark:border-slate-700 hover:border-sky-400 dark:hover:border-sky-600 text-slate-700 dark:text-slate-300 hover:text-sky-700 dark:hover:text-sky-300 text-xs font-semibold transition shadow-2xs cursor-pointer" title="Paste an external audit or critique to verify against the manuscript and optionally update">
+                                    <span>⚖️</span> <span>Challenge / Update</span>
+                                </button>
                                 
                                 <!-- Consolidated Export & Copy Dropdown -->
                                 <div class="relative inline-block text-left" id="exportDropdownWrapper">
@@ -3176,6 +3307,49 @@ def index_page():
 
                         <!-- Scrollable Body Content -->
                         <div class="flex-1 overflow-y-auto p-6 min-h-0 flex flex-col">
+                            <!-- Collapsible Review-First Discuss / Challenge & Update Panel (Analyze & Commentary) -->
+                            <div id="appraisalDiscussPanel" class="hidden mb-4 bg-white dark:bg-slate-900 rounded-xl border border-sky-200 dark:border-sky-800/70 p-4 space-y-3 shadow-xs flex-shrink-0">
+                                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+                                    <div>
+                                        <h3 class="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                            <span>⚖️</span> <span>Challenge / Audit &amp; Update</span>
+                                        </h3>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                            Paste an external audit or critique. FACT verifies every claim against the full indexed manuscript &amp; tables, refutes errors, and lets you review before applying updates.
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <select id="appraisalDiscussTarget" class="text-[11px] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-slate-700 dark:text-slate-200 font-semibold cursor-pointer">
+                                            <option value="analysis">Target: Clinical Analysis</option>
+                                            <option value="commentary">Target: Commentary</option>
+                                        </select>
+                                        <button type="button" id="appraisalUndoUpdateBtn" onclick="undoAppraisalUpdate()" class="hidden px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-semibold transition cursor-pointer">
+                                            ↩️ Undo Update
+                                        </button>
+                                        <button type="button" onclick="resetAppraisalDiscuss()" class="px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-medium transition cursor-pointer">
+                                            Clear
+                                        </button>
+                                        <button type="button" onclick="toggleAppraisalDiscussPanel(false)" class="px-2 py-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xs font-bold cursor-pointer" title="Close panel">✕</button>
+                                    </div>
+                                </div>
+
+                                <div id="appraisalDiscussFeed" class="hidden space-y-3 max-h-[340px] overflow-y-auto pr-1"></div>
+
+                                <div class="space-y-2">
+                                    <textarea
+                                        id="appraisalDiscussInput"
+                                        rows="3"
+                                        placeholder="Paste an external audit or critique (e.g., 'Check Table 2 multivariable OS HR and update if needed')..."
+                                        class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-100 focus:bg-white focus:dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 transition leading-relaxed resize-y"
+                                    ></textarea>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span id="appraisalDiscussStatus" class="text-[11px] text-slate-400">Deterministic manuscript verification (temp=0.0)</span>
+                                        <button type="button" id="appraisalDiscussBtn" onclick="submitAppraisalDiscuss()" class="btn-primary-accent text-white font-semibold text-xs px-4 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
+                                            <span>⚖️</span> <span id="appraisalDiscussBtnText">Verify &amp; Respond</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                             <div id="outputMarkdown" class="prose max-w-none text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-950/70 p-6 rounded-lg border border-slate-200 dark:border-slate-800 text-sm leading-relaxed flex-1"></div>
                             <!-- Ask Tab Container (Conversational QA Interrogation) -->
                             <div id="askContainer" class="hidden flex-1 flex flex-col min-h-0 space-y-3">
@@ -5088,6 +5262,8 @@ def index_page():
 
                     if (data.status === 'success') {
                         window.ResearchAppState.lastSummarizerMarkdown = data.formatted_markdown || '';
+                        window.ResearchAppState.lastSummarizerStudies = data.ingested_studies || [];
+                        resetSummarizerDiscuss();
                         
                         banner.className = "rounded-lg p-3 text-xs flex items-center justify-between border bg-emerald-50 text-emerald-900 border-emerald-200";
                         banner.innerHTML = `
@@ -5351,6 +5527,345 @@ ${scopedHtml}
 
             function copySummarizerMarkdown() {
                 handleSummarizerExportAction('copy_markdown');
+            }
+
+            // =========================================================================
+            // Review-First Discuss / Challenge & Update (Contextualize & Analyze)
+            // =========================================================================
+            let summarizerDiscussHistory = [];
+            let summarizerPendingUpdate = '';
+            let summarizerPrevMarkdown = '';
+
+            let appraisalDiscussHistory = [];
+            let appraisalPendingUpdate = { target: 'analysis', markdown: '' };
+            let appraisalPrevBackup = { target: 'analysis', markdown: '' };
+
+            function buildAdjudicationVerdictHtml(data, mode) {
+                const verdict = (data.overall_verdict || 'PARTIAL_UPDATES').toUpperCase();
+                let badgeClass = 'bg-amber-100 text-amber-800 border-amber-300';
+                let badgeLabel = '⚠ Partial Updates Recommended';
+                if (verdict === 'UPDATES_RECOMMENDED') {
+                    badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+                    badgeLabel = '✓ Updates Recommended';
+                } else if (verdict === 'REFUTED_NO_CHANGE') {
+                    badgeClass = 'bg-sky-100 text-sky-800 border-sky-300';
+                    badgeLabel = '🛡️ Critique Refuted — Draft Accurate';
+                }
+
+                const usePills = (mode === 'appraisal' && typeof renderCoordinatePillsInText === 'function');
+                const fmtTxt = (s) => usePills ? renderCoordinatePillsInText(s || '') : escapeHtml(s || '');
+
+                let sourceInfoHtml = '';
+                if (mode === 'summarizer') {
+                    const ftCount = data.fulltext_verified_count || 0;
+                    const absCount = data.abstract_only_count || 0;
+                    sourceInfoHtml = `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">${ftCount > 0 ? `✓ ${ftCount} Full-Text PMC Verified` : 'Abstract-Only'}${absCount > 0 && ftCount > 0 ? ` · ${absCount} Abstract-Only` : ''}</span>`;
+                }
+
+                const pointsHtml = (data.point_by_point || []).map(p => {
+                    const st = (p.status || 'PARTIAL').toUpperCase();
+                    let stCls = 'bg-amber-100 text-amber-900 border-amber-300';
+                    if (st === 'CONFIRMED') stCls = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+                    else if (st === 'REFUTED') stCls = 'bg-sky-100 text-sky-900 border-sky-300';
+                    else if (st === 'UNVERIFIABLE') stCls = 'bg-slate-200 text-slate-800 border-slate-300';
+
+                    return `
+                        <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-950/60 space-y-1 text-xs">
+                            <div class="flex items-start justify-between gap-2">
+                                <span class="font-semibold text-slate-800 dark:text-slate-100">${escapeHtml(p.claim || '')}</span>
+                                <span class="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border ${stCls}">${escapeHtml(st)}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                                <strong class="text-slate-700 dark:text-slate-200">Source Evidence:</strong> ${fmtTxt(p.evidence || '')}
+                            </div>
+                            <div class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                                <strong class="text-slate-700 dark:text-slate-200">Resolution:</strong> ${fmtTxt(p.resolution || '')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const applyFn = mode === 'summarizer' ? 'applySummarizerProposedUpdate()' : 'applyAppraisalProposedUpdate()';
+                const applyBtnHtml = data.has_updates ? `
+                    <div class="pt-1 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-700">
+                        <span class="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium">Review the confirmed corrections above, then click Apply to update your document.</span>
+                        <button type="button" onclick="${applyFn}" class="shrink-0 px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition cursor-pointer flex items-center gap-1.5">
+                            <span>✅</span> <span>Apply Proposed Update</span>
+                        </button>
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 space-y-2.5">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="px-2.5 py-0.5 rounded text-[11px] font-bold border ${badgeClass}">${badgeLabel}</span>
+                            ${sourceInfoHtml}
+                        </div>
+                        <p class="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">${fmtTxt(data.summary_response || '')}</p>
+                        ${pointsHtml ? `<div class="space-y-2">${pointsHtml}</div>` : ''}
+                        ${applyBtnHtml}
+                    </div>
+                `;
+            }
+
+            function resetSummarizerDiscuss() {
+                summarizerDiscussHistory = [];
+                summarizerPendingUpdate = '';
+                summarizerPrevMarkdown = '';
+                const feed = document.getElementById('summarizerDiscussFeed');
+                const inp = document.getElementById('summarizerDiscussInput');
+                const undoBtn = document.getElementById('summarizerUndoUpdateBtn');
+                if (feed) { feed.innerHTML = ''; feed.classList.add('hidden'); }
+                if (inp) inp.value = '';
+                if (undoBtn) undoBtn.classList.add('hidden');
+            }
+
+            async function submitSummarizerDiscuss() {
+                const inp = document.getElementById('summarizerDiscussInput');
+                const critique = inp ? inp.value.trim() : '';
+                if (!critique) {
+                    alert('Please enter feedback or paste an audit critique to verify.');
+                    return;
+                }
+                const currentMd = (window.ResearchAppState && window.ResearchAppState.lastSummarizerMarkdown) || '';
+                if (!currentMd) {
+                    alert('Please generate a briefing first.');
+                    return;
+                }
+
+                const btn = document.getElementById('summarizerDiscussBtn');
+                const btnText = document.getElementById('summarizerDiscussBtnText');
+                const feed = document.getElementById('summarizerDiscussFeed');
+                if (btn) btn.disabled = true;
+                if (btnText) btnText.innerText = 'Checking Sources & Full Text...';
+
+                try {
+                    const sumVoiceSel = document.getElementById('summarizerVoicePresetSelect');
+                    const sumVoiceKey = sumVoiceSel ? sumVoiceSel.value : 'calibrated';
+                    const sumVoiceProfile = (sumVoiceKey === 'neutral') ? null : (typeof getEffectiveVoiceProfile === 'function' ? getEffectiveVoiceProfile() : null);
+                    const sumCustomPrompt = document.getElementById('summarizerCustomPrompt')?.value.trim() || null;
+
+                    const resp = await fetch('/api/summarizer/discuss', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            current_markdown: currentMd,
+                            critique: critique,
+                            ingested_studies: (window.ResearchAppState && window.ResearchAppState.lastSummarizerStudies) || [],
+                            voice_profile: sumVoiceProfile,
+                            custom_prompt: sumCustomPrompt,
+                            history: summarizerDiscussHistory,
+                            autofetch_fulltext: true,
+                            user_uid: currentUser ? currentUser.uid : 'anonymous',
+                            user_email: currentUser ? currentUser.email : 'unauthenticated'
+                        })
+                    });
+                    if (!resp.ok) {
+                        const err = await resp.text();
+                        throw new Error(`HTTP ${resp.status}: ${err}`);
+                    }
+                    const data = await resp.json();
+                    summarizerDiscussHistory.push({ role: 'user', content: critique });
+                    summarizerDiscussHistory.push({ role: 'assistant', content: data.summary_response || '' });
+                    if (data.has_updates && data.updated_markdown) {
+                        summarizerPendingUpdate = data.updated_markdown;
+                    }
+                    if (feed) {
+                        feed.classList.remove('hidden');
+                        feed.insertAdjacentHTML('beforeend', buildAdjudicationVerdictHtml(data, 'summarizer'));
+                        feed.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    if (inp) inp.value = '';
+                } catch (err) {
+                    alert('Verification failed: ' + err.message);
+                } finally {
+                    if (btn) btn.disabled = false;
+                    if (btnText) btnText.innerText = 'Verify & Respond';
+                }
+            }
+
+            function applySummarizerProposedUpdate() {
+                if (!summarizerPendingUpdate) return;
+                summarizerPrevMarkdown = (window.ResearchAppState && window.ResearchAppState.lastSummarizerMarkdown) || '';
+                window.ResearchAppState.lastSummarizerMarkdown = summarizerPendingUpdate;
+                const renderedDiv = document.getElementById('summarizerRenderedContent');
+                if (renderedDiv) {
+                    renderedDiv.innerHTML = marked.parse(summarizerPendingUpdate);
+                    renderedDiv.querySelectorAll('a').forEach(a => {
+                        a.setAttribute('target', '_blank');
+                        a.setAttribute('rel', 'noopener noreferrer');
+                    });
+                }
+                summarizerPendingUpdate = '';
+                const undoBtn = document.getElementById('summarizerUndoUpdateBtn');
+                if (undoBtn) undoBtn.classList.remove('hidden');
+                const statusEl = document.getElementById('summarizerDiscussStatus');
+                if (statusEl) statusEl.innerText = '✓ Briefing updated! Export / Copy now uses the revised text.';
+                if (renderedDiv) renderedDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+            function undoSummarizerUpdate() {
+                if (!summarizerPrevMarkdown) return;
+                window.ResearchAppState.lastSummarizerMarkdown = summarizerPrevMarkdown;
+                const renderedDiv = document.getElementById('summarizerRenderedContent');
+                if (renderedDiv) {
+                    renderedDiv.innerHTML = marked.parse(summarizerPrevMarkdown);
+                    renderedDiv.querySelectorAll('a').forEach(a => {
+                        a.setAttribute('target', '_blank');
+                        a.setAttribute('rel', 'noopener noreferrer');
+                    });
+                }
+                summarizerPrevMarkdown = '';
+                const undoBtn = document.getElementById('summarizerUndoUpdateBtn');
+                if (undoBtn) undoBtn.classList.add('hidden');
+                const statusEl = document.getElementById('summarizerDiscussStatus');
+                if (statusEl) statusEl.innerText = '↩️ Reverted to previous briefing version.';
+            }
+
+            function toggleAppraisalDiscussPanel(forceState) {
+                const panel = document.getElementById('appraisalDiscussPanel');
+                if (!panel) return;
+                const shouldOpen = (typeof forceState === 'boolean') ? forceState : panel.classList.contains('hidden');
+                panel.classList.toggle('hidden', !shouldOpen);
+                if (shouldOpen) {
+                    // Sync target dropdown with active tab
+                    const targetSel = document.getElementById('appraisalDiscussTarget');
+                    if (targetSel) {
+                        targetSel.value = (currentActiveLeftTab === 'commentary') ? 'commentary' : 'analysis';
+                    }
+                    document.getElementById('appraisalDiscussInput')?.focus();
+                }
+            }
+
+            function resetAppraisalDiscuss() {
+                appraisalDiscussHistory = [];
+                appraisalPendingUpdate = { target: 'analysis', markdown: '' };
+                appraisalPrevBackup = { target: 'analysis', markdown: '' };
+                const feed = document.getElementById('appraisalDiscussFeed');
+                const inp = document.getElementById('appraisalDiscussInput');
+                const undoBtn = document.getElementById('appraisalUndoUpdateBtn');
+                if (feed) { feed.innerHTML = ''; feed.classList.add('hidden'); }
+                if (inp) inp.value = '';
+                if (undoBtn) undoBtn.classList.add('hidden');
+            }
+
+            async function submitAppraisalDiscuss() {
+                if (!currentFilename) {
+                    alert('Please load or analyze a paper first.');
+                    return;
+                }
+                const inp = document.getElementById('appraisalDiscussInput');
+                const critique = inp ? inp.value.trim() : '';
+                if (!critique) {
+                    alert('Please paste an external audit or critique to verify.');
+                    return;
+                }
+                const target = document.getElementById('appraisalDiscussTarget')?.value || 'analysis';
+                const currentMd = (target === 'commentary') ? getClinicianCommentaryText() : getRawAppraisalMarkdown();
+                if (!currentMd) {
+                    alert(target === 'commentary' ? 'No commentary drafted yet to challenge.' : 'No clinical analysis available to challenge.');
+                    return;
+                }
+
+                const btn = document.getElementById('appraisalDiscussBtn');
+                const btnText = document.getElementById('appraisalDiscussBtnText');
+                const feed = document.getElementById('appraisalDiscussFeed');
+                if (btn) btn.disabled = true;
+                if (btnText) btnText.innerText = 'Verifying Manuscript...';
+
+                try {
+                    const resp = await fetch('/api/appraisal/discuss', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            filename: currentFilename,
+                            current_markdown: currentMd,
+                            critique: critique,
+                            target: target,
+                            history: appraisalDiscussHistory,
+                            user_uid: currentUser ? currentUser.uid : 'anonymous',
+                            user_email: currentUser ? currentUser.email : 'unauthenticated'
+                        })
+                    });
+                    if (!resp.ok) {
+                        const err = await resp.text();
+                        throw new Error(`HTTP ${resp.status}: ${err}`);
+                    }
+                    const data = await resp.json();
+                    appraisalDiscussHistory.push({ role: 'user', content: critique });
+                    appraisalDiscussHistory.push({ role: 'assistant', content: data.summary_response || '' });
+                    if (data.has_updates && data.updated_markdown) {
+                        appraisalPendingUpdate = { target: target, markdown: data.updated_markdown };
+                    }
+                    if (feed) {
+                        feed.classList.remove('hidden');
+                        feed.insertAdjacentHTML('beforeend', buildAdjudicationVerdictHtml(data, 'appraisal'));
+                        feed.scrollTop = feed.scrollHeight;
+                    }
+                    if (inp) inp.value = '';
+                } catch (err) {
+                    alert('Verification failed: ' + err.message);
+                } finally {
+                    if (btn) btn.disabled = false;
+                    if (btnText) btnText.innerText = 'Verify & Respond';
+                }
+            }
+
+            function applyAppraisalProposedUpdate() {
+                if (!appraisalPendingUpdate || !appraisalPendingUpdate.markdown) return;
+                const { target, markdown } = appraisalPendingUpdate;
+                if (target === 'commentary') {
+                    const ta = document.getElementById('commentaryTextarea');
+                    if (ta) {
+                        appraisalPrevBackup = { target: 'commentary', markdown: ta.value };
+                        ta.value = markdown;
+                        updateCommentaryCharCount();
+                    }
+                } else {
+                    appraisalPrevBackup = { target: 'analysis', markdown: getRawAppraisalMarkdown() };
+                    if (window.ResearchAppState) {
+                        window.ResearchAppState.lastAppraisalMarkdown = markdown;
+                    }
+                    const container = document.getElementById('outputMarkdown');
+                    if (container) {
+                        container.innerHTML = renderAnchoredMarkdown(markdown);
+                        container.querySelectorAll('a').forEach(a => {
+                            a.setAttribute('target', '_blank');
+                            a.setAttribute('rel', 'noopener noreferrer');
+                            a.classList.add('doi-link');
+                        });
+                    }
+                }
+                appraisalPendingUpdate = { target: target, markdown: '' };
+                const undoBtn = document.getElementById('appraisalUndoUpdateBtn');
+                if (undoBtn) undoBtn.classList.remove('hidden');
+                const statusEl = document.getElementById('appraisalDiscussStatus');
+                if (statusEl) statusEl.innerText = `✓ ${target === 'commentary' ? 'Commentary' : 'Clinical Analysis'} updated! Export / Copy now uses the revised text.`;
+            }
+
+            function undoAppraisalUpdate() {
+                if (!appraisalPrevBackup || !appraisalPrevBackup.markdown) return;
+                const { target, markdown } = appraisalPrevBackup;
+                if (target === 'commentary') {
+                    const ta = document.getElementById('commentaryTextarea');
+                    if (ta) {
+                        ta.value = markdown;
+                        updateCommentaryCharCount();
+                    }
+                } else {
+                    if (window.ResearchAppState) {
+                        window.ResearchAppState.lastAppraisalMarkdown = markdown;
+                    }
+                    const container = document.getElementById('outputMarkdown');
+                    if (container) {
+                        container.innerHTML = renderAnchoredMarkdown(markdown);
+                    }
+                }
+                appraisalPrevBackup = { target: target, markdown: '' };
+                const undoBtn = document.getElementById('appraisalUndoUpdateBtn');
+                if (undoBtn) undoBtn.classList.add('hidden');
+                const statusEl = document.getElementById('appraisalDiscussStatus');
+                if (statusEl) statusEl.innerText = '↩️ Reverted to previous version.';
             }
 
             // Cross-Tab Trigger: Deep link to Appraisal Workbench from Finder or Summarizer
@@ -7216,6 +7731,8 @@ ${scopedHtml}
             function resetCommentaryAndQCPanels(clearCommentary = true) {
                 lastQCAuditData = null;
                 if (clearCommentary) {
+                    resetAppraisalDiscuss();
+                    toggleAppraisalDiscussPanel(false);
                     const ta = document.getElementById('commentaryTextarea');
                     if (ta) {
                         ta.value = '';

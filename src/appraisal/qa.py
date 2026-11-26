@@ -89,7 +89,10 @@ class PaperQAEngine:
         prompt: str,
         system_instruction: str,
         preferred_model: Optional[str] = None,
-        thinking_level: str = "low"
+        thinking_level: str = "low",
+        json_mode: bool = False,
+        temperature: float = 0.15,
+        max_output_tokens: int = 4096
     ) -> Tuple[str, str, str]:
         """Call Gemini REST endpoint with verified model fallback hierarchy."""
         models = [preferred_model] if preferred_model and preferred_model in MODEL_HIERARCHY else list(MODEL_HIERARCHY)
@@ -105,16 +108,18 @@ class PaperQAEngine:
                 "contents": [{"parts": [{"text": prompt}]}],
                 "systemInstruction": {"parts": [{"text": system_instruction}]},
                 "generationConfig": {
-                    "temperature": 0.15,
-                    "maxOutputTokens": 4096
+                    "temperature": temperature,
+                    "maxOutputTokens": max_output_tokens
                 }
             }
+            if json_mode:
+                payload["generationConfig"]["responseMimeType"] = "application/json"
             if effective_thinking:
                 payload["generationConfig"]["thinkingConfig"] = {
                     "thinkingLevel": effective_thinking
                 }
             try:
-                resp = requests.post(url, json=payload, timeout=40)
+                resp = requests.post(url, json=payload, timeout=60)
                 if resp.status_code == 200:
                     data = resp.json()
                     candidates = data.get("candidates", [])
@@ -230,6 +235,109 @@ class PaperQAEngine:
         # Save to Normalized Query Cache
         self._query_cache[cache_key] = result
         return result
+
+    def discuss_and_verify_appraisal(
+        self,
+        indexed_doc: IndexedDocument,
+        current_markdown: str,
+        critique: str,
+        target: str = "analysis",
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        model_override: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Deterministic (temp=0.0) adjudication pass for Analyze (Clinical Analysis or Commentary).
+        Verifies each claim in the user's feedback or external audit directly against the full
+        indexed manuscript coordinates, refuting unsupported critiques or proposing a coordinate-grounded
+        updated draft for user review before applying.
+        """
+        clean_critique = (critique or "").strip()
+        if not clean_critique:
+            return {"status": "error", "message": "Feedback or audit critique cannot be empty."}
+        if not self.api_key:
+            return {"status": "error", "message": "Gemini API key is not configured."}
+
+        manuscript_text, valid_anchor_dict = self.assemble_manuscript_context(indexed_doc)
+        # Also include TableNote anchors if present in all_anchors
+        for aid, txt in indexed_doc.all_anchors.items():
+            if aid not in valid_anchor_dict and "Meta" not in aid and txt.strip():
+                valid_anchor_dict[aid] = txt.strip()
+                manuscript_text += f"\n{aid}\n{txt.strip()}\n"
+
+        history_blob = ""
+        if conversation_history:
+            turns = []
+            for h in conversation_history[-4:]:
+                role = "Clinician" if h.get("role") in ("user", "human") else "Adjudicator"
+                turns.append(f"{role}: {str(h.get('content', '')).strip()}")
+            if turns:
+                history_blob = "\n\n### PRIOR DISCUSSION:\n" + "\n".join(turns)
+
+        target_label = "Clinician Editorial Commentary" if target == "commentary" else "Clinical Analysis Appraisal"
+
+        system_instruction = (
+            f"You are a deterministic, evidence-bound clinical methodologist adjudicating feedback or an external audit on a {target_label}.\n"
+            "STRICT RULES:\n"
+            "1. Verify EVERY point in the feedback/audit directly against the provided MANUSCRIPT CLINICAL CONTENT & TABLES.\n"
+            "2. Do NOT blindly agree with the user or external audit! If the current text is accurate and the critique is mistaken or unsupported by the manuscript, mark that point 'REFUTED' and cite the exact coordinate anchor(s) proving it.\n"
+            "3. If a critique identifies a real factual error, missing statistic, univariate-vs-multivariable discrepancy, or overstatement confirmed by the manuscript, mark it 'CONFIRMED' or 'PARTIAL', cite the exact coordinate anchor(s), and fix it in 'updated_markdown'.\n"
+            "4. EXACT ANCHOR CITATIONS: Every factual claim or correction in 'evidence' and 'updated_markdown' MUST use exact individual coordinate anchors from the manuscript (e.g., [Results, Table 2] [Results, Para 6]). Never invent anchors and never combine multiple numbers into one bracket.\n"
+            "5. PRESERVE STRUCTURE: If 'has_updates' is true, output the COMPLETE revised markdown in 'updated_markdown' preserving all existing section headings (# Title, ## Clinical Bottom Line, ## Results in Context, etc.), formatting, and verified coordinate anchors. Do NOT use LaTeX $...$ math. If all points are REFUTED or UNVERIFIABLE, set 'has_updates': false and 'updated_markdown': \"\".\n"
+            "Respond strictly as valid JSON matching this schema:\n"
+            "{\n"
+            '  "overall_verdict": "UPDATES_RECOMMENDED" | "REFUTED_NO_CHANGE" | "PARTIAL_UPDATES",\n'
+            '  "summary_response": "2-4 sentence direct, objective response summarizing what was confirmed vs refuted with exact anchors",\n'
+            '  "point_by_point": [\n'
+            "    {\n"
+            '      "claim": "Short summary of the critique point",\n'
+            '      "status": "CONFIRMED" | "REFUTED" | "PARTIAL" | "UNVERIFIABLE",\n'
+            '      "evidence": "Exact numbers/quotes from the manuscript with coordinate anchor(s)",\n'
+            '      "resolution": "Specific correction made in updated_markdown, or why the current text stands"\n'
+            "    }\n"
+            "  ],\n"
+            '  "has_updates": true,\n'
+            '  "updated_markdown": "Complete revised markdown if has_updates is true, else empty string"\n'
+            "}"
+        )
+
+        user_prompt = (
+            f"### MANUSCRIPT CLINICAL CONTENT WITH COORDINATE ANCHORS:\n{manuscript_text}\n\n"
+            f"### CURRENT {target_label.upper()}:\n{current_markdown}"
+            f"{history_blob}\n\n"
+            f"### CLINICIAN FEEDBACK / EXTERNAL AUDIT TO ADJUDICATE:\n{clean_critique}"
+        )
+
+        raw_json, _, used_model = self._invoke_gemini_rest(
+            prompt=user_prompt,
+            system_instruction=system_instruction,
+            preferred_model=model_override,
+            thinking_level="low",
+            json_mode=True,
+            temperature=0.0,
+            max_output_tokens=12288
+        )
+
+        try:
+            parsed = json.loads(raw_json)
+        except Exception:
+            cleaned = re.sub(r"^```(?:json)?|```$", "", raw_json.strip(), flags=re.MULTILINE).strip()
+            parsed = json.loads(cleaned)
+
+        updated_md = (parsed.get("updated_markdown") or "").strip()
+        if updated_md:
+            san = sanitize_and_verify_appraisal(updated_md, valid_anchor_dict)
+            updated_md = san.cleaned_markdown
+
+        return {
+            "status": "success",
+            "target": target,
+            "overall_verdict": parsed.get("overall_verdict", "PARTIAL_UPDATES"),
+            "summary_response": parsed.get("summary_response", ""),
+            "point_by_point": parsed.get("point_by_point", []),
+            "has_updates": bool(parsed.get("has_updates")) and bool(updated_md),
+            "updated_markdown": updated_md,
+            "selected_model": used_model
+        }
 
     def clear_cache(self, filename: Optional[str] = None):
         """Clear query cache for a specific file or all files."""
