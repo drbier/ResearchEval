@@ -560,13 +560,11 @@ class PaperSummarizer:
 
         # Anti-Hallucination Guard: If content could not be accessed, do not guess
         if status != "success" or not abstract:
+            safe_title = title if title and title != 'Unable to access content' else 'Unable to access content'
             return (
-                f"Title:\n"
-                f"{title if title and title != 'Unable to access content' else 'Unable to access content'}\n\n"
-                f"Summary:\n"
-                f"Unable to access content\n\n"
-                f"Source:\n"
-                f"{input_url}"
+                f"### {safe_title}\n\n"
+                f"**Summary:** Unable to access content\n\n"
+                f"**Source:** {input_url}"
             )
 
         system_prompt = (
@@ -590,12 +588,9 @@ class PaperSummarizer:
         summary_clean = summary_text.strip()
 
         return (
-            f"Title:\n"
-            f"{title}\n\n"
-            f"Summary:\n"
-            f"{summary_clean}\n\n"
-            f"Source:\n"
-            f"{input_url}"
+            f"### {title}\n\n"
+            f"**Summary:**\n{summary_clean}\n\n"
+            f"**Source:** {input_url}"
         )
 
     def generate_overarching_synthesis(
@@ -702,28 +697,30 @@ class PaperSummarizer:
         print(f"[Summarizer:Batch] Synthesizing overarching sections across {len(valid_studies)} accessible studies...")
         overarching = self.generate_overarching_synthesis(valid_studies, individual_blocks)
 
-        # Step 4: Assemble Strict Output Document Layout
+        # Step 4: Assemble Rich Markdown Document Layout (matching Analyze typography)
         doc_parts = []
+
+        # Top-level Briefing Title from categorization header
+        raw_header = (overarching.get("categorization_header") or "Study Findings").strip()
+        clean_header = re.sub(r"^#+\s*", "", raw_header).strip()
+        if clean_header:
+            doc_parts.append(f"# {clean_header}")
 
         # 1. Topic Intro
         if overarching.get("topic_intro"):
-            doc_parts.append(f"### 1. Topic Intro\n{overarching['topic_intro']}")
+            doc_parts.append(f"## 1. Topic Intro\n\n{overarching['topic_intro']}")
 
-        # 2. Categorization
-        header = overarching.get("categorization_header") or "## Study Findings"
-        doc_parts.append(f"### 2. Categorization\n{header}")
-
-        # 3. Study Summaries
+        # 2. Study Summaries
         studies_formatted = "\n\n---\n\n".join(individual_blocks)
-        doc_parts.append(f"### 3. Study Summaries\n\n{studies_formatted}")
+        doc_parts.append(f"## 2. Study Summaries\n\n{studies_formatted}")
 
-        # 4. Conclusion
+        # 3. Conclusion
         if overarching.get("conclusion"):
-            doc_parts.append(f"### 4. Conclusion\n{overarching['conclusion']}")
+            doc_parts.append(f"## 3. Conclusion\n\n{overarching['conclusion']}")
 
-        # 5. Final Analysis
+        # 4. Final Analysis
         if overarching.get("final_analysis"):
-            doc_parts.append(f"### 5. Final Analysis\n{overarching['final_analysis']}")
+            doc_parts.append(f"## 4. Final Analysis\n\n{overarching['final_analysis']}")
 
         full_markdown = "\n\n".join(doc_parts)
 

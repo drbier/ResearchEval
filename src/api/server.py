@@ -1761,8 +1761,8 @@ def index_page():
                 color: #ffffff !important;
                 border-color: var(--highlight-pill-border, #0369a1) !important;
             }
-            /* Rich Typography for Clinical Analysis Markdown */
-            #outputMarkdown h1 {
+            /* Rich Typography for Clinical Analysis & Contextualizer Markdown */
+            #outputMarkdown h1, #summarizerRenderedContent h1 {
                 font-size: 1.35rem !important;
                 font-weight: 800 !important;
                 color: #0f172a !important; /* slate-900 */
@@ -1771,15 +1771,15 @@ def index_page():
                 margin-bottom: 0.85rem !important;
                 letter-spacing: -0.015em !important;
             }
-            #outputMarkdown h2 {
+            #outputMarkdown h2, #summarizerRenderedContent h2 {
                 font-size: 1.125rem !important;
                 font-weight: 700 !important;
                 color: var(--accent-text, #0369a1) !important;
-                margin-top: 1.25rem !important;
-                margin-bottom: 0.5rem !important;
+                margin-top: 1.35rem !important;
+                margin-bottom: 0.55rem !important;
                 letter-spacing: -0.01em !important;
             }
-            #outputMarkdown h3 {
+            #outputMarkdown h3, #summarizerRenderedContent h3 {
                 font-size: 1.02rem !important; /* noticeably larger than 0.875rem body text */
                 font-weight: 700 !important;
                 color: #0f172a !important; /* slate-900 bold */
@@ -1787,66 +1787,74 @@ def index_page():
                 margin-bottom: 0.4rem !important;
                 letter-spacing: -0.005em !important;
             }
-            #outputMarkdown p {
-                margin-bottom: 0.6rem !important;
+            #outputMarkdown p, #summarizerRenderedContent p {
+                margin-bottom: 0.65rem !important;
             }
-            #outputMarkdown ul {
+            #outputMarkdown hr, #summarizerRenderedContent hr {
+                border: none !important;
+                border-top: 1px solid #e2e8f0 !important;
+                margin: 1.25rem 0 !important;
+            }
+            #outputMarkdown ul, #summarizerRenderedContent ul {
                 list-style-type: disc !important;
                 padding-left: 1.35rem !important;
                 margin-top: 0.35rem !important;
                 margin-bottom: 0.65rem !important;
             }
-            #outputMarkdown ul ul {
+            #outputMarkdown ul ul, #summarizerRenderedContent ul ul {
                 list-style-type: circle !important;
                 margin-top: 0.25rem !important;
                 margin-bottom: 0.25rem !important;
             }
-            #outputMarkdown ol {
+            #outputMarkdown ol, #summarizerRenderedContent ol {
                 list-style-type: decimal !important;
                 padding-left: 1.35rem !important;
                 margin-top: 0.35rem !important;
                 margin-bottom: 0.65rem !important;
             }
-            #outputMarkdown li {
+            #outputMarkdown li, #summarizerRenderedContent li {
                 margin-bottom: 0.35rem !important;
             }
-            #outputMarkdown strong {
+            #outputMarkdown strong, #summarizerRenderedContent strong {
                 font-weight: 700 !important;
                 color: #0f172a !important;
             }
             /* Classic Live Hyperlink Style for DOI & External Links */
-            #outputMarkdown a, .doi-link {
+            #outputMarkdown a, #summarizerRenderedContent a, .doi-link {
                 color: #0000ee !important;
                 text-decoration: underline !important;
                 font-weight: 500;
                 cursor: pointer;
                 transition: font-weight 0.1s ease, color 0.1s ease;
             }
-            #outputMarkdown a:hover, .doi-link:hover {
+            #outputMarkdown a:hover, #summarizerRenderedContent a:hover, .doi-link:hover {
                 color: #0000cc !important;
                 font-weight: 700 !important;
                 text-decoration: underline !important;
             }
             /* Dark Mode Overrides for Rich Markdown & Document UI */
-            html.dark #outputMarkdown {
+            html.dark #outputMarkdown, html.dark #summarizerRenderedContent {
                 color: #e2e8f0 !important;
             }
-            html.dark #outputMarkdown h1 {
+            html.dark #outputMarkdown h1, html.dark #summarizerRenderedContent h1 {
                 color: #f8fafc !important;
             }
-            html.dark #outputMarkdown h2 {
+            html.dark #outputMarkdown h2, html.dark #summarizerRenderedContent h2 {
                 color: var(--accent-text, #38bdf8) !important;
             }
-            html.dark #outputMarkdown h3 {
+            html.dark #outputMarkdown h3, html.dark #summarizerRenderedContent h3 {
                 color: #f1f5f9 !important; /* slate-100 high-contrast bold */
             }
-            html.dark #outputMarkdown strong {
+            html.dark #outputMarkdown hr, html.dark #summarizerRenderedContent hr {
+                border-top-color: #334155 !important;
+            }
+            html.dark #outputMarkdown strong, html.dark #summarizerRenderedContent strong {
                 color: #f1f5f9 !important;
             }
-            html.dark #outputMarkdown a, html.dark .doi-link {
+            html.dark #outputMarkdown a, html.dark #summarizerRenderedContent a, html.dark .doi-link {
                 color: #60a5fa !important;
             }
-            html.dark #outputMarkdown a:hover, html.dark .doi-link:hover {
+            html.dark #outputMarkdown a:hover, html.dark #summarizerRenderedContent a:hover, html.dark .doi-link:hover {
                 color: #93c5fd !important;
             }
             html.dark .resizer {
@@ -2977,8 +2985,8 @@ def index_page():
                                     </div>
                                 </div>
                             </div>
-                            <!-- Rendered Markdown Content -->
-                            <div id="summarizerRenderedContent" class="text-xs leading-relaxed space-y-4 text-slate-800 dark:text-slate-200"></div>
+                            <!-- Rendered Markdown Content (matches Analyze #outputMarkdown styling) -->
+                            <div id="summarizerRenderedContent" class="prose max-w-none text-sm leading-relaxed text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800"></div>
                         </div>
                     </div>
                 </div>
@@ -5047,6 +5055,10 @@ def index_page():
 
                         if (renderedDiv) {
                             renderedDiv.innerHTML = marked.parse(data.formatted_markdown || '');
+                            renderedDiv.querySelectorAll('a').forEach(a => {
+                                a.setAttribute('target', '_blank');
+                                a.setAttribute('rel', 'noopener noreferrer');
+                            });
                         }
 
                         if (outContainer) outContainer.classList.remove('hidden');
