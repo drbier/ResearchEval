@@ -6875,7 +6875,32 @@ ${scopedHtml}
                 }
             }
 
+            function resetCommentaryAndQCPanels(clearCommentary = true) {
+                lastQCAuditData = null;
+                if (clearCommentary) {
+                    const ta = document.getElementById('commentaryTextarea');
+                    if (ta) {
+                        ta.value = '';
+                        updateCommentaryCharCount();
+                    }
+                }
+                ['', 'thinking_'].forEach(prefix => {
+                    const qcSec = document.getElementById(prefix ? `${prefix}QcAuditSection` : 'qcAuditSection');
+                    const summaryVerdict = document.getElementById(prefix ? `${prefix}QcSummaryVerdict` : 'qcSummaryVerdict');
+                    const caveatBox = document.getElementById(prefix ? `${prefix}QcDesignCaveatBox` : 'qcDesignCaveatBox');
+                    const feed = document.getElementById(prefix ? `${prefix}QcDiscrepanciesFeed` : 'qcDiscrepanciesFeed');
+                    if (qcSec) qcSec.classList.add('hidden');
+                    if (summaryVerdict) summaryVerdict.innerText = '';
+                    if (caveatBox) {
+                        caveatBox.innerHTML = '';
+                        caveatBox.classList.add('hidden');
+                    }
+                    if (feed) feed.innerHTML = '';
+                });
+            }
+
             function renderAppraisalResults(data) {
+                resetCommentaryAndQCPanels(true);
                 anchorIndex = data.anchor_index || {};
 
                 // Update Study Wonk Header Badge and Tooltip
@@ -8975,9 +9000,8 @@ ${scopedHtml}
                         ta.value = data.commentary;
                         updateCommentaryCharCount();
                     }
-
-                    // Auto-trigger background adversarial QC audit after draft generation
-                    runSecondaryQCAudit();
+                    // Clear any previous QC audit results so QC only runs when explicitly requested
+                    resetCommentaryAndQCPanels(false);
                 } catch (e) {
                     alert("Commentary generation failed: " + e.message);
                 } finally {
@@ -9181,9 +9205,13 @@ ${scopedHtml}
                     }).join('');
                 };
 
-                // Render both in Commentary tab and in Thinking/Audit tab
-                populateQCBlock('');
-                populateQCBlock('thinking_');
+                // Render in the originating tab (and mirror to Thinking/Audit when run from Commentary)
+                if (sourceOrigin === 'thinking') {
+                    populateQCBlock('thinking_');
+                } else {
+                    populateQCBlock('');
+                    populateQCBlock('thinking_');
+                }
             }
 
             function applyQCSuggestion(index) {
