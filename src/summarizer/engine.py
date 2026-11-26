@@ -189,8 +189,24 @@ class PaperSummarizer:
 
         epmc_pmc = re.search(r"europepmc\.org/(?:article/pmc/|articles/pmc?)(\d+)", clean_input, re.IGNORECASE)
         if epmc_pmc:
-            pmcid = f"PMC{epmc_pmc.group(1)}"
+            pmcid_digits = epmc_pmc.group(1)
+            pmcid = f"PMC{pmcid_digits}"
+            res = self._fetch_pmc_abstract(pmcid_digits, clean_input)
+            if res.get("status") == "success":
+                return res
             return self._fetch_europe_pmc_abstract(pmcid=pmcid, original_url=clean_input)
+
+        # 1b. Check for NCBI PubMed Central (PMC) URL or raw PMCID (e.g. pmc.ncbi.nlm.nih.gov/articles/PMC11871543/ or PMC11871543)
+        pmc_match = (
+            re.search(r"(?:pmc\.ncbi\.nlm\.nih\.gov|ncbi\.nlm\.nih\.gov/pmc)/articles/PMC(\d+)", clean_input, re.IGNORECASE)
+            or re.match(r"^PMC(\d+)$", clean_input, re.IGNORECASE)
+        )
+        if pmc_match:
+            pmcid_digits = pmc_match.group(1)
+            res = self._fetch_pmc_abstract(pmcid_digits, clean_input)
+            if res.get("status") == "success":
+                return res
+            return self._fetch_europe_pmc_abstract(pmcid=f"PMC{pmcid_digits}", original_url=clean_input)
 
         # 2. Check for PubMed ID in URL or raw numeric PMID
         pmid_match = re.search(r"pubmed\.ncbi\.nlm\.nih\.gov/(\d+)", clean_input, re.IGNORECASE) or \
@@ -298,6 +314,95 @@ class PaperSummarizer:
                 "title": "Unable to access content",
                 "structured_abstract": None
             }
+
+    def _fetch_pmc_abstract(self, pmcid_digits: str, original_url: str) -> Dict[str, Any]:
+        """Query NCBI EFetch (db=pmc) for JATS XML title and structured abstract, with PMID fallback."""
+        time.sleep(0.35)
+        pmcid = f"PMC{pmcid_digits}"
+        params = {
+            "db": "pmc",
+            "id": pmcid_digits,
+            "retmode": "xml"
+        }
+        try:
+            resp = resilient_request(self.ncbi_efetch_url, params=params, timeout=15)
+            if resp.status_code != 200 or len(resp.content) < 200:
+                return {
+                    "input_url": original_url,
+                    "pmcid": pmcid,
+                    "status": "unavailable",
+                    "error": "Unable to access content",
+                    "title": "Unable to access content",
+                    "structured_abstract": None
+                }
+
+            root = ET.fromstring(resp.content)
+            title_el = root.find(".//front//article-title")
+            if title_el is None:
+                title_el = root.find(".//article-title")
+            title = " ".join("".join(title_el.itertext()).split()) if title_el is not None else "Untitled Publication"
+
+            pmid = None
+            for aid in root.findall(".//front//article-id"):
+                if (aid.get("pub-id-type") or "").lower() == "pmid":
+                    pmid = "".join(aid.itertext()).strip()
+                    if pmid:
+                        break
+
+            abstract_el = root.find(".//front//abstract")
+            if abstract_el is None:
+                abstract_el = root.find(".//abstract")
+
+            abstract_sections = []
+            if abstract_el is not None:
+                sec_nodes = abstract_el.findall("./sec") or abstract_el.findall(".//sec")
+                if sec_nodes:
+                    for s in sec_nodes:
+                        s_title_el = s.find("title")
+                        s_title = " ".join("".join(s_title_el.itertext()).split()) if s_title_el is not None else ""
+                        s_paras = [" ".join("".join(p.itertext()).split()) for p in s.findall(".//p")]
+                        p_text = " ".join(filter(None, s_paras))
+                        if s_title and p_text:
+                            abstract_sections.append(f"{s_title.upper()}: {p_text}")
+                        elif p_text:
+                            abstract_sections.append(p_text)
+                if not abstract_sections:
+                    for p in abstract_el.findall(".//p"):
+                        txt = " ".join("".join(p.itertext()).split())
+                        if txt:
+                            abstract_sections.append(txt)
+                if not abstract_sections:
+                    raw_abs = " ".join("".join(abstract_el.itertext()).split())
+                    if raw_abs:
+                        abstract_sections.append(raw_abs)
+
+            if abstract_sections:
+                return {
+                    "input_url": original_url,
+                    "pmcid": pmcid,
+                    "pmid": pmid,
+                    "status": "success",
+                    "title": title,
+                    "structured_abstract": "\n\n".join(abstract_sections)
+                }
+
+            # Fallback to PubMed XML if PMC JATS lacked an abstract but exposed a PMID
+            if pmid:
+                pm_res = self._fetch_pubmed_abstract(pmid, original_url)
+                if pm_res.get("status") == "success":
+                    pm_res["pmcid"] = pmcid
+                    return pm_res
+        except Exception as e:
+            print(f"[Summarizer:PMC] Error fetching {pmcid}: {str(e)}")
+
+        return {
+            "input_url": original_url,
+            "pmcid": pmcid,
+            "status": "unavailable",
+            "error": "Unable to access content",
+            "title": "Unable to access content",
+            "structured_abstract": None
+        }
 
     def _fetch_doi_abstract(self, doi: str, original_url: str) -> Dict[str, Any]:
         """Fetch abstract for a DOI via Semantic Scholar API with strict null-handling."""
