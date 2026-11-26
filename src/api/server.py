@@ -3142,8 +3142,14 @@ def index_page():
                                         placeholder="Paste an external audit or ask FACT to check a specific claim, statistic, or omission..."
                                         class="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-800 dark:text-slate-100 focus:bg-white focus:dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 transition leading-relaxed resize-y"
                                     ></textarea>
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span id="summarizerDiscussStatus" class="text-[11px] text-slate-400">Deterministic verification (temp=0.0) · Auto-fetches PMC full text when available</span>
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <div class="flex flex-wrap items-center gap-3">
+                                            <label class="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none" title="When checked, FACT queries NCBI PMC for open-access full text & tables to verify full-text audit claims. Uncheck for strict abstract-only verification.">
+                                                <input type="checkbox" id="summarizerAutofetchFulltext" checked class="rounded text-sky-600 focus:ring-sky-500 w-3.5 h-3.5 cursor-pointer"/>
+                                                <span>Auto-fetch PMC full text &amp; tables</span>
+                                            </label>
+                                            <span id="summarizerDiscussStatus" class="text-[11px] text-slate-400">Deterministic verification (temp=0.0)</span>
+                                        </div>
                                         <button type="button" id="summarizerDiscussBtn" onclick="submitSummarizerDiscuss()" class="btn-primary-accent text-white font-semibold text-xs px-4 py-1.5 rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0">
                                             <span>⚖️</span> <span id="summarizerDiscussBtnText">Verify &amp; Respond</span>
                                         </button>
@@ -5636,8 +5642,9 @@ ${scopedHtml}
                 const btn = document.getElementById('summarizerDiscussBtn');
                 const btnText = document.getElementById('summarizerDiscussBtnText');
                 const feed = document.getElementById('summarizerDiscussFeed');
+                const autofetchFt = document.getElementById('summarizerAutofetchFulltext')?.checked ?? true;
                 if (btn) btn.disabled = true;
-                if (btnText) btnText.innerText = 'Checking Sources & Full Text...';
+                if (btnText) btnText.innerText = autofetchFt ? 'Checking Sources & Full Text...' : 'Checking Abstracts...';
 
                 try {
                     const sumVoiceSel = document.getElementById('summarizerVoicePresetSelect');
@@ -5655,7 +5662,7 @@ ${scopedHtml}
                             voice_profile: sumVoiceProfile,
                             custom_prompt: sumCustomPrompt,
                             history: summarizerDiscussHistory,
-                            autofetch_fulltext: true,
+                            autofetch_fulltext: autofetchFt,
                             user_uid: currentUser ? currentUser.uid : 'anonymous',
                             user_email: currentUser ? currentUser.email : 'unauthenticated'
                         })
