@@ -470,11 +470,11 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
             prompt=user_prompt,
             system_instruction=system_instruction,
             preferred_model=model_override,
-            thinking_level="high",
+            thinking_level="medium",
             temperature=0.0,
             json_mode=True,
             timeout=90,
-            max_output_tokens=8192
+            max_output_tokens=16384
         )
 
         return self._postprocess_audit_output(
