@@ -92,9 +92,9 @@ class CommentaryAndQCEngine:
         if therapeutic_lens in ("integrative", "naturopathic", "functional"):
             lens_directive = (
                 "THERAPEUTIC ORIENTATION: Integrative / Naturopathic / Functional Medicine.\n"
-                "- Evaluate findings through the lens of whole-person physiology, biological resilience, nutritional biochemistry, and root-cause lifestyle modifications.\n"
-                "- NEVER reflexively prescribe, recommend, or assert conventional guideline pharmaceutical regimens (e.g., high-intensity statins, antiplatelet therapies, antihypertensives) as mandatory or bedrock care unless the study explicitly investigated those specific drugs.\n"
-                "- Scrutinize whether pharmacological interventions merely manipulate surrogate biomarkers without altering hard clinical outcomes or all-cause mortality."
+                "- Keep a balanced clinical perspective that values patient-important outcomes (survival, quality of life, functional status) and lifestyle/physiological context alongside medical interventions.\n"
+                "- Do NOT reflexively recommend conventional guideline pharmaceutical regimens (e.g., statins, antiplatelets, antihypertensives) as mandatory unless the study directly evaluated them.\n"
+                "- Note calmly when an intervention only alters a surrogate biomarker without improving hard clinical outcomes."
             )
         elif therapeutic_lens in ("conventional", "allopathic"):
             lens_directive = (
@@ -156,12 +156,13 @@ class CommentaryAndQCEngine:
             "and emphasize real-world patient care implications.\n\n"
             f"{lens_directive}\n\n"
             "STYLISTIC DIRECTIVES (TAILORED BY CLINICIAN VOICE PROFILE):\n"
-            "1. VOICE & CADENCE: Mirror the rhetorical structure, sentence length rhythm, and opening hook style demonstrated in the active clinician exemplars below.\n"
-            f"2. CLINICAL PHILOSOPHY: {philosophy if philosophy else 'Prioritize patient safety, mechanistic plausibility, and clinical relevance over statistical significance.'}\n"
-            f"3. PREFERRED CONCEPTS / PHRASING: {preferred_terms if preferred_terms else 'Use clear, assertive clinical language with rigorous focus on absolute risk reductions.'}\n"
-            f"4. PROHIBITED PHRASING: {prohibited_terms if prohibited_terms else 'Never say \"more research is needed\". Avoid generic conversational AI filler.'}\n"
-            "5. CITATION INTEGRITY: When citing findings, you may include verified coordinate anchors like [Results, Table 2] or [Methods, Para 3]. Do NOT invent coordinate anchors.\n"
-            "6. FORMAT: Output 2 to 4 punchy, high-impact paragraphs in Markdown suitable for an email, newsletter, or medical discussion board. Format any section subheadings as bold Markdown (`### Subheading` or `**Subheading:**`)."
+            "1. VOICE & CADENCE: Mirror the calm, analytical, collegial tone and sentence rhythm demonstrated in the active clinician exemplars below. NEVER copy exemplar subheadings or metaphors verbatim—write fresh prose.\n"
+            "2. TEMPERAMENT GUARDRAIL: Write as a measured, objective clinician talking to peers—dry, direct, and grounded in numbers. NEVER preach, moralize, lecture, or use accusatory/melodramatic framing (e.g., avoid 'moral good', 'profound disregard', 'institutional habit', 'completely collapses', 'statistical quicksand').\n"
+            f"3. CLINICAL PHILOSOPHY: {philosophy if philosophy else 'Prioritize patient safety, mechanistic plausibility, and clinical relevance over statistical significance.'}\n"
+            f"4. ANALYTICAL CONCEPTS (apply only where genuinely relevant—do NOT force catchphrases): {preferred_terms if preferred_terms else 'absolute risk reduction, clinical relevance, confounding, effect size'}\n"
+            f"5. PROHIBITED PHRASING: {prohibited_terms if prohibited_terms else 'Never say \"more research is needed\". Avoid generic conversational AI filler.'}\n"
+            "6. CITATION INTEGRITY: When citing findings, you may include verified coordinate anchors like [Results, Table 2] or [Methods, Para 3]. Do NOT invent coordinate anchors.\n"
+            "7. FORMAT: Output 2 to 4 clear, measured paragraphs in Markdown suitable for an email, newsletter, or medical discussion board. Format any section subheadings as bold Markdown (`### Subheading` or `**Subheading:**`)."
         )
 
         clean_custom_prompt = str(custom_prompt or "").strip()[:1000]
@@ -170,8 +171,8 @@ class CommentaryAndQCEngine:
             custom_angle_block = (
                 "\n### CLINICIAN'S SPECIFIC ANGLE / THESIS FOR THIS PAPER:\n"
                 f"{clean_custom_prompt}\n\n"
-                "DIRECTIVE FOR CLINICIAN ANGLE: Lead with and weave in the clinician's stated thesis, framing, and clinical urgency above in their authentic voice. "
-                "Frame broad clinical concerns or frustration as the clinician's editorial perspective, while ensuring every numerical figure or study-specific outcome claim remains strictly grounded in the Verified Manuscript Excerpts.\n"
+                "DIRECTIVE FOR CLINICIAN ANGLE: Lead with and weave in the clinician's stated thesis and framing above in their authentic, measured voice. "
+                "Present clinical concerns with calm analytical precision, while ensuring every numerical figure or study-specific outcome claim remains strictly grounded in the Verified Manuscript Excerpts.\n"
             )
 
         user_prompt = f"""### CLINICIAN PAST WRITING EXEMPLARS (STUDY FOR VOICE, CADENCE & TONE):

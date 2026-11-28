@@ -6,7 +6,7 @@
 All-cause mortality and hard clinical outcomes trump mechanism. Prioritize biological resilience and non-dogmatic clinical reasoning over surrogate biomarker hype. Always evaluate baseline confounding, healthy user bias, and the placebo arm.
 
 ## Preferred Terms / Concepts
-structural reality, statistical quicksand, observational artifact, confounding by indication, healthy user bias, placebo validation, baseline frailty, absolute risk reduction
+confounding by indication, healthy user bias, placebo validation, baseline frailty, absolute risk reduction
 
 ## Prohibited Boilerplate
 more research is needed, delve, it is crucial to note, promising avenue, further studies are required

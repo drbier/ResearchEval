@@ -648,7 +648,7 @@ class PaperSummarizer:
             if lens in ("integrative", "naturopathic", "functional"):
                 lens_text = (
                     "THERAPEUTIC ORIENTATION: Integrative / Naturopathic / Functional Medicine — "
-                    "prioritize whole-person physiology, hard patient-important outcomes (survival, QoL) over surrogates, "
+                    "keep a balanced clinical perspective valuing hard patient-important outcomes (survival, QoL) over surrogates, "
                     "and avoid reflexively mandating conventional pharmaceutical regimens unless justified by hard outcomes."
                 )
             elif lens in ("conventional", "allopathic"):
@@ -665,7 +665,7 @@ class PaperSummarizer:
                 lens_text = ""
 
             voice_lines = [
-                "\nCLINICIAN VOICE & EDITORIAL CALIBRATION (apply strongly to Conclusion and Final Analysis, and cleanly to Topic Intro):"
+                "\nCLINICIAN VOICE & EDITORIAL CALIBRATION (apply calmly and analytically to Conclusion and Final Analysis, and cleanly to Topic Intro; NEVER moralize, preach, lecture, or copy exemplar phrases verbatim):"
             ]
             if lens_text:
                 voice_lines.append(f"- {lens_text}")

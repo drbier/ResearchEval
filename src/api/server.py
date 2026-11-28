@@ -9174,7 +9174,7 @@ ${scopedHtml}
                 updated_at_ms: Date.now(),
                 therapeutic_lens: "integrative",
                 philosophy: "All-cause mortality and hard clinical outcomes trump mechanism. Prioritize biological resilience and non-dogmatic clinical reasoning over surrogate biomarker hype. Always evaluate baseline confounding, healthy user bias, and the placebo arm.",
-                preferred_terms: "structural reality, statistical quicksand, observational artifact, confounding by indication, healthy user bias, placebo validation, baseline frailty, absolute risk reduction",
+                preferred_terms: "confounding by indication, healthy user bias, placebo validation, baseline frailty, absolute risk reduction",
                 prohibited_terms: "more research is needed, delve, it is crucial to note, promising avenue, further studies are required",
                 exemplars: [
                     {
