@@ -20,7 +20,9 @@ class CommentaryAndQCEngine:
         preferred_model: Optional[str] = None,
         thinking_level: str = "low",
         temperature: float = 0.2,
-        json_mode: bool = False
+        json_mode: bool = False,
+        timeout: int = 50,
+        max_output_tokens: int = 8192
     ) -> Tuple[str, str, str]:
         """Invoke Gemini via direct REST endpoint with model fallback hierarchy."""
         if not self.api_key:
@@ -41,7 +43,7 @@ class CommentaryAndQCEngine:
                 "systemInstruction": {"parts": [{"text": system_instruction}]},
                 "generationConfig": {
                     "temperature": temperature,
-                    "maxOutputTokens": 8192
+                    "maxOutputTokens": max_output_tokens
                 }
             }
             if effective_thinking:
@@ -52,7 +54,7 @@ class CommentaryAndQCEngine:
                 payload["generationConfig"]["responseMimeType"] = "application/json"
 
             try:
-                resp = requests.post(url, json=payload, timeout=50)
+                resp = requests.post(url, json=payload, timeout=timeout)
                 if resp.status_code == 200:
                     data = resp.json()
                     candidates = data.get("candidates", [])
@@ -221,6 +223,128 @@ Draft an editorial commentary in the clinician's authentic voice, applying their
             "active_exemplars_count": len(active_exemplars)
         }
 
+    @staticmethod
+    def _strip_coord_brackets(text: str) -> str:
+        """Remove inline [Section, Para/Table] coordinate brackets for quote verification."""
+        return re.sub(r'\[[^\]]{2,80}\]', ' ', text or '')
+
+    @classmethod
+    def _verify_quote_in_draft(cls, quoted_claim: str, combined_draft: str) -> bool:
+        """
+        Gate A: Anti-Strawman verification with bracket-stripping, ellipsis support,
+        and >=70% content-token sentence overlap fallback.
+        """
+        if not quoted_claim or not combined_draft:
+            return False
+
+        clean_draft = cls._strip_coord_brackets(combined_draft).lower()
+        clean_quote = cls._strip_coord_brackets(quoted_claim).lower()
+
+        norm_draft = re.sub(r'[\W_]+', ' ', clean_draft).strip()
+        norm_quote = re.sub(r'[\W_]+', ' ', clean_quote).strip()
+        if not norm_quote:
+            return False
+
+        # Short quotes (< 16 chars) or direct substring match
+        if len(norm_quote) <= 15 or norm_quote in norm_draft:
+            return True
+
+        # Ellipsis-split segment matching (e.g. "first clause ... second clause")
+        if '...' in clean_quote or '…' in clean_quote:
+            segs = [re.sub(r'[\W_]+', ' ', s).strip() for s in re.split(r'\.{2,}|…', clean_quote)]
+            meaningful_segs = [s for s in segs if len(s) >= 12]
+            if meaningful_segs and all(s in norm_draft for s in meaningful_segs):
+                return True
+
+        # Content-token overlap fallback (>= 70% overlap with a draft sentence/line)
+        q_tokens = [t for t in norm_quote.split() if len(t) >= 3]
+        if len(q_tokens) >= 4:
+            q_set = set(q_tokens)
+            for chunk in re.split(r'[\n\.!?]+', clean_draft):
+                c_tokens = set(t for t in re.sub(r'[\W_]+', ' ', chunk).split() if len(t) >= 3)
+                if not c_tokens:
+                    continue
+                overlap = len(q_set & c_tokens) / len(q_set)
+                if overlap >= 0.70:
+                    return True
+
+        return False
+
+    @staticmethod
+    def _resolve_citation_anchor(anc_str: str, all_anchors: Dict[str, str]) -> Optional[str]:
+        """
+        Gate B Tier 1: Canonical + fuzzy anchor resolution covering Para N, Table N,
+        Fig N, TableNote, and Abstract subsections.
+        """
+        clean = str(anc_str).strip()
+        if not clean:
+            return None
+        if not clean.startswith("["):
+            clean = f"[{clean}]"
+        if clean in all_anchors:
+            return clean
+
+        # Case-insensitive exact match
+        clean_lower = clean.lower()
+        for k in all_anchors.keys():
+            if k.lower() == clean_lower:
+                return k
+
+        sec_aliases = {
+            "abs": "abstract", "abstract": "abstract",
+            "intro": "introduction", "introduction": "introduction",
+            "meth": "methods", "method": "methods", "methods": "methods",
+            "res": "results", "result": "results", "results": "results",
+            "disc": "discussion", "discussion": "discussion",
+            "concl": "conclusions", "conclusion": "conclusions", "conclusions": "conclusions",
+            "supp": "appendix", "appendix": "appendix"
+        }
+
+        inner = clean.strip("[]").strip()
+        # Match "[Section, Para N]" or "[Section, pN]"
+        m_para = re.match(r'^([A-Za-z\s&]+?)\s*,\s*(?:Para(?:graph)?\s*|p)(\d+)$', inner, re.IGNORECASE)
+        if m_para:
+            sec_raw = m_para.group(1).strip().lower()
+            sec_norm = sec_aliases.get(sec_raw, sec_raw)
+            num = m_para.group(2)
+            for k in all_anchors.keys():
+                kl = k.lower()
+                if sec_norm in kl and f"para {num}]" in kl:
+                    return k
+
+        # Match "[Section, Table N]" or "[Table N]"
+        m_tbl = re.match(r'^(?:([A-Za-z\s&]+?)\s*,\s*)?Table\s*([0-9]+[A-Za-z]?|[IVXLCDM]+)$', inner, re.IGNORECASE)
+        if m_tbl:
+            sec_raw = (m_tbl.group(1) or "").strip().lower()
+            sec_norm = sec_aliases.get(sec_raw, sec_raw)
+            tnum = m_tbl.group(2).lower()
+            for k in all_anchors.keys():
+                kl = k.lower()
+                if f"table {tnum}]" in kl and (not sec_norm or sec_norm in kl):
+                    return k
+
+        # Match "[Section, Fig N]" or "[Figure N]"
+        m_fig = re.match(r'^(?:([A-Za-z\s&]+?)\s*,\s*)?Fig(?:ure)?\.?\s*([0-9]+[A-Za-z]?)$', inner, re.IGNORECASE)
+        if m_fig:
+            sec_raw = (m_fig.group(1) or "").strip().lower()
+            sec_norm = sec_aliases.get(sec_raw, sec_raw)
+            fnum = m_fig.group(2).lower()
+            for k in all_anchors.keys():
+                kl = k.lower()
+                if f"fig {fnum}]" in kl and (not sec_norm or sec_norm in kl):
+                    return k
+
+        # Match "[Abstract, Methods/Results/Conclusions/Objective]" or "[Abs, Results]"
+        m_abs = re.match(r'^(?:Abs|Abstract)\s*,\s*([A-Za-z]+)$', inner, re.IGNORECASE)
+        if m_abs:
+            sub = m_abs.group(1).strip().lower()
+            for k in all_anchors.keys():
+                kl = k.lower()
+                if kl.startswith("[abstract,") and sub in kl:
+                    return k
+
+        return None
+
     def audit_appraisal_and_commentary(
         self,
         indexed_doc: IndexedDocument,
@@ -230,33 +354,57 @@ Draft an editorial commentary in the clinician's authentic voice, applying their
         model_override: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Stage 2: Calibrated Evidence-Bound Methodological Auditor.
-        Independent stateless verification pass with 3-Tier Coordinate Quarantine Pipeline.
+        Stage 2: Calibrated Evidence-Bound Methodological Auditor (Informed Medicine Standard).
+        Independent stateless verification pass with full-text inspection and hardened
+        3-Tier Coordinate Quarantine Pipeline.
         """
         triage_info = triage_data or {}
-        framework_id = triage_info.get("primary_framework_id", "GENERAL")
-        framework_name = triage_info.get("framework_name", "Clinical Study")
+        framework_id = str(triage_info.get("primary_framework_id", "GENERAL") or "GENERAL")
+        framework_name = str(triage_info.get("framework_name", "Clinical Study") or "Clinical Study")
         applicable_rules = triage_info.get("applicable_rules", [])
 
-        # Format full manuscript anchors for audit reference
+        # Format complete manuscript anchors (including all Tables & TableNotes, up to 250K chars)
         manuscript_anchors_text = "\n".join(
             f"{aid}: {txt}" for aid, txt in indexed_doc.all_anchors.items() if aid != "[Doc_Header]"
         )
 
         system_instruction = (
-            "You are an objective, evidence-bound statistical and methodological auditor.\n"
-            "Your task is to independently audit a proposed clinician commentary and research appraisal against the raw manuscript coordinates.\n\n"
-            "STRICT AUDIT MANDATES:\n"
-            "1. NO FORCED HALLUCINATIONS: Do NOT invent flaws, nitpick stylistic prose, or manufacture discrepancies.\n"
-            "   If all numerical claims, risk metrics, and causal assertions accurately reflect the manuscript and respect the study design's limitations,\n"
-            "   you MUST output audit_status: 'NO_DISCREPANCIES_FOUND' with an empty discrepancies: [] array.\n"
-            "2. VERBATIM QUOTES ONLY: Every item in discrepancies MUST provide an exact, verbatim substring in quoted_claim that appears in the submitted commentary or appraisal.\n"
-            "3. SCOPE DECLARATION: Clearly mark scope as 'LOCALIZED_CLAIM' (for specific numbers, doses, or subgroup stats) or 'HOLISTIC_OR_OMISSION' (for overarching causal claims or unmeasured endpoints).\n"
-            "4. CITATIONS: Provide exact [Section, Para N] anchors from the manuscript coordinates supporting your audit finding.\n"
-            "5. OUTPUT FORMAT: Respond ONLY with a valid JSON object matching the requested schema."
+            "You are a stoic, matter-of-fact Clinical Research & Commentary Auditor.\n"
+            "Your mandate is to audit drafted medical research appraisals and clinician commentaries strictly against the provided full-text source manuscript coordinates and tables.\n"
+            "Ensure 100% factual fidelity, statistical rigor, and clear epistemic boundaries between measured study data and clinical interpretation—without diluting the author's clinical voice.\n\n"
+            "1. CORE ANALYTICAL STANDARDS (UNIVERSAL REPORTING INTEGRITY):\n"
+            "   - Hard Endpoints First: Prioritize Tier 1 hard clinical outcomes (Overall Survival, all-cause mortality) over surrogate, composite, or intermediate endpoints. Flag abstract spin when null hard endpoints are omitted or buried.\n"
+            "   - Observational vs. Randomized Distinction: Distinguish randomized interventions from non-randomized baseline exposures nested inside RCTs. Check whether confounding by indication was tested against the placebo/control arm.\n"
+            "   - Reporting Integrity & Harms Transparency: Whenever an intervention adverse event or discontinuation rate is cited, check whether the placebo/control denominator is reported in the manuscript and flag missing control anchoring or relative-vs-absolute risk asymmetry.\n\n"
+            "2. STRICT SOURCE-BOUND VERIFICATION:\n"
+            "   - Zero External Memory: Cross-reference EVERY number, HR/OR/RR, 95% CI, p-value, sample size, follow-up duration, and causal claim EXCLUSIVELY against the provided manuscript coordinates.\n"
+            "   - Complete Document Inspection: Inspect ALL Tables, Figure Legends, Methods, and Multivariable Regression subsections—not just the Abstract and main Results prose.\n"
+            "   - Internal Paper Typos: Watch for copy-paste errors inside published manuscripts (e.g., an HR from a secondary endpoint accidentally repeated in OS prose). Cross-check prose against regression tables and flag internal discrepancies explicitly.\n\n"
+            "3. METHODOLOGICAL & STATISTICAL FALLACIES TO AUDIT:\n"
+            "   - Non-Inferiority Fallacy (treating p > 0.05 superiority as proof of equivalence).\n"
+            "   - Categorical vs. Continuous Collapse (effects present only in arbitrary quantiles that vanish linearly).\n"
+            "   - Univariate-to-Multivariable Attenuation (unadjusted survival/efficacy gains disappearing after covariate adjustment).\n"
+            "   - Overstated Null/Causal Language (e.g., 'confirms no effect' -> 'shows no statistically significant advantage'; causal verbs on observational cohorts).\n"
+            "   - Adherence & Exposure Precision (distinguish baseline prescription/intent declared at entry vs. longitudinal adherence tracking).\n\n"
+            "4. EPISTEMIC BOUNDARIES (VOICE-PRESERVING):\n"
+            "   - Flag biological mechanisms, unmeasured toxicities, or external clinical workups mentioned in commentary that were not measured in the trial if they lack transitional signposting.\n"
+            "   - NEVER recommend deleting clinical insights; instead recommend minimal signposting edits (e.g., 'From a broader physiological perspective...', 'In clinical practice...').\n\n"
+            "5. NOISE FILTERS:\n"
+            "   - IGNORE inline document/page citation brackets (e.g. [Res, p3], [Abs, Results]) and empty stripped-tag parentheses.\n"
+            "   - FLAG any unstripped internal rule tags (e.g. {R_HARD_OUTCOME_PRIORITY}, {R_CONSORT_HARMS_01}).\n\n"
+            "6. OUTPUT DISCIPLINE:\n"
+            "   - Zero filler, pleasantries, praise, or exclamation marks.\n"
+            "   - Every item in discrepancies MUST quote the exact claim from the draft in quoted_claim and cite exact manuscript anchor(s) in citations.\n"
+            "   - Enumerate 5 to 10 (MAX 10) primary quantitative and methodological points you confirmed in verified_claims.\n"
+            "   - If no genuine factual, statistical, omission, or epistemic boundary flaws exist, output audit_status: 'NO_DISCREPANCIES_FOUND' with discrepancies: [].\n"
+            "   - Respond ONLY with a valid JSON object matching the requested schema."
         )
 
-        commentary_section_prompt = f"### SUBMITTED CLINICIAN COMMENTARY TO AUDIT:\n{commentary_text}\n" if commentary_text.strip() else "### SUBMITTED CLINICIAN COMMENTARY TO AUDIT:\n(None submitted. Audit the Research Appraisal alone against the manuscript coordinates.)\n"
+        commentary_section_prompt = (
+            f"### SUBMITTED CLINICIAN COMMENTARY TO AUDIT:\n{commentary_text}\n"
+            if commentary_text.strip()
+            else "### SUBMITTED CLINICIAN COMMENTARY TO AUDIT:\n(None submitted. Audit the Research Appraisal alone against the manuscript coordinates.)\n"
+        )
 
         user_prompt = f"""### STUDY DESIGN FRAMEWORK:
 ID: {framework_id} ({framework_name})
@@ -266,31 +414,42 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
 {indexed_doc.doc_header}
 
 {commentary_section_prompt}
-### SUBMITTED RESEARCH APPRAISAL TO AUDIT:
-{appraisal_markdown[:4000]}
+### SUBMITTED RESEARCH APPRAISAL TO AUDIT (COMPLETE):
+{appraisal_markdown}
 
-### RAW INDEXED MANUSCRIPT COORDINATES & TEXT:
-{manuscript_anchors_text[:28000]}
+### RAW INDEXED MANUSCRIPT COORDINATES & TABLES:
+{manuscript_anchors_text[:250000]}
 
 ============================================================
 ### REQUIRED JSON OUTPUT SCHEMA:
 {{
+  "confidence_tag": "High Certainty" | "Moderate Certainty / Hypothesis" | "Exploratory / Low Certainty",
   "overall_integrity": "VERIFIED" | "CAUTION" | "DISCREPANCY",
   "audit_status": "NO_DISCREPANCIES_FOUND" | "ISSUES_DETECTED",
-  "summary_verdict": "<1-2 sentence executive audit conclusion>",
+  "summary_verdict": "<1-2 sentence stoic executive audit conclusion>",
   "discrepancies": [
     {{
       "scope": "LOCALIZED_CLAIM" | "HOLISTIC_OR_OMISSION",
-      "category": "NUMERICAL_ERROR" | "CAUSAL_OVERREACH" | "UNDERPOWERED_SAFETY_CLAIM" | "CHERRY_PICKED_ENDPOINT" | "OMITTED_OUTCOME",
+      "category": "NUMERICAL_ERROR" | "CAUSAL_OVERREACH" | "CONTROL_ANCHORING" | "ATTENUATION_OR_FALLACY" | "ADHERENCE_PRECISION" | "EPISTEMIC_BOUNDARY" | "OMITTED_OUTCOME" | "UNSTRIPPED_TAG",
       "severity": "YELLOW" | "RED",
-      "quoted_claim": "<exact verbatim quote from commentary or appraisal>",
+      "quoted_claim": "<exact verbatim substring from commentary or appraisal>",
       "manuscript_evidence": "<concise explanation of how the manuscript contradicts or limits this claim, citing coordinates>",
       "citations": ["<exact coordinate anchor like [Results, Table 2]>"],
       "triage_rule_ref": "<rule_id or null>",
-      "suggested_edit": "<specific revised phrasing>"
+      "suggested_edit": "<minimal revised phrasing preserving author voice>"
     }}
   ],
-  "study_design_caveat": "<optional primary methodological caveat with coordinate citation, or null>"
+  "verified_claims": [
+    {{
+      "claim": "<concise verified number, endpoint, or methodological critique (cap at 5-10 items total)>",
+      "citations": ["<exact coordinate anchor>"]
+    }}
+  ],
+  "study_design_caveat": "<optional primary methodological caveat with coordinate citation, or null>",
+  "publish_readiness": {{
+    "verdict": "<direct assessment of fairness and publish-readiness>",
+    "pre_publish_fixes": ["<concrete minimal pre-publish fix if any>"]
+  }}
 }}
 """
 
@@ -298,27 +457,56 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
             return {
                 "status": "ready_for_inference_key_needed",
                 "selected_model": model_override or PRIMARY_MODEL,
+                "confidence_tag": "Exploratory / Low Certainty",
                 "overall_integrity": "VERIFIED",
                 "audit_status": "NO_DISCREPANCIES_FOUND",
                 "summary_verdict": "API key required for live QC audit inference.",
-                "discrepancies": []
+                "discrepancies": [],
+                "verified_claims": [],
+                "quarantined_count": 0
             }
 
         raw_output, thought_output, used_model = self._invoke_gemini_rest(
             prompt=user_prompt,
             system_instruction=system_instruction,
             preferred_model=model_override,
-            thinking_level="medium",
+            thinking_level="high",
             temperature=0.0,
-            json_mode=True
+            json_mode=True,
+            timeout=90,
+            max_output_tokens=8192
         )
 
-        # Parse JSON output defensively
+        return self._postprocess_audit_output(
+            raw_output=raw_output,
+            used_model=used_model,
+            indexed_doc=indexed_doc,
+            appraisal_markdown=appraisal_markdown,
+            commentary_text=commentary_text,
+            framework_id=framework_id,
+            framework_name=framework_name,
+            applicable_rules=applicable_rules
+        )
+
+    def _postprocess_audit_output(
+        self,
+        raw_output: str,
+        used_model: str,
+        indexed_doc: IndexedDocument,
+        appraisal_markdown: str,
+        commentary_text: str,
+        framework_id: str = "GENERAL",
+        framework_name: str = "Clinical Study",
+        applicable_rules: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Parse audit JSON and run hardened 3-Tier Coordinate Verification & Quarantine Pipeline."""
+        applicable_rules = applicable_rules or []
+
         parsed: Dict[str, Any] = {}
         try:
             parsed = json.loads(raw_output)
         except Exception:
-            clean_json_match = re.search(r'\{[\s\S]*\}', raw_output)
+            clean_json_match = re.search(r'\{[\s\S]*\}', raw_output or '')
             if clean_json_match:
                 try:
                     parsed = json.loads(clean_json_match.group(0))
@@ -326,42 +514,41 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
                     print(f"[CommentaryAndQCEngine] Audit JSON parse error: {pe}")
                     parsed = {}
 
-        if not parsed:
+        # Never silently default to VERIFIED on malformed/truncated JSON
+        if not parsed or not isinstance(parsed, dict):
             return {
-                "status": "parse_fallback",
+                "status": "parse_error",
                 "selected_model": used_model,
-                "overall_integrity": "VERIFIED",
-                "audit_status": "NO_DISCREPANCIES_FOUND",
-                "summary_verdict": "Audit evaluation completed without structured discrepancy detection.",
+                "confidence_tag": "Exploratory / Low Certainty",
+                "overall_integrity": "AUDIT_ERROR",
+                "audit_status": "AUDIT_ERROR",
+                "summary_verdict": "Audit response could not be parsed as valid JSON (possible truncation). Please re-run the Adversarial QC Audit.",
                 "discrepancies": [],
+                "verified_claims": [],
+                "quarantined_count": 0,
                 "raw_output": raw_output
             }
 
-        # -------------------------------------------------------------
-        # 3-Tier Coordinate Verification & Quarantine Pipeline
-        # -------------------------------------------------------------
         raw_discrepancies = parsed.get("discrepancies", [])
         if not isinstance(raw_discrepancies, list):
             raw_discrepancies = []
 
         validated_discrepancies: List[Dict[str, Any]] = []
-        combined_draft = f"{commentary_text}\n\n{appraisal_markdown}".lower()
-        # Normalization for substring check: strip punctuation and collapse whitespace
-        norm_combined_draft = re.sub(r'[\W_]+', ' ', combined_draft).strip()
+        quarantined_count = 0
+        combined_draft = f"{commentary_text}\n\n{appraisal_markdown}"
 
         for item in raw_discrepancies:
             if not isinstance(item, dict):
                 continue
 
             quoted_claim = str(item.get("quoted_claim", "")).strip()
-            # Gate A: Anti-Strawman Substring Verification
-            # Verify quoted_claim appears in the commentary or appraisal
-            norm_quote = re.sub(r'[\W_]+', ' ', quoted_claim.lower()).strip()
-            if not norm_quote or (norm_quote not in norm_combined_draft and len(norm_quote) > 15):
-                # Dropped as ungrounded strawman
+            # Gate A: Anti-Strawman Verification (bracket-stripped + ellipsis + >=70% token overlap)
+            if not self._verify_quote_in_draft(quoted_claim, combined_draft):
+                quarantined_count += 1
                 continue
 
             scope = str(item.get("scope", "LOCALIZED_CLAIM")).upper()
+            category = str(item.get("category", "NUMERICAL_ERROR")).upper()
             raw_citations = item.get("citations", [])
             if not isinstance(raw_citations, list):
                 raw_citations = [str(raw_citations)] if raw_citations else []
@@ -371,35 +558,21 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
             # Clean any broken/invalid inline brackets from evidence text
             def _clean_inline_brackets(match):
                 inner = match.group(1).strip()
-                cand = f"[{inner}]"
-                return cand if cand in indexed_doc.all_anchors else inner
+                resolved = self._resolve_citation_anchor(inner, indexed_doc.all_anchors)
+                return resolved if resolved else inner
             clean_evidence = re.sub(r'\[([^\]]+)\]', _clean_inline_brackets, evidence_text)
 
             # Gate B: Grounding Verification by Scope
             verified_citations: List[str] = []
-            
-            # Tier 1: Canonical resolution
-            for c in raw_citations:
-                anc_str = str(c).strip()
-                if not anc_str.startswith("["):
-                    anc_str = f"[{anc_str}]"
-                if anc_str in indexed_doc.all_anchors:
-                    if anc_str not in verified_citations:
-                        verified_citations.append(anc_str)
-                    continue
 
-                # Fuzzy resolution (e.g. [Res, Para 3] -> [Results, Para 3])
-                m = re.match(r'\[\s*([A-Za-z\s&]+?)\s*,\s*Para(?:graph)?\s+(\d+)', anc_str, re.IGNORECASE)
-                if m:
-                    for canonical_key in indexed_doc.all_anchors.keys():
-                        if m.group(1).lower() in canonical_key.lower() and f"Para {m.group(2)}" in canonical_key:
-                            if canonical_key not in verified_citations:
-                                verified_citations.append(canonical_key)
-                            break
+            # Tier 1: Canonical + Fuzzy Resolution (Para, Table, Fig, Abstract)
+            for c in raw_citations:
+                resolved = self._resolve_citation_anchor(str(c), indexed_doc.all_anchors)
+                if resolved and resolved not in verified_citations:
+                    verified_citations.append(resolved)
 
             # Tier 2: Substring Grounding Recovery if citations empty
             if not verified_citations and evidence_text:
-                # Look for numbers or key tokens in manuscript
                 numbers = re.findall(r'\b\d+(?:\.\d+)?%?\b', evidence_text)
                 for num in numbers:
                     for aid, txt in indexed_doc.all_anchors.items():
@@ -410,19 +583,24 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
                         break
 
             # Tier 3: Quarantine Check
-            if scope == "LOCALIZED_CLAIM":
-                # Strict: Must have at least 1 verified anchor
+            is_boundary_or_tag = category in ("EPISTEMIC_BOUNDARY", "UNSTRIPPED_TAG", "OMITTED_OUTCOME", "CONTROL_ANCHORING")
+            if scope == "LOCALIZED_CLAIM" and not is_boundary_or_tag:
                 if not verified_citations:
-                    continue  # Quarantined / dropped
+                    quarantined_count += 1
+                    continue
             else:
-                # HOLISTIC_OR_OMISSION
                 rule_ref = str(item.get("triage_rule_ref", "")).strip()
                 is_rule_valid = bool(rule_ref and rule_ref in applicable_rules)
-                is_observational = bool("cohort" in framework_id.lower() or "observational" in framework_id.lower())
+                is_observational = bool(
+                    framework_id == "FW_C"
+                    or "observational" in framework_name.lower()
+                    or "cohort" in framework_name.lower()
+                )
                 has_structural_anchor = any(k in c for c in verified_citations for k in ["Doc_Header", "Abstract", "Methods"])
 
-                if not (verified_citations or is_rule_valid or is_observational or has_structural_anchor):
-                    continue  # Quarantined / dropped
+                if not (verified_citations or is_rule_valid or is_observational or has_structural_anchor or is_boundary_or_tag):
+                    quarantined_count += 1
+                    continue
 
                 if not verified_citations:
                     verified_citations = ["[Doc_Header]"]
@@ -432,9 +610,27 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
             item["citations"] = verified_citations
             validated_discrepancies.append(item)
 
+        # Normalize verified_claims (cap at 10)
+        raw_verified = parsed.get("verified_claims", [])
+        verified_claims_clean: List[Dict[str, Any]] = []
+        if isinstance(raw_verified, list):
+            for vc in raw_verified[:10]:
+                if isinstance(vc, dict) and str(vc.get("claim", "")).strip():
+                    vc_cits = []
+                    for c in (vc.get("citations") or []):
+                        res = self._resolve_citation_anchor(str(c), indexed_doc.all_anchors)
+                        if res and res not in vc_cits:
+                            vc_cits.append(res)
+                    verified_claims_clean.append({
+                        "claim": str(vc.get("claim", "")).strip(),
+                        "citations": vc_cits
+                    })
+                elif isinstance(vc, str) and vc.strip():
+                    verified_claims_clean.append({"claim": vc.strip(), "citations": []})
+
         # Recalculate status and integrity after quarantine
         final_status = "ISSUES_DETECTED" if validated_discrepancies else "NO_DISCREPANCIES_FOUND"
-        has_red = any(d.get("severity", "").upper() == "RED" for d in validated_discrepancies)
+        has_red = any(str(d.get("severity", "")).upper() == "RED" for d in validated_discrepancies)
         final_integrity = "DISCREPANCY" if has_red else ("CAUTION" if validated_discrepancies else "VERIFIED")
 
         summary_verdict = parsed.get("summary_verdict") or (
@@ -443,14 +639,22 @@ Active Evaluation Rules: {json.dumps(applicable_rules)}
             f"Audit identified {len(validated_discrepancies)} point(s) requiring calibration against manuscript data."
         )
 
+        publish_readiness = parsed.get("publish_readiness")
+        if not isinstance(publish_readiness, dict):
+            publish_readiness = None
+
         return {
             "status": "success",
             "selected_model": used_model,
+            "confidence_tag": parsed.get("confidence_tag") or "High Certainty",
             "overall_integrity": final_integrity,
             "audit_status": final_status,
             "summary_verdict": summary_verdict,
             "discrepancies": validated_discrepancies,
+            "verified_claims": verified_claims_clean,
             "study_design_caveat": parsed.get("study_design_caveat"),
+            "publish_readiness": publish_readiness,
+            "quarantined_count": quarantined_count,
             "raw_output": raw_output
         }
 

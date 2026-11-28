@@ -9970,14 +9970,18 @@ ${scopedHtml}
                     qcSec.classList.remove('hidden');
 
                     if (integrityBadge) {
-                        if (integrity === 'VERIFIED') {
-                            integrityBadge.innerText = "✓ Grounding Verified";
+                        const confTag = data.confidence_tag ? ` · ${data.confidence_tag}` : '';
+                        if (integrity === 'AUDIT_ERROR') {
+                            integrityBadge.innerText = "⚠ Audit Parse Error — Retry";
+                            integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700";
+                        } else if (integrity === 'VERIFIED') {
+                            integrityBadge.innerText = `✓ Grounding Verified${confTag}`;
                             integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700";
                         } else if (integrity === 'CAUTION') {
-                            integrityBadge.innerText = "⚠ Nuance / Overreach Identified";
+                            integrityBadge.innerText = `⚠ Nuance / Boundary Flagged${confTag}`;
                             integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700";
                         } else {
-                            integrityBadge.innerText = "✗ Discrepancy Flagged";
+                            integrityBadge.innerText = `✗ Discrepancy Flagged${confTag}`;
                             integrityBadge.className = "px-2.5 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-700";
                         }
                     }
@@ -9997,74 +10001,126 @@ ${scopedHtml}
 
                     if (!feed) return;
 
-                    if (discrepancies.length === 0) {
+                    if (integrity === 'AUDIT_ERROR') {
                         feed.innerHTML = `
-                            <div class="p-4 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-2">
-                                <span class="text-base font-bold text-emerald-600">✓</span>
-                                <span><strong>No discrepancies or ungrounded claims detected.</strong> All numerical findings, effect sizes, and causal statements are supported by manuscript coordinates.</span>
+                            <div class="p-4 rounded-md bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs flex items-center gap-2">
+                                <span class="text-base font-bold text-rose-600">⚠</span>
+                                <span><strong>Audit did not complete cleanly.</strong> The auditor output could not be parsed as valid structured JSON. Please click <strong>Run Adversarial QC Audit</strong> again to retry.</span>
                             </div>
                         `;
                         return;
                     }
 
-                    feed.innerHTML = discrepancies.map((d, idx) => {
-                        const isRed = (d.severity || '').toUpperCase() === 'RED';
-                        const category = (d.category || 'ANALYSIS').replace(/_/g, ' ');
-                        const scope = (d.scope || 'LOCALIZED_CLAIM').replace(/_/g, ' ');
-                        
-                        let citationsHtml = '';
-                        if (d.citations && d.citations.length > 0) {
-                            citationsHtml = `
-                                <div class="flex items-center gap-1.5 flex-wrap pt-1">
-                                    <span class="text-[11px] font-semibold text-slate-500">Evidence Anchors:</span>
-                                    ${d.citations.map(c => {
-                                        const clean = String(c).replace(/^\[|\]$/g, '').trim();
-                                        const rawId = `[${clean}]`;
-                                        const enc = encodeURIComponent(rawId);
-                                        return `<button type="button" onclick="inspectAnchor('${enc}')" data-anchor="${rawId}" class="anchor-pill inline-flex items-center px-2 py-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none cursor-pointer" title="Jump to proof on PDF">${formatAnchorDisplay(clean)}</button>`;
-                                    }).join(' ')}
-                                </div>
-                            `;
-                        }
+                    const commentaryVal = document.getElementById('commentaryTextarea')?.value || '';
 
-                        const hasCommentaryInput = Boolean(document.getElementById('commentaryTextarea')?.value.trim());
-
-                        return `
-                            <div class="p-3.5 rounded-lg border ${isRed ? 'border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20' : 'border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20'} space-y-2 text-xs">
-                                <div class="flex items-center justify-between gap-2">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isRed ? 'bg-rose-200 text-rose-900 border border-rose-300' : 'bg-amber-200 text-amber-900 border border-amber-300'}">${escapeHtml(category)}</span>
-                                        <span class="text-[10px] font-mono text-slate-500 uppercase">${escapeHtml(scope)}</span>
-                                    </div>
-                                    <span class="text-[10px] font-bold ${isRed ? 'text-rose-700' : 'text-amber-700'}">${isRed ? 'CRITICAL DISCREPANCY' : 'CAUTION / NUANCE'}</span>
-                                </div>
-
-                                <div class="bg-white dark:bg-slate-900 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
-                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Audited Claim:</span>
-                                    <p class="text-xs text-slate-800 dark:text-slate-200 font-serif italic">"${escapeHtml(d.quoted_claim || '')}"</p>
-                                </div>
-
-                                <div class="space-y-1">
-                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Manuscript Proof / Finding:</span>
-                                    <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">${renderCoordinatePillsInText(d.manuscript_evidence || '')}</p>
-                                    ${citationsHtml}
-                                </div>
-
-                                ${d.suggested_edit ? `
-                                    <div class="p-2.5 rounded bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 flex items-start justify-between gap-3">
-                                        <div class="space-y-0.5">
-                                            <span class="text-[10px] font-bold text-sky-900 dark:text-sky-300 uppercase block">Suggested Alignment:</span>
-                                            <p class="text-xs text-sky-950 dark:text-sky-200 font-serif italic">${escapeHtml(d.suggested_edit)}</p>
-                                        </div>
-                                        ${hasCommentaryInput ? `
-                                        <button type="button" onclick="applyQCSuggestion(${idx})" class="shrink-0 px-2.5 py-1 rounded bg-white dark:bg-slate-850 hover:bg-sky-600 hover:text-white text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 text-[11px] font-semibold transition shadow-2xs cursor-pointer">
-                                            Apply Fix
-                                        </button>` : ''}
-                                    </div>
-                                ` : ''}
+                    let discrepanciesHtml = '';
+                    if (discrepancies.length === 0) {
+                        discrepanciesHtml = `
+                            <div class="p-4 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-2">
+                                <span class="text-base font-bold text-emerald-600">✓</span>
+                                <span><strong>No discrepancies or ungrounded claims detected.</strong> All reviewed quantitative findings, endpoints, and causal statements align with the manuscript coordinates.</span>
                             </div>
                         `;
-                    }).join('');
+                    } else {
+                        discrepanciesHtml = discrepancies.map((d, idx) => {
+                            const isRed = (d.severity || '').toUpperCase() === 'RED';
+                            const category = (d.category || 'ANALYSIS').replace(/_/g, ' ');
+                            const scope = (d.scope || 'LOCALIZED_CLAIM').replace(/_/g, ' ');
+
+                            let citationsHtml = '';
+                            if (d.citations && d.citations.length > 0) {
+                                citationsHtml = `
+                                    <div class="flex items-center gap-1.5 flex-wrap pt-1">
+                                        <span class="text-[11px] font-semibold text-slate-500">Evidence Anchors:</span>
+                                        ${d.citations.map(c => {
+                                            const clean = String(c).replace(/^\[|\]$/g, '').trim();
+                                            const rawId = `[${clean}]`;
+                                            const enc = encodeURIComponent(rawId);
+                                            return `<button type="button" onclick="inspectAnchor('${enc}')" data-anchor="${rawId}" class="anchor-pill inline-flex items-center px-2 py-0.5 text-[11px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded shadow-2xs leading-none cursor-pointer" title="Jump to proof on PDF">${formatAnchorDisplay(clean)}</button>`;
+                                        }).join(' ')}
+                                    </div>
+                                `;
+                            }
+
+                            // Guard: Only show one-click Apply Fix when quoted_claim is an exact substring of #commentaryTextarea
+                            const canAutoApply = Boolean(commentaryVal.trim() && d.quoted_claim && commentaryVal.includes(d.quoted_claim));
+
+                            return `
+                                <div class="p-3.5 rounded-lg border ${isRed ? 'border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20' : 'border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20'} space-y-2 text-xs">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isRed ? 'bg-rose-200 text-rose-900 border border-rose-300' : 'bg-amber-200 text-amber-900 border border-amber-300'}">${escapeHtml(category)}</span>
+                                            <span class="text-[10px] font-mono text-slate-500 uppercase">${escapeHtml(scope)}</span>
+                                        </div>
+                                        <span class="text-[10px] font-bold ${isRed ? 'text-rose-700' : 'text-amber-700'}">${isRed ? 'CRITICAL DISCREPANCY' : 'CAUTION / BOUNDARY'}</span>
+                                    </div>
+
+                                    <div class="bg-white dark:bg-slate-900 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Audited Claim:</span>
+                                        <p class="text-xs text-slate-800 dark:text-slate-200 font-serif italic">"${escapeHtml(d.quoted_claim || '')}"</p>
+                                    </div>
+
+                                    <div class="space-y-1">
+                                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Manuscript Proof / Finding:</span>
+                                        <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">${renderCoordinatePillsInText(d.manuscript_evidence || '')}</p>
+                                        ${citationsHtml}
+                                    </div>
+
+                                    ${d.suggested_edit ? `
+                                        <div class="p-2.5 rounded bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 flex items-start justify-between gap-3">
+                                            <div class="space-y-0.5">
+                                                <span class="text-[10px] font-bold text-sky-900 dark:text-sky-300 uppercase block">Suggested Alignment:</span>
+                                                <p class="text-xs text-sky-950 dark:text-sky-200 font-serif italic">${escapeHtml(d.suggested_edit)}</p>
+                                            </div>
+                                            ${canAutoApply ? `
+                                            <button type="button" onclick="applyQCSuggestion(${idx})" class="shrink-0 px-2.5 py-1 rounded bg-white dark:bg-slate-850 hover:bg-sky-600 hover:text-white text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 text-[11px] font-semibold transition shadow-2xs cursor-pointer">
+                                                Apply Fix
+                                            </button>` : ''}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('');
+                    }
+
+                    // Collapsible Verified Claims Ledger
+                    const verifiedClaims = Array.isArray(data.verified_claims) ? data.verified_claims : [];
+                    let verifiedHtml = '';
+                    if (verifiedClaims.length > 0) {
+                        const vcItems = verifiedClaims.map(vc => {
+                            const txt = typeof vc === 'string' ? vc : (vc.claim || '');
+                            const cits = (vc && Array.isArray(vc.citations)) ? vc.citations.map(c => {
+                                const clean = String(c).replace(/^\[|\]$/g, '').trim();
+                                const rawId = `[${clean}]`;
+                                return `<button type="button" onclick="inspectAnchor('${encodeURIComponent(rawId)}')" class="anchor-pill inline-flex items-center px-1.5 py-0.5 text-[10px] font-sans font-medium bg-sky-50 dark:bg-sky-950/70 text-sky-800 dark:text-sky-300 hover:bg-sky-600 hover:text-white border border-sky-300/80 dark:border-sky-800 rounded leading-none cursor-pointer">${formatAnchorDisplay(clean)}</button>`;
+                            }).join(' ') : '';
+                            return `<li class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">${renderCoordinatePillsInText(txt)} ${cits}</li>`;
+                        }).join('');
+                        verifiedHtml = `
+                            <details class="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-xs">
+                                <summary class="font-bold text-emerald-700 dark:text-emerald-400 cursor-pointer select-none">✓ Verified Claims (${verifiedClaims.length})</summary>
+                                <ul class="list-disc pl-5 mt-2 space-y-1.5">${vcItems}</ul>
+                            </details>
+                        `;
+                    }
+
+                    // Publish-Readiness Verdict Block
+                    let publishHtml = '';
+                    if (data.publish_readiness && data.publish_readiness.verdict) {
+                        const fixes = Array.isArray(data.publish_readiness.pre_publish_fixes) ? data.publish_readiness.pre_publish_fixes.filter(Boolean) : [];
+                        const fixesHtml = fixes.length > 0
+                            ? `<ol class="list-decimal pl-5 mt-1.5 space-y-1 text-slate-700 dark:text-slate-300">${fixes.map(f => `<li>${escapeHtml(String(f))}</li>`).join('')}</ol>`
+                            : '';
+                        publishHtml = `
+                            <div class="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-xs space-y-1">
+                                <div class="font-bold text-slate-800 dark:text-slate-100">Fairness &amp; Publish-Readiness Verdict</div>
+                                <p class="text-slate-700 dark:text-slate-300 leading-relaxed">${escapeHtml(data.publish_readiness.verdict)}</p>
+                                ${fixesHtml}
+                            </div>
+                        `;
+                    }
+
+                    feed.innerHTML = discrepanciesHtml + verifiedHtml + publishHtml;
                 };
 
                 // Render in the originating tab (and mirror to Thinking/Audit when run from Commentary)
